@@ -11,7 +11,7 @@
 		<ContainerPort>8080</ContainerPort>
 		<ContainerUser>1654</ContainerUser>
 		<ContainerFamily>noble</ContainerFamily>
-		<ContainerRepository>fsh-api</ContainerRepository>
+		<ContainerRepository>edvantix-api</ContainerRepository>
 	</PropertyGroup>
 
 	<ItemGroup>

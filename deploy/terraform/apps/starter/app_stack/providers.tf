@@ -13,7 +13,7 @@ provider "aws" {
     tags = merge(
       {
         Environment = var.environment
-        Project     = "dotnet-starter-kit"
+        Project     = "edvantix"
         ManagedBy   = "terraform"
       },
       var.owner != null ? { Owner = var.owner } : {}

@@ -24,7 +24,7 @@ param(
   [Parameter(Mandatory, HelpMessage = 'AWS region, e.g. us-east-1 or ap-south-1')][string]$Region,
   [switch]$BuildApi,
   [string]$ImageTag,
-  [string]$Registry = 'ghcr.io/fullstackhero',
+  [string]$Registry = 'ghcr.io/horesse',
   [switch]$SkipMigrate,
   [switch]$SeedDemo,
   [switch]$SkipFrontend,
@@ -33,8 +33,8 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $MinTfVersion = [version]'1.15.4'
-$ApiImageName = 'fsh-api'
-$MigratorImageName = 'fsh-db-migrator'
+$ApiImageName = 'edvantix-api'
+$MigratorImageName = 'edvantix-db-migrator'
 
 $ScriptDir = $PSScriptRoot
 $RepoRoot = (Resolve-Path "$ScriptDir/../../../..").Path
@@ -87,7 +87,7 @@ if ($BuildApi) {
   # registry host must be split out of the repository name (folding it into
   # ContainerRepository silently loads to the local Docker daemon instead).
   $registryHost = $Registry.Split('/')[0]                                   # e.g. ghcr.io
-  $registryPath = $Registry.Substring($registryHost.Length).TrimStart('/')  # e.g. fullstackhero
+  $registryPath = $Registry.Substring($registryHost.Length).TrimStart('/')  # e.g. horesse
   $apiRepo = if ($registryPath) { "$registryPath/$ApiImageName" } else { $ApiImageName }
   $migratorRepo = if ($registryPath) { "$registryPath/$MigratorImageName" } else { $MigratorImageName }
   Write-Host "==> Building & pushing API image $registryHost/$apiRepo`:$ImageTag"

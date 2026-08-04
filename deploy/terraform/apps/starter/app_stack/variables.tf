@@ -474,8 +474,8 @@ variable "alarm_email_addresses" {
 
 variable "container_registry" {
   type        = string
-  description = "Container registry URL (e.g., ghcr.io/fullstackhero)."
-  default     = "ghcr.io/fullstackhero"
+  description = "Container registry URL (e.g., ghcr.io/horesse)."
+  default     = "ghcr.io/horesse"
 }
 
 variable "container_image_tag" {
@@ -491,13 +491,13 @@ variable "container_image_tag" {
 variable "api_image_name" {
   type        = string
   description = "API container image name (without registry or tag)."
-  default     = "fsh-api"
+  default     = "edvantix-api"
 }
 
 variable "migrator_image_name" {
   type        = string
   description = "DbMigrator container image name (without registry or tag)."
-  default     = "fsh-db-migrator"
+  default     = "edvantix-db-migrator"
 }
 
 ################################################################################

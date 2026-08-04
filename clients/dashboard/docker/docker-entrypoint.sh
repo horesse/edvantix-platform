@@ -1,10 +1,10 @@
 #!/bin/sh
 set -e
 
-: "${FSH_API_URL:?FSH_API_URL is required (e.g. https://api.example.com)}"
-: "${FSH_DEFAULT_TENANT:=root}"
+: "${EDV_API_URL:?EDV_API_URL is required (e.g. https://api.example.com)}"
+: "${EDV_DEFAULT_TENANT:=root}"
 
-export FSH_API_URL FSH_DEFAULT_TENANT
+export EDV_API_URL EDV_DEFAULT_TENANT
 
 envsubst < /usr/share/nginx/html/config.json.template \
        > /usr/share/nginx/html/config.json

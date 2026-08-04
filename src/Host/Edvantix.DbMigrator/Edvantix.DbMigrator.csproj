@@ -14,7 +14,7 @@
          from $(Version), colliding with ContainerImageTags). -->
     <ContainerUser>1654</ContainerUser>
     <ContainerFamily>noble</ContainerFamily>
-    <ContainerRepository>fsh-db-migrator</ContainerRepository>
+    <ContainerRepository>edvantix-db-migrator</ContainerRepository>
 
     <!-- This is an internal operator-facing CLI — no localization, all
          operator messages are literal strings. CA1303 (use resource tables
