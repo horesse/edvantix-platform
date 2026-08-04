@@ -27,7 +27,7 @@ public sealed class UserPasswordServiceTests
     public UserPasswordServiceTests()
     {
         _userManager = Substitute.For<UserManager<FshUser>>(
-            Substitute.For<IUserStore<FshUser>>(), null, null, null, null, null, null, null, null);
+            Substitute.For<IUserStore<FshUser>>(), null!, null!, null!, null!, null!, null!, null!, null!);
         _jobService = Substitute.For<IJobService>();
         _mailService = Substitute.For<IMailService>();
         _tenantAccessor = Substitute.For<IMultiTenantContextAccessor<AppTenantInfo>>();
@@ -41,7 +41,7 @@ public sealed class UserPasswordServiceTests
         _jobService.Enqueue(Arg.Any<Expression<Func<Task>>>())
             .Returns(ci =>
             {
-                ci.Arg<Expression<Func<Task>>>().Compile().Invoke();
+                ci.Arg<Expression<Func<Task>>>()!.Compile().Invoke();
                 return "job-1";
             });
         _mailService.SendAsync(Arg.Any<MailRequest>(), Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);

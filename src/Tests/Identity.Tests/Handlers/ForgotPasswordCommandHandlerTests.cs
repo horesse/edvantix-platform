@@ -38,7 +38,7 @@ public sealed class ForgotPasswordCommandHandlerTests
 
         // Assert
         result.ShouldBe("Password reset email sent.");
-        await _userService.Received(1).ForgotPasswordAsync(command.Email, Arg.Is<string>(s => s.StartsWith(originUrl)), Arg.Any<CancellationToken>());
+        await _userService.Received(1).ForgotPasswordAsync(command.Email, Arg.Is<string>(s => s != null && s.StartsWith(originUrl)), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -74,6 +74,6 @@ public sealed class ForgotPasswordCommandHandlerTests
         await _sut.Handle(command, cts.Token);
 
         // Assert
-        await _userService.Received(1).ForgotPasswordAsync(command.Email, Arg.Is<string>(s => s.StartsWith(originUrl)), cts.Token);
+        await _userService.Received(1).ForgotPasswordAsync(command.Email, Arg.Is<string>(s => s!= null && s.StartsWith(originUrl)), cts.Token);
     }
 }
