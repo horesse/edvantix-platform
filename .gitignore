@@ -520,3 +520,13 @@ clients/**/.env.local
 # Audit dead-letter queue — runtime fallback when the audit pipeline cannot
 # reach its persistent sink. Local-only by design; never commit.
 **/audit-dlq/
+
+# Obsidian vault (docs/). Shared settings — appearance.json, core-plugins.json,
+# community-plugins.json, hotkeys.json, graph.json — stay tracked so the vault
+# opens the same way for everyone. Ignored below is per-user or volatile state.
+**/.obsidian/workspace.json
+**/.obsidian/workspace-mobile.json
+**/.obsidian/cache
+**/.obsidian/plugins/*/data.json
+# Obsidian's own trash, used when "Move to Obsidian trash" is the delete setting.
+**/.trash/
