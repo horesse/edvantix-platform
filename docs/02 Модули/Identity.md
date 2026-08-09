@@ -38,6 +38,19 @@ tags: [модуль, каркас, identity]
 `PermissionSet` (кэш прав), `RolePermissionSyncer` + hosted service,
 `PathAwareAuthorizationHandler`, `RequiredPermissionAuthorizationHandler`.
 
+### Роли школы
+
+`SchoolRoleConstants` (`SchoolAdmin`, `Manager`, `Teacher`, `Student`, `Guardian`) —
+обычные, не системные роли, сидируемые для каждого нетроевого тенанта
+(`IdentityDbInitializer.SeedRolesAsync`) и донасыщаемые новыми правами по мере
+регистрации новых модулей (`RolePermissionSyncer.SyncAsync`). В отличие от
+`Admin`/`Basic` (`RoleConstants.DefaultRoles`, защищённый файл BuildingBlocks),
+школа может их редактировать и удалять как любую свою роль. Бандл прав каждой
+роли строится `SchoolRolePermissions.Resolve` фильтром по каталогу
+`PermissionConstants.All`, а не явным перечислением — растёт сам по мере того,
+как [[People]], [[Curriculum]], [[StudyGroups]], [[Scheduling]], [[Payments]]
+регистрируют свои права. Подробности решений — [[Задачи · Доработки каркаса]].
+
 ## Контракты
 
 `Modules.Identity.Contracts`
@@ -98,7 +111,13 @@ tags: [модуль, каркас, identity]
 `Sessions`, `Groups`, `Impersonation`.
 
 Действия `Users`: `View` (basic) `Search` `Create` `Update` `Delete` `Export`
-`ManageRoles` `Impersonate` `ConfirmEmail`.
+`ManageRoles` `Impersonate` `ConfirmEmail` `Invite`.
+
+`Users.Invite` — зарезервировано под приглашение по e-mail без установки пароля
+приглашающим (см. [[Задачи · Доработки каркаса]]); сама команда/эндпоинт ещё не
+реализованы, право заведено заранее, потому что бандл роли `Manager` уже на него
+ссылается — единственное действие `Users`, которое получает эта роль, остальное
+управление пользователями остаётся за `SchoolAdmin`.
 
 Реестр прав — `PermissionConstants` в `BuildingBlocks/Shared`; каждый модуль
 регистрирует свои в `ConfigureServices`. Механика — [[Модель прав доступа]].

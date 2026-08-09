@@ -21,6 +21,13 @@ public static class IdentityPermissions
         public const string ManageRoles   = $"Permissions.{Resource}.ManageRoles";
         public const string Impersonate   = $"Permissions.{Resource}.Impersonate";
         public const string ConfirmEmail  = $"Permissions.{Resource}.ConfirmEmail";
+        /// <summary>
+        /// Send an e-mail invite for a new user to set their own password — narrower than
+        /// <see cref="Create"/> (which sets the password directly). Granted to the school
+        /// <c>Manager</c> role, which otherwise only gets <see cref="View"/> on Identity
+        /// resources — see <c>SchoolRolePermissions</c>.
+        /// </summary>
+        public const string Invite        = $"Permissions.{Resource}.Invite";
     }
 
     public static class UserRoles
@@ -85,6 +92,7 @@ public static class IdentityPermissions
         new("Manage User Roles",   "ManageRoles",          Users.Resource),
         new("Impersonate User",    "Impersonate",          Users.Resource),
         new("Confirm User Email",  "ConfirmEmail",         Users.Resource),
+        new("Invite User",         "Invite",               Users.Resource),
 
         new("View User Roles",     ActionConstants.View,   UserRoles.Resource, IsBasic: true),
         new("Update User Roles",   ActionConstants.Update, UserRoles.Resource),

@@ -2,6 +2,7 @@ using FSH.Framework.Caching;
 using FSH.Framework.Shared.Constants;
 using FSH.Framework.Shared.Identity.Claims;
 using FSH.Framework.Shared.Multitenancy;
+using FSH.Modules.Identity.Contracts.Authorization;
 using FSH.Modules.Identity.Data;
 using FSH.Modules.Identity.Domain;
 using Finbuckle.MultiTenant.Abstractions;
@@ -14,9 +15,17 @@ namespace FSH.Modules.Identity.Authorization;
 
 /// <summary>
 /// Adds missing permission claims to the built-in roles (<see cref="RoleConstants.Admin"/>,
-/// <see cref="RoleConstants.Basic"/>) for the current Finbuckle tenant context. Idempotent —
+/// <see cref="RoleConstants.Basic"/>) and, for non-root tenants, the seeded school roles
+/// (<see cref="SchoolRoleConstants"/>) for the current Finbuckle tenant context. Idempotent —
 /// only inserts claims that don't already exist, so it can run on every startup safely.
 /// </summary>
+/// <remarks>
+/// The school-roles top-up matters more here than for Admin/Basic: People/Curriculum/
+/// StudyGroups/Scheduling/Payments don't exist yet, so a tenant provisioned today seeds those
+/// roles with a near-empty bundle (see <see cref="SchoolRolePermissions"/>). This sync is what
+/// lets already-provisioned tenants pick up each module's permissions as it ships, without a
+/// one-off backfill migration.
+/// </remarks>
 public sealed class RolePermissionSyncer(
     IdentityDbContext context,
     RoleManager<FshRole> roleManager,
@@ -38,9 +47,23 @@ public sealed class RolePermissionSyncer(
             : PermissionConstants.Admin.ToList();
         int adminAdded = await SyncRoleAsync(RoleConstants.Admin, adminPermissions, cancellationToken).ConfigureAwait(false);
 
+        int schoolRolesAdded = 0;
+        if (!isRoot)
+        {
+            // School roles don't apply to the platform's own root tenant. SyncRoleAsync no-ops
+            // (returns 0) for a tenant provisioned before this feature shipped, whose IdentityDbInitializer
+            // never created these roles — that's fine, IdentityDbInitializer.SeedAsync creates them
+            // the next time the migrator runs `seed` for that tenant.
+            foreach (string roleName in SchoolRoleConstants.All)
+            {
+                var permissions = SchoolRolePermissions.Resolve(roleName, PermissionConstants.All);
+                schoolRolesAdded += await SyncRoleAsync(roleName, permissions, cancellationToken).ConfigureAwait(false);
+            }
+        }
+
         // If we wrote anything, drop the per-user permission cache so already-logged-in
         // sessions see the new perms on their next request rather than waiting for TTL.
-        if (basicAdded + adminAdded > 0)
+        if (basicAdded + adminAdded + schoolRolesAdded > 0)
         {
             await cache.RemoveByTagAsync(CacheKeys.Tags.Permissions, cancellationToken).ConfigureAwait(false);
         }

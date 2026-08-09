@@ -2,6 +2,8 @@ using Finbuckle.MultiTenant.Abstractions;
 using FSH.Framework.Persistence;
 using FSH.Framework.Shared.Constants;
 using FSH.Framework.Shared.Multitenancy;
+using FSH.Modules.Identity.Authorization;
+using FSH.Modules.Identity.Contracts.Authorization;
 using FSH.Modules.Identity.Domain;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -65,6 +67,31 @@ internal sealed class IdentityDbInitializer(
                     await AssignPermissionsToRoleAsync(context, PermissionConstants.Root, role, cancellationToken);
                 }
             }
+        }
+
+        // School roles (SchoolAdmin/Manager/Teacher/Student/Guardian) are product-facing and only
+        // make sense for a school, not the platform's own root tenant.
+        if (multiTenantContextAccessor.MultiTenantContext.TenantInfo?.Id != MultitenancyConstants.Root.Id)
+        {
+            await SeedSchoolRolesAsync(cancellationToken);
+        }
+    }
+
+    private async Task SeedSchoolRolesAsync(CancellationToken cancellationToken = default)
+    {
+        foreach (string roleName in SchoolRoleConstants.All)
+        {
+            if (await roleManager.Roles.SingleOrDefaultAsync(r => r.Name == roleName, cancellationToken)
+                is not FshRole role)
+            {
+                role = new FshRole(roleName, $"{roleName} Role for {multiTenantContextAccessor.MultiTenantContext.TenantInfo?.Id} Tenant");
+                await roleManager.CreateAsync(role);
+            }
+
+            // Unlike Admin/Basic above, these are ordinary roles a school can edit or delete —
+            // RoleConstants.DefaultRoles deliberately does not include them (see SchoolRoleConstants).
+            var permissions = SchoolRolePermissions.Resolve(roleName, PermissionConstants.All);
+            await AssignPermissionsToRoleAsync(context, permissions, role, cancellationToken);
         }
     }
 
