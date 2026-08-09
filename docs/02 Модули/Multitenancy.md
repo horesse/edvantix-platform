@@ -22,13 +22,18 @@ tags: [модуль, каркас, multitenancy]
 |---|---|
 | `AppTenantInfo` | тенант Finbuckle: идентификатор, имя, строка подключения, срок действия |
 | `TenantTheme` | брендирование: цвета, логотип |
+| `TenantSettings` | часовой пояс (IANA `TimeZoneId`, по умолчанию `UTC`) и валюта (ISO 4217 `Currency`, по умолчанию `USD`) школы |
 | `TenantExpiryNotice` | уведомления о приближении окончания срока |
 | `TenantProvisioning`, `TenantProvisioningStep` | пошаговый провижининг со статусами и повтором |
 
 `AppTenantInfo` объявлен в `src/BuildingBlocks/Shared/Multitenancy/` — защищённом
 каталоге; прикладные поля школы (часовой пояс, валюта, настройки) туда не добавляются,
-для них заводится `TenantSettings` в этом модуле по образцу `TenantTheme`.
-См. [[Задачи · Доработки каркаса]].
+для них заведён `TenantSettings` в этом модуле по образцу `TenantTheme`: явная
+`TenantId`-колонка с уникальным индексом в `TenantDbContext` (глобальный реестр, не
+изолированный per-tenant контекст). Задаётся при создании школы (`CreateTenantCommand`,
+необязательные поля с дефолтом UTC/USD) и бэкофиллен для существующих тенантов в
+миграции `AddTenantSettings`. Root-тенант получает настройки по умолчанию при сидировании
+в `Edvantix.DbMigrator`. См. [[Задачи · Доработки каркаса]].
 
 `TenantDbContext` + `TenantDbContextFactory` — реестр тенантов, глобальный
 (вне изоляции).
@@ -41,17 +46,17 @@ tags: [модуль, каркас, multitenancy]
 
 `CreateTenantCommand` · `ChangeTenantActivationCommand` · `AdjustTenantValidityCommand` ·
 `RenewTenantCommand` · `UpdateTenantThemeCommand` · `ResetTenantThemeCommand` ·
-`RetryTenantProvisioningCommand`
+`UpdateTenantSettingsCommand` · `RetryTenantProvisioningCommand`
 
 ### Запросы
 
 `GetTenantsQuery` · `GetTenantStatusQuery` · `GetTenantThemeQuery` ·
-`GetTenantMigrationsQuery` · `GetTenantProvisioningStatusQuery`
+`GetTenantSettingsQuery` · `GetTenantMigrationsQuery` · `GetTenantProvisioningStatusQuery`
 
 ### DTO
 
-`TenantDto` · `TenantStatusDto` · `TenantThemeDto` · `TenantLifecycleResultDto` ·
-`TenantMigrationStatusDto` · `TenantProvisioningStatusDto`
+`TenantDto` · `TenantStatusDto` · `TenantThemeDto` · `TenantSettingsDto` ·
+`TenantLifecycleResultDto` · `TenantMigrationStatusDto` · `TenantProvisioningStatusDto`
 
 ### Публикуемые события
 
@@ -67,13 +72,15 @@ tags: [модуль, каркас, multitenancy]
 
 ### Сервисы
 
-`ITenantService` · `ITenantThemeService`
+`ITenantService` · `ITenantThemeService` · `ITenantSettingsService`
 
 ## Права
 
-`MultitenancyPermissions`, ресурс `Tenants`. Кросс-тенантные операции — через
-`SystemPermissions.Platform.Tenants` с флагом `IsRoot: true`: доступны только
-`SuperAdmin` в root-тенанте.
+`MultitenancyPermissions`, ресурсы `Tenants` и `SchoolSettings`. Кросс-тенантные
+операции — через `SystemPermissions.Platform.Tenants` с флагом `IsRoot: true`:
+доступны только `SuperAdmin` в root-тенанте. `SchoolSettings` — тенантного уровня:
+`View` (`IsBasic: true`, всем аутентифицированным) и `Manage` (сейчас достаётся роли
+`Admin`, до появления сида роли `SchoolAdmin`).
 
 ## HTTP API
 
@@ -87,6 +94,7 @@ GET    /api/v1/tenants/{id}/migrations
 GET    /api/v1/tenants/{id}/provisioning
 POST   /api/v1/tenants/{id}/provisioning/retry
 GET    /api/v1/tenants/{id}/theme                + обновление и сброс
+GET    /api/v1/tenants/settings                  + обновление (PUT)
 GET    /api/v1/tenants/me/status
 ```
 

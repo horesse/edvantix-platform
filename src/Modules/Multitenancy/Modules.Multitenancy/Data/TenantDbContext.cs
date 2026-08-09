@@ -21,6 +21,8 @@ public class TenantDbContext : EFCoreStoreDbContext<AppTenantInfo>
 
     public DbSet<TenantTheme> TenantThemes => Set<TenantTheme>();
 
+    public DbSet<TenantSettings> TenantSettings => Set<TenantSettings>();
+
     public DbSet<TenantExpiryNotice> TenantExpiryNotices => Set<TenantExpiryNotice>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

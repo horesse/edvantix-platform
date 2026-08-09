@@ -2,10 +2,11 @@
 using FSH.Framework.Persistence;
 using FSH.Modules.Multitenancy.Contracts;
 using FSH.Modules.Multitenancy.Contracts.v1.CreateTenant;
+using System.Text.RegularExpressions;
 
 namespace FSH.Modules.Multitenancy.Features.v1.CreateTenant;
 
-public sealed class CreateTenantCommandValidator : AbstractValidator<CreateTenantCommand>
+public sealed partial class CreateTenantCommandValidator : AbstractValidator<CreateTenantCommand>
 {
     public CreateTenantCommandValidator(ITenantService tenantService, IConnectionStringValidator connectionStringValidator)
     {
@@ -40,5 +41,20 @@ public sealed class CreateTenantCommandValidator : AbstractValidator<CreateTenan
             .Matches("^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$")
             .When(t => !string.IsNullOrWhiteSpace(t.PlanKey))
             .WithMessage("Plan key must be a lowercase slug (a-z, 0-9, hyphen).");
+
+        // Both optional — null/empty falls back to UTC / USD in the handler. When supplied they
+        // must be valid, same rules as UpdateTenantSettingsCommandValidator.
+        RuleFor(t => t.TimeZoneId)
+            .Must(tz => TimeZoneInfo.TryFindSystemTimeZoneById(tz!, out _))
+            .When(t => !string.IsNullOrWhiteSpace(t.TimeZoneId))
+            .WithMessage("TimeZoneId must be a valid IANA time zone identifier.");
+
+        RuleFor(t => t.Currency)
+            .Must(c => CurrencyCodeRegex().IsMatch(c!))
+            .When(t => !string.IsNullOrWhiteSpace(t.Currency))
+            .WithMessage("Currency must be a 3-letter ISO 4217 code (e.g. USD).");
     }
+
+    [GeneratedRegex("^[A-Za-z]{3}$")]
+    private static partial Regex CurrencyCodeRegex();
 }

@@ -12,6 +12,7 @@ namespace FSH.Modules.Multitenancy.Features.v1.CreateTenant;
 
 public sealed class CreateTenantCommandHandler(
     ITenantService tenantService,
+    ITenantSettingsService settingsService,
     ITenantProvisioningService provisioningService,
     ITenantInitialPasswordBuffer passwordBuffer,
     IMediator mediator,
@@ -42,6 +43,15 @@ public sealed class CreateTenantCommandHandler(
             command.Issuer,
             term.Key,
             periodEnd,
+            cancellationToken).ConfigureAwait(false);
+
+        // Values are set at creation time, not left to a later edit — a generated schedule built
+        // before the school's real time zone is chosen would be wrong from the first lesson.
+        // Falls back to UTC / USD when the caller doesn't supply either.
+        await settingsService.CreateAsync(
+            tenantId,
+            command.TimeZoneId,
+            command.Currency,
             cancellationToken).ConfigureAwait(false);
 
         // Buffer the admin password for IdentityDbInitializer's background seed step,

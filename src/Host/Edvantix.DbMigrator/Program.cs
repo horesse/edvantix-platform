@@ -13,6 +13,7 @@ using FSH.Modules.Multitenancy;
 using FSH.Modules.Multitenancy.Contracts;
 using FSH.Modules.Multitenancy.Contracts.v1.GetTenantStatus;
 using FSH.Modules.Multitenancy.Data;
+using FSH.Modules.Multitenancy.Domain;
 using FSH.Modules.Multitenancy.Features.v1.GetTenantStatus;
 using FSH.Modules.Tickets;
 using FSH.Modules.Webhooks;
@@ -235,6 +236,25 @@ try
             await tenantDb.TenantInfo.AddAsync(rootTenant, CancellationToken.None).ConfigureAwait(false);
             await tenantDb.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
             await Console.Out.WriteLineAsync("[tenant-catalog] seeded root tenant").ConfigureAwait(false);
+        }
+
+        // Root tenant gets settings with default values (UTC / USD) too — cheaper than branching
+        // on null everywhere a caller resolves the root tenant's settings. Checked unconditionally
+        // (not just when the tenant itself was just seeded) so upgrading an existing install still
+        // backfills the row.
+        if (cli.Command != "list-pending")
+        {
+            var hasRootSettings = await tenantDb.TenantSettings
+                .AnyAsync(s => s.TenantId == MultitenancyConstants.Root.Id, CancellationToken.None)
+                .ConfigureAwait(false);
+            if (!hasRootSettings)
+            {
+                await tenantDb.TenantSettings.AddAsync(
+                    TenantSettings.Create(MultitenancyConstants.Root.Id),
+                    CancellationToken.None).ConfigureAwait(false);
+                await tenantDb.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
+                await Console.Out.WriteLineAsync("[tenant-catalog] seeded root tenant settings").ConfigureAwait(false);
+            }
         }
     }
 

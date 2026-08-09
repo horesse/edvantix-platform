@@ -35,6 +35,9 @@ public static class CacheKeys
     /// <summary>Key for the system-wide default theme.</summary>
     public const string DefaultTheme = "theme:default";
 
+    /// <summary>Key for a tenant's settings (time zone, currency, ...).</summary>
+    public static string TenantSettings(string tenantId) => $"settings:t:{tenantId}";
+
     /// <summary>Key for an idempotency replay entry, scoped by tenant.</summary>
     public static string IdempotencyEntry(string tenantId, string key) => $"idem:t:{tenantId}:{key}";
 

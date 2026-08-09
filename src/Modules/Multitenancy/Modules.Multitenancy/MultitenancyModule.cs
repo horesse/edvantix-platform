@@ -19,9 +19,11 @@ using FSH.Modules.Multitenancy.Features.v1.CreateTenant;
 using FSH.Modules.Multitenancy.Features.v1.GetMyTenantStatus;
 using FSH.Modules.Multitenancy.Features.v1.GetTenantMigrations;
 using FSH.Modules.Multitenancy.Features.v1.GetTenants;
+using FSH.Modules.Multitenancy.Features.v1.GetTenantSettings;
 using FSH.Modules.Multitenancy.Features.v1.GetTenantStatus;
 using FSH.Modules.Multitenancy.Features.v1.GetTenantTheme;
 using FSH.Modules.Multitenancy.Features.v1.ResetTenantTheme;
+using FSH.Modules.Multitenancy.Features.v1.UpdateTenantSettings;
 using FSH.Modules.Multitenancy.Features.v1.TenantProvisioning.GetTenantProvisioningStatus;
 using FSH.Modules.Multitenancy.Features.v1.TenantProvisioning.RetryTenantProvisioning;
 using FSH.Modules.Multitenancy.Features.v1.RenewTenant;
@@ -56,6 +58,7 @@ public sealed class MultitenancyModule : IModule
 
         builder.Services.AddScoped<ITenantService, TenantService>();
         builder.Services.AddScoped<ITenantThemeService, TenantThemeService>();
+        builder.Services.AddScoped<ITenantSettingsService, TenantSettingsService>();
         builder.Services.AddTransient<IConnectionStringValidator, ConnectionStringValidator>();
         builder.Services.AddScoped<ITenantProvisioningService, TenantProvisioningService>();
         builder.Services.AddTransient<TenantProvisioningJob>();
@@ -233,6 +236,10 @@ public sealed class MultitenancyModule : IModule
         GetTenantThemeEndpoint.Map(group);
         UpdateTenantThemeEndpoint.Map(group);
         ResetTenantThemeEndpoint.Map(group);
+
+        // Settings endpoints
+        GetTenantSettingsEndpoint.Map(group);
+        UpdateTenantSettingsEndpoint.Map(group);
 
         var jobManager = endpoints.ServiceProvider.GetService<IRecurringJobManager>();
         if (jobManager is not null)
