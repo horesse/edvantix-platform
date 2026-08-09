@@ -2,8 +2,8 @@
 
 Tenant catalog, provisioning, activation/upgrade, per-tenant theming (Finbuckle.MultiTenant). Foundational — registered early.
 
-**Entities / DbContext:** `AppTenantInfo` (catalog), `TenantProvisioning` + `TenantProvisioningStep`, `TenantTheme`. `TenantDbContext` holds the tenant catalog in the main DB.
-**Areas:** CreateTenant, ChangeTenantActivation, UpgradeTenant, Get(Tenants/Status/Migrations), TenantProvisioning (status/retry), TenantTheme (get/update/reset). Full list: `Features/v1/` or `/scalar`.
+**Entities / DbContext:** `AppTenantInfo` (catalog), `TenantProvisioning` + `TenantProvisioningStep`, `TenantTheme`, `TenantSettings`. `TenantDbContext` holds the tenant catalog in the main DB.
+**Areas:** CreateTenant, ChangeTenantActivation, UpgradeTenant, Get(Tenants/Status/Migrations), TenantProvisioning (status/retry), TenantTheme (get/update/reset), TenantSettings (get/update). Full list: `Features/v1/` or `/scalar`.
 
 ## Gotchas
 
@@ -12,5 +12,6 @@ Tenant catalog, provisioning, activation/upgrade, per-tenant theming (Finbuckle.
 - **`ITenantInitialPasswordBuffer`** (singleton) — the tenant admin password is **operator-supplied**, not a constant. `CreateTenantCommandHandler` calls `Store(tenantId, password)` **before** kicking off provisioning; the background seed step `TryConsume`s it (`ConcurrentDictionary`, consume = remove).
 - **Provisioning** runs 4 steps (Database → Migrations → Seeding → CacheWarm) via a Hangfire `TenantProvisioningJob`, falling back to inline execution if Hangfire storage is unavailable. **Activation is gated on `Status == Completed`.**
 - `ITenantService.MigrateTenantAsync`/`SeedTenantAsync` create a fresh scope and set `IMultiTenantContext` **first**, then run the `IDbInitializer`s.
+- **`TenantSettings`** (time zone + currency) — created eagerly at `CreateTenantCommandHandler` time (not lazily on first read like `TenantTheme`), because a scheduling/billing consumer needs the real value from the tenant's first day, not a UTC/USD placeholder that later silently changes underneath already-generated data. `CreateTenantCommand.TimeZoneId`/`Currency` are optional and fall back to UTC/USD. Existing tenants were backfilled with UTC/USD in migration `AddTenantSettings`; the root tenant gets the same defaults via `Edvantix.DbMigrator`'s root-tenant seed step. `ITenantSettingsService.GetAsync` still falls back to `TenantSettingsDto.Default` defensively if a row is somehow missing.
 
 Tenant **isolation** mechanics (default-on filter, `IGlobalEntity` opt-out, `base.OnModelCreating` last) live in `database.md`.
