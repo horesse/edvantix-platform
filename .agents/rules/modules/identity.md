@@ -28,6 +28,10 @@ Auth (JWT + ASP.NET Identity), users, roles, permissions, sessions, impersonatio
 
 These are the model for background loops: stay alive, log with context, never swallow cancellation. See `api-conventions.md`.
 
+## School roles
+
+`SchoolRoleConstants` (`SchoolAdmin`, `Manager`, `Teacher`, `Student`, `Guardian`) are ordinary, non-system roles seeded per non-root tenant — **not** added to `RoleConstants.DefaultRoles` (that list is BuildingBlocks-protected and marks framework roles a school can't edit/delete; these five must stay editable). `SchoolRolePermissions.Resolve(roleName, catalog)` builds each role's bundle by *filtering* `PermissionConstants.All` (SchoolAdmin = all non-root; Manager = same minus non-`View` Identity actions plus `Users.Invite`; Teacher/Student/Guardian = `*.ViewOwn` convention + a short exception list) rather than enumerating permission names — so bundles grow automatically as People/Curriculum/StudyGroups/Scheduling/Payments register permissions in later releases. Two call sites must stay in sync: `IdentityDbInitializer.SeedRolesAsync` (initial seed, skips root) and `RolePermissionSyncer.SyncAsync` (periodic top-up for already-provisioned tenants — required here, not optional, since those five modules don't exist yet).
+
 ## Tokens / sessions
 
 Login `POST /api/v1/identity/token/issue` (header `X-FSH-App` enforces the operator/tenant app boundary). Refresh `POST /api/v1/identity/token/refresh` cross-checks subject. Session rows are written best-effort during login — failures log a warning and login still succeeds. Admin can't demote/deactivate the last admin or the root-tenant seed admin (guards in `UserRoleService`/`UserStatusService`).

@@ -79,8 +79,8 @@ tags: [модуль, каркас, multitenancy]
 `MultitenancyPermissions`, ресурсы `Tenants` и `SchoolSettings`. Кросс-тенантные
 операции — через `SystemPermissions.Platform.Tenants` с флагом `IsRoot: true`:
 доступны только `SuperAdmin` в root-тенанте. `SchoolSettings` — тенантного уровня:
-`View` (`IsBasic: true`, всем аутентифицированным) и `Manage` (сейчас достаётся роли
-`Admin`, до появления сида роли `SchoolAdmin`).
+`View` (`IsBasic: true`, всем аутентифицированным) и `Manage` (роли `Admin` и
+`SchoolAdmin` — обе получают полный не-root бандл, см. [[Identity]]).
 
 ## HTTP API
 
