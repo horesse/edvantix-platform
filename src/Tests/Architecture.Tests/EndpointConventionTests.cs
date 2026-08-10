@@ -282,7 +282,9 @@ public class EndpointConventionTests
                                name.StartsWith("Unpin", StringComparison.Ordinal) ||
                                name.StartsWith("Link", StringComparison.Ordinal) ||
                                name.StartsWith("Unlink", StringComparison.Ordinal) ||
-                               name.StartsWith("Import", StringComparison.Ordinal);
+                               name.StartsWith("Import", StringComparison.Ordinal) ||
+                               name.StartsWith("Publish", StringComparison.Ordinal) ||
+                               name.StartsWith("Duplicate", StringComparison.Ordinal);
 
                 if (!hasVerb)
                 {

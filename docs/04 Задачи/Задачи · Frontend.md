@@ -64,10 +64,55 @@ tags: [задачи, frontend]
 
 ### Этап 2 · Curriculum
 
-- [ ] `/subjects` — дерево направлений
-- [ ] `/courses` — список, фильтры по направлению, статусу, уровню
-- [ ] `/courses/:id` — **конструктор курса**: дерево разделов и уроков с
-      перетаскиванием, инлайн-правкой и автосохранением; материалы урока
+> [!note] ✅ Backend готов — можно начинать
+> Модуль [[Curriculum]] полностью реализован (см. [[Задачи · Новые модули]]): все эндпоинты
+> из `HTTP API` в справочнике работают, права `CurriculumPermissions` зарегистрированы
+> (`Subjects`/`Courses`/`Lessons`/`LessonMaterials`). Роутинг плоский, без сегмента
+> `/curriculum` — как у People. Разделы курса (`CourseModule`) не имеют отдельного ресурса
+> прав, их CRUD гейтится `Courses.Update` — учитывать в проверках `perm`/`anyPerm` на UI.
+
+- [ ] `src/api/curriculum.ts` — обёртка над `apiFetch`: типы `SubjectDto`/`SubjectNodeDto`/
+      `CourseDto`/`CourseDetailDto`/`CourseModuleDto`/`LessonDto`/`LessonMaterialDto`/
+      `PagedResponse<T>` вручную по контрактам (см. [[Curriculum]] → «Контракты»); enum'ы
+      `CourseLevel`/`CourseStatus`/`MaterialKind` — string union, сериализуются как строки;
+      ключи TanStack Query на `subjects`/`courses`/`lessons`
+- [ ] `/subjects` — дерево направлений (`GET /subjects/tree` → `SubjectNodeDto[]`, право
+      `Subjects.View`), инлайн создание/переименование/удаление узла (`POST`/`PUT`/`DELETE
+      /subjects/{id}`, право `Subjects.Create`/`Update`/`Delete`), перетаскивание для
+      `PUT /subjects/order` (`ReorderSubjectsCommand` — принимает `parentId` и упорядоченный
+      список id **только для одного уровня**, т.е. drag-n-drop работает в пределах родителя)
+- [ ] `/courses` — список (`GET /courses`, право `Courses.View`), фильтры по направлению
+      (`subjectId`), статусу (`Draft`/`Published`/`Archived`) и уровню (`CourseLevel`),
+      пагинация и сортировка (`sortBy=title|createdAtUtc|durationHours`); отдельная вкладка/
+      маршрут `/courses/trash` (`GET /courses/trash`, право `Courses.ViewTrash`) с кнопкой
+      восстановления (`POST /courses/{id}/restore`, право `Courses.Restore`)
+- [ ] `/courses/:id` — **конструктор курса**: карточка курса (редактирование `title`/
+      `description`/`level`/`durationHours`/`subjectId`/`coverFileId` через `PUT /courses/{id}`,
+      право `Courses.Update`) + дерево разделов и уроков ниже. `GET /courses/{id}` возвращает
+      `CourseDetailDto` с готовым деревом `modules[].lessons[]` — отдельного запроса на дерево
+      не нужно. Кнопки жизненного цикла: «Опубликовать» (`POST .../publish`, право
+      `Courses.Publish`; сервер вернёт 409, если у курса нет ни одного раздела — показать
+      причину, не глотать ошибку), «Архивировать» (`POST .../archive`, тоже `Courses.Publish`),
+      «Дублировать» (`POST .../duplicate` → редирект на новый `id`, право `Courses.Create`),
+      «Удалить» (`DELETE /courses/{id}` → в корзину, право `Courses.Delete`)
+  - [ ] Дерево разделов: создание раздела (`POST /courses/{id}/modules`, право
+        `Courses.Update`), инлайн-правка названия/описания (`PUT /modules/{id}`), удаление
+        (`DELETE /modules/{id}` — предупредить, что каскадно удалит уроки и материалы раздела),
+        перетаскивание (`PUT /courses/{id}/modules/reorder`)
+  - [ ] Уроки внутри раздела: создание (`POST /modules/{id}/lessons`, право
+        `Lessons.Create`), инлайн-правка title/objectives/content/durationMinutes
+        (`PUT /lessons/{id}`, `Lessons.Update`), удаление (`DELETE /lessons/{id}`,
+        `Lessons.Delete` — каскадно удаляет материалы урока), перетаскивание
+        (`PUT /modules/{id}/lessons/reorder`); автосохранение по правилу 9 AGENTS.md —
+        передавать `lessonId`/поля через `mutate(arg)`, не через состояние формы, которое
+        замыкают колбэки
+  - [ ] Материалы урока (панель на карточке урока): список (`GET /lessons/{id}/materials`,
+        право `LessonMaterials.View`), добавление (`POST /lessons/{id}/materials`, право
+        `LessonMaterials.Manage`) — форма переключает «файл» (через presigned-загрузку
+        [[Files]], передаётся `fileId`) или «ссылка» (`url`), **ровно одно из двух** —
+        валидировать на клиенте до отправки, сервер вернёт 400 при нарушении; переключатель
+        `VisibleToStudents`; удаление (`DELETE /materials/{id}`); перетаскивание
+        (`PUT /lessons/{id}/materials/reorder`)
 
 ### Этап 3 · StudyGroups
 

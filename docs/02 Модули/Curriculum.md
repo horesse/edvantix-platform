@@ -1,6 +1,6 @@
 ---
 tags: [модуль, новый, curriculum]
-статус: проектируется
+статус: реализован
 порядок: 600
 схема: curriculum
 ---
@@ -9,7 +9,19 @@ tags: [модуль, новый, curriculum]
 
 ← [[Edvantix]] · [[Карта модулей]] · задачи: [[Задачи · Новые модули]]
 
-> 🟡 Проектируется · порядок `600` · схема `curriculum`
+> ✅ Реализован · порядок `600` · схема `curriculum`
+>
+> Домен, миграция, CRUD/дерево/поиск для пяти сущностей, публикация/архивация/дублирование/
+> корзина курса, перестановка на каждом уровне, материалы урока с CHECK-ограничением,
+> `LessonMaterialAccessPolicy`, `ICourseQueryService`, три интеграционных события — всё сделано.
+> `dotnet build` — 0 предупреждений/0 ошибок, `Architecture.Tests` — 51/51,
+> `Curriculum.Tests` (юнит) — 25/25, интеграционные тесты изоляции тенантов — 5/5 (плюс контроль:
+> People 7/7 и Catalog без регрессии — суммарно 114/114 в общем прогоне).
+>
+> Проектные решения, принятые при реализации (плоская персистентность вместо вложенного
+> агрегата, мягкое удаление только у `Course`, семантика дублирования и т.д.) — подробно в
+> [[Задачи · Новые модули]] → Curriculum → «Проектные решения», кратко — в
+> `.agents/rules/modules/curriculum.md`.
 
 ## Назначение
 
@@ -178,10 +190,16 @@ public interface ICourseQueryService
 
 ## HTTP API
 
+Плоский роутинг без сегмента `/curriculum` — как у [[People]], не как у Catalog.
+
 ```
 GET    /api/v1/subjects/tree
-POST   /api/v1/subjects                        + CRUD
+POST   /api/v1/subjects
+PUT    /api/v1/subjects/{id}
+DELETE /api/v1/subjects/{id}
+PUT    /api/v1/subjects/order                  ReorderSubjectsCommand
 
+GET    /api/v1/courses/trash                   ListTrashedCoursesQuery (право Courses.ViewTrash)
 GET    /api/v1/courses
 POST   /api/v1/courses
 GET    /api/v1/courses/{id}
@@ -190,10 +208,17 @@ DELETE /api/v1/courses/{id}
 POST   /api/v1/courses/{id}/publish
 POST   /api/v1/courses/{id}/archive
 POST   /api/v1/courses/{id}/duplicate
+POST   /api/v1/courses/{id}/restore
 
-POST   /api/v1/courses/{id}/modules            + CRUD
+POST   /api/v1/courses/{id}/modules
+PUT    /api/v1/modules/{id}
+DELETE /api/v1/modules/{id}
 PUT    /api/v1/courses/{id}/modules/reorder
-POST   /api/v1/modules/{id}/lessons            + CRUD
+
+POST   /api/v1/modules/{id}/lessons
+PUT    /api/v1/lessons/{id}
+DELETE /api/v1/lessons/{id}
+GET    /api/v1/lessons/{id}
 PUT    /api/v1/modules/{id}/lessons/reorder
 
 GET    /api/v1/lessons/{id}/materials
@@ -203,7 +228,8 @@ PUT    /api/v1/lessons/{id}/materials/reorder
 ```
 
 `duplicate` — рабочий сценарий: школы правят программу от потока к потоку, а менять
-курс, по которому уже идут занятия, рискованно.
+курс, по которому уже идут занятия, рискованно. Модули (разделы) курса не имеют отдельного
+ресурса прав — их CRUD и перестановка гейтятся `Courses.Update`.
 
 ## Зависимости
 

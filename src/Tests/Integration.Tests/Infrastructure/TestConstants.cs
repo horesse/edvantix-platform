@@ -21,4 +21,8 @@ public static class TestConstants
     /// docs/02 Модули/People.md and PeopleModule.MapEndpoints. Only /people/me/scope
     /// carries the "/people" segment.</summary>
     public const string PeopleBasePath = "/api/v1";
+
+    /// <summary>Curriculum uses flat resource routing (no "/curriculum" segment), same
+    /// convention as People — see docs/02 Модули/Curriculum.md and CurriculumModule.MapEndpoints.</summary>
+    public const string CurriculumBasePath = "/api/v1";
 }
