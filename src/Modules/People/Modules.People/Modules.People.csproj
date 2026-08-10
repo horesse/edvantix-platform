@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<RootNamespace>FSH.Modules.People</RootNamespace>
+		<AssemblyName>FSH.Modules.People</AssemblyName>
+		<NoWarn>$(NoWarn);CA1031;CA1812;CA1859;S3267</NoWarn>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\..\BuildingBlocks\Caching\Caching.csproj" />
+		<ProjectReference Include="..\..\..\BuildingBlocks\Eventing\Eventing.csproj" />
+		<ProjectReference Include="..\..\..\BuildingBlocks\Persistence\Persistence.csproj" />
+		<ProjectReference Include="..\..\..\BuildingBlocks\Web\Web.csproj" />
+		<ProjectReference Include="..\Modules.People.Contracts\Modules.People.Contracts.csproj" />
+		<ProjectReference Include="..\..\Identity\Modules.Identity.Contracts\Modules.Identity.Contracts.csproj" />
+		<ProjectReference Include="..\..\Files\Modules.Files.Contracts\Modules.Files.Contracts.csproj" />
+	</ItemGroup>
+
+</Project>

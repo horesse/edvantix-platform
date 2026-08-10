@@ -16,4 +16,9 @@ public static class TestConstants
     public const string WebhooksBasePath = "/api/v1/webhooks";
     public const string CatalogBasePath = "/api/v1/catalog";
     public const string TicketsBasePath = "/api/v1";
+
+    /// <summary>People uses flat resource routing (no "/people" segment) — see
+    /// docs/02 Модули/People.md and PeopleModule.MapEndpoints. Only /people/me/scope
+    /// carries the "/people" segment.</summary>
+    public const string PeopleBasePath = "/api/v1";
 }

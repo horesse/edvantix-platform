@@ -257,6 +257,8 @@ public class EndpointConventionTests
                                name.StartsWith("Verify", StringComparison.Ordinal) ||
                                name.StartsWith("Disable", StringComparison.Ordinal) ||
                                name.StartsWith("Enable", StringComparison.Ordinal) ||
+                               name.StartsWith("Activate", StringComparison.Ordinal) ||
+                               name.StartsWith("Deactivate", StringComparison.Ordinal) ||
                                name.StartsWith("Restore", StringComparison.Ordinal) ||
                                name.StartsWith("Adjust", StringComparison.Ordinal) ||
                                name.StartsWith("Resolve", StringComparison.Ordinal) ||
@@ -277,7 +279,10 @@ public class EndpointConventionTests
                                name.StartsWith("Send", StringComparison.Ordinal) ||
                                name.StartsWith("Discover", StringComparison.Ordinal) ||
                                name.StartsWith("Pin", StringComparison.Ordinal) ||
-                               name.StartsWith("Unpin", StringComparison.Ordinal);
+                               name.StartsWith("Unpin", StringComparison.Ordinal) ||
+                               name.StartsWith("Link", StringComparison.Ordinal) ||
+                               name.StartsWith("Unlink", StringComparison.Ordinal) ||
+                               name.StartsWith("Import", StringComparison.Ordinal);
 
                 if (!hasVerb)
                 {
