@@ -1,6 +1,6 @@
 ---
 tags: [модуль, новый, people]
-статус: проектируется
+статус: реализован
 порядок: 550
 схема: people
 ---
@@ -9,7 +9,19 @@ tags: [модуль, новый, people]
 
 ← [[Edvantix]] · [[Карта модулей]] · задачи: [[Задачи · Новые модули]]
 
-> 🟡 Проектируется · порядок `550` · схема `people`
+> ✅ Реализован · порядок `550` · схема `people`
+>
+> Домен, миграция, CRUD/поиск для трёх сущностей, жизненный цикл ученика, представители,
+> привязка учётной записи, заметки, `IPeopleScopeResolver`, `IPeopleLookupService`, импорт CSV —
+> всё сделано, юнит- и интеграционные тесты зелёные (36 + 7). Не хватает только
+> `GetTeacherWorkloadQuery` (сознательно отложено до [[StudyGroups]]).
+>
+> [!warning] Известный, не исправленный вопрос по `BuildingBlocks/Eventing`
+> `AddEventingForDbContext<T>()` регистрирует `IOutboxStore` без ключа — при двух и более
+> модулях, использующих его (сейчас People и Identity), не-ключевой DI отдаёт **последнюю**
+> регистрацию всем. Тесты зелёные, но это тихая порча схемы у Identity. Требует правки
+> защищённого `src/BuildingBlocks/Eventing/ServiceCollectionExtensions.cs` — нужно согласование.
+> Подробности — [[Задачи · Новые модули]].
 
 ## Назначение
 
@@ -104,34 +116,47 @@ erDiagram
 
 ### Команды
 
-| Команда | Область |
-|---|---|
-| `CreateStudentCommand` · `UpdateStudentCommand` · `DeleteStudentCommand` | Students |
-| `ArchiveStudentCommand` · `RestoreStudentCommand` | Students |
-| `LinkStudentUserCommand` · `UnlinkStudentUserCommand` | Students |
-| `AddStudentGuardianCommand` · `RemoveStudentGuardianCommand` · `SetPrimaryPayerCommand` | Students |
-| `AddStudentNoteCommand` · `DeleteStudentNoteCommand` | Students |
-| `ImportStudentsCommand` | Students |
-| `CreateTeacherCommand` · `UpdateTeacherCommand` · `DeleteTeacherCommand` · `DeactivateTeacherCommand` | Teachers |
-| `CreateGuardianCommand` · `UpdateGuardianCommand` · `DeleteGuardianCommand` | Guardians |
+| Команда                                                                                               | Область   |
+| ----------------------------------------------------------------------------------------------------- | --------- |
+| `CreateStudentCommand` · `UpdateStudentCommand` · `DeleteStudentCommand`                              | Students  |
+| `ArchiveStudentCommand` · `RestoreStudentCommand`                                                     | Students  |
+| `LinkStudentUserCommand` · `UnlinkStudentUserCommand`                                                 | Students  |
+| `AddStudentGuardianCommand` · `RemoveStudentGuardianCommand` · `SetPrimaryPayerCommand`               | Students  |
+| `AddStudentNoteCommand` · `DeleteStudentNoteCommand`                                                  | Students  |
+| `ImportStudentsCommand`                                                                               | Students  |
+| `CreateTeacherCommand` · `UpdateTeacherCommand` · `DeleteTeacherCommand`                              | Teachers  |
+| `DeactivateTeacherCommand` · `ActivateTeacherCommand`¹                                                | Teachers  |
+| `LinkTeacherUserCommand` · `UnlinkTeacherUserCommand`                                                 | Teachers  |
+| `CreateGuardianCommand` · `UpdateGuardianCommand` · `DeleteGuardianCommand`                           | Guardians |
+| `LinkGuardianUserCommand` · `UnlinkGuardianUserCommand`                                               | Guardians |
+
+¹ Не было в исходной спецификации — добавлено при реализации как естественная пара к
+`DeactivateTeacherCommand` (`Teacher.Activate()` уже существовал в домене).
 
 ### Запросы
 
-| Запрос | Возвращает |
-|---|---|
-| `SearchStudentsQuery` | `PagedList<StudentDto>` — фильтры: статус, группа, менеджер, долг |
-| `GetStudentByIdQuery` | `StudentDetailDto` |
-| `GetStudentGuardiansQuery` | `IReadOnlyList<GuardianDto>` |
-| `GetStudentNotesQuery` | `IReadOnlyList<StudentNoteDto>` |
-| `SearchTeachersQuery` · `GetTeacherByIdQuery` | `TeacherDto` |
-| `GetTeacherWorkloadQuery` | `TeacherWorkloadDto` — группы и часы |
-| `SearchGuardiansQuery` · `GetGuardianByIdQuery` | `GuardianDto` |
-| `GetMyPeopleScopeQuery` | `PeopleScope` |
+| Запрос                                          | Возвращает                                                        |
+| ----------------------------------------------- | ----------------------------------------------------------------- |
+| `SearchStudentsQuery`                           | `PagedResponse<StudentDto>` — фильтры: статус, менеджер, текст. Группа/долг — после [[StudyGroups]]/[[Payments]] |
+| `GetStudentByIdQuery`                           | `StudentDetailDto`                                                |
+| `GetStudentGuardiansQuery`                      | `IReadOnlyList<StudentGuardianDto>`² |
+| `GetStudentNotesQuery`                          | `IReadOnlyList<StudentNoteDto>`                                   |
+| `SearchTeachersQuery`                           | `PagedResponse<TeacherDto>`                                       |
+| `GetTeacherByIdQuery`                           | `TeacherDto`                                                      |
+| `GetTeacherWorkloadQuery`                       | ⏳ **не реализовано** — `TeacherWorkloadDto`, ждёт [[StudyGroups]] |
+| `SearchGuardiansQuery`                          | `PagedResponse<GuardianDto>`                                      |
+| `GetGuardianByIdQuery`                          | `GuardianDto`                                                     |
+| `GetMyPeopleScopeQuery`                         | `PeopleScope`                                                     |
+
+² В спецификации был `IReadOnlyList<GuardianDto>` — заменено на `StudentGuardianDto`
+(обёртка над `GuardianDto` с `Relation`/`IsPrimaryPayer`) при реализации: экрану «представители
+ученика» нужен не только бриф человека, но и деталь связи.
 
 ### DTO
 
 `StudentDto` · `StudentDetailDto` · `StudentNoteDto` · `TeacherDto` ·
-`TeacherWorkloadDto` · `GuardianDto` · `StudentGuardianDto` · `PeopleScope`
+`TeacherWorkloadDto` (⏳ не реализовано) · `GuardianDto` · `StudentGuardianDto` ·
+`PersonBriefDto` · `PeopleScope` · `ImportStudentsResultDto` · `ImportStudentRowResultDto`
 
 ### Публикуемые события
 
@@ -160,8 +185,13 @@ public sealed record PeopleScope(
 
 Отвечает на вопрос «кто этот пользователь в предметной области». Используется
 [[StudyGroups]], [[Scheduling]], [[Payments]] для проверок «своих» данных.
-Результат кэшируется в Redis, инвалидируется по `GuardianLinkedToStudent`
-и `StudentCreated`.
+
+Кэш — `HybridCache` (не самодельный Redis-клиент, см. `caching.md`), ключ
+`people:scope:u:{userId}`, тег — переиспользуемый `CacheKeys.Tags.User(userId)` из
+`BuildingBlocks/Caching` (новый тег в защищённый пакет не добавлялся). Инвалидация — в
+обработчиках `AddStudentGuardianCommand`/`RemoveStudentGuardianCommand` (у затронутого
+опекуна) и во всех шести `Link*User`/`Unlink*User` (у затронутого userId) — точнее набора
+точек, чем изначально предполагали «по `GuardianLinkedToStudent` и `StudentCreated`».
 
 ```csharp
 public interface IPeopleLookupService
@@ -203,19 +233,28 @@ DELETE /api/v1/students/{id}
 POST   /api/v1/students/{id}/archive
 POST   /api/v1/students/{id}/restore
 POST   /api/v1/students/{id}/link-user
+POST   /api/v1/students/{id}/unlink-user
 GET    /api/v1/students/{id}/guardians
 POST   /api/v1/students/{id}/guardians
 DELETE /api/v1/students/{id}/guardians/{gid}
+POST   /api/v1/students/{id}/guardians/{gid}/primary-payer
 GET    /api/v1/students/{id}/notes
 POST   /api/v1/students/{id}/notes
-POST   /api/v1/students/import
+DELETE /api/v1/students/{id}/notes/{noteId}
+POST   /api/v1/students/import                ?dryRun=true|false (по умолчанию true)
 
 GET    /api/v1/teachers                       + полный CRUD
-GET    /api/v1/teachers/{id}/workload
+POST   /api/v1/teachers/{id}/deactivate
+POST   /api/v1/teachers/{id}/activate
+POST   /api/v1/teachers/{id}/link-user
+POST   /api/v1/teachers/{id}/unlink-user
+GET    /api/v1/teachers/{id}/workload          ⏳ не реализовано — ждёт StudyGroups
 
 GET    /api/v1/guardians                      + полный CRUD
+POST   /api/v1/guardians/{id}/link-user
+POST   /api/v1/guardians/{id}/unlink-user
 
-GET    /api/v1/people/me/scope
+GET    /api/v1/people/me/scope                 единственный маршрут с сегментом /people/
 ```
 
 ## Зависимости

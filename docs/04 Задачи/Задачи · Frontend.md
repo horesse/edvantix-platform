@@ -33,12 +33,34 @@ tags: [задачи, frontend]
 
 ### Этап 1 · People
 
-- [ ] `/students` — список, фильтры, статусы
-- [ ] `/students/:id` — профиль, группы, посещаемость, счета, представители,
-      заметки, история изменений
-- [ ] `/students/import` — импорт CSV с предпросмотром
-- [ ] `/teachers`, `/teachers/:id` — профиль, нагрузка, расписание
-- [ ] `/guardians` — список, подопечные
+> [!note] ✅ Backend готов — можно начинать
+> Модуль [[People]] полностью реализован (см. [[Задачи · Новые модули]]): все эндпоинты
+> из `HTTP API` в справочнике работают, права `PeoplePermissions` зарегистрированы.
+> Единственное, чего нет в API — `GET /teachers/{id}/workload` (ждёт [[StudyGroups]]),
+> поэтому раздел «нагрузка» на карточке преподавателя пока не строить.
+
+- [ ] `src/api/people.ts` — обёртка над `apiFetch`: типы `StudentDto`/`StudentDetailDto`/
+      `TeacherDto`/`GuardianDto`/`StudentGuardianDto`/`StudentNoteDto`/`PeopleScope`/
+      `PagedResponse<T>` вручную по контрактам (см. [[People]] → «Контракты»); ключи
+      TanStack Query на `students`/`teachers`/`guardians`
+- [ ] `/students` — список, фильтры (статус, менеджер, текст), пагинация.
+      `GET /api/v1/students`, право `Students.View`
+- [ ] `/students/:id` — профиль (`GET /students/{id}` → `StudentDetailDto`), редактирование
+      (`PUT`), архивация/восстановление (`POST .../archive`, `.../restore`), привязка/отвязка
+      учётки (`POST .../link-user`, `.../unlink-user`), представители (`GET/POST/DELETE
+      .../guardians`, `POST .../guardians/{gid}/primary-payer`), заметки — отдельная вкладка
+      под правом `Students.ViewNotes` (`GET/POST .../notes`, `DELETE .../notes/{noteId}`).
+      Группы/посещаемость/счета — заглушки до [[StudyGroups]]/[[Scheduling]]/[[Payments]]
+- [ ] `/students/import` — загрузка CSV (`multipart/form-data`, поле `file`) →
+      `POST /students/import?dryRun=true` для предпросмотра (таблица построчных результатов,
+      `ImportStudentsResultDto.Rows`, ошибки без блокировки остальных строк) → повторный
+      вызов с `?dryRun=false` для записи
+- [ ] `/teachers` — список (`GET /teachers`, право `Teachers.View`)
+- [ ] `/teachers/:id` — профиль, специализации (`string[]`), ставка, деактивация/активация
+      (`POST .../deactivate`, `.../activate`), привязка/отвязка учётки. Блок «нагрузка» —
+      не строить, эндпоинта нет (см. заметку выше)
+- [ ] `/guardians` — список, подопечные (по клику — переход на карточку ученика через
+      `StudentGuardianDto`), привязка/отвязка учётки
 
 ### Этап 2 · Curriculum
 
