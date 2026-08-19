@@ -1,4 +1,5 @@
 using System.Net;
+using Microsoft.Extensions.DependencyInjection;
 using Finbuckle.MultiTenant.Abstractions;
 using FSH.Framework.Core.Exceptions;
 using FSH.Framework.Eventing.Outbox;
@@ -16,7 +17,7 @@ namespace FSH.Modules.StudyGroups.Features.v1.StudyGroups.CreateStudyGroup;
 public sealed class CreateStudyGroupCommandHandler(
     StudyGroupsDbContext dbContext,
     ICourseQueryService courseQueryService,
-    IOutboxStore outboxStore,
+    [FromKeyedServices(typeof(StudyGroupsDbContext))] IOutboxStore outboxStore,
     IMultiTenantContextAccessor<AppTenantInfo> multiTenantContextAccessor)
     : ICommandHandler<CreateStudyGroupCommand, Guid>
 {

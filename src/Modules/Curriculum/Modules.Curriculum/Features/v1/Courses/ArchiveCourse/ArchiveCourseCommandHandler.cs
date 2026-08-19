@@ -1,4 +1,5 @@
 using Finbuckle.MultiTenant.Abstractions;
+using Microsoft.Extensions.DependencyInjection;
 using FSH.Framework.Core.Exceptions;
 using FSH.Framework.Eventing.Outbox;
 using FSH.Framework.Shared.Multitenancy;
@@ -12,7 +13,7 @@ namespace FSH.Modules.Curriculum.Features.v1.Courses.ArchiveCourse;
 
 public sealed class ArchiveCourseCommandHandler(
     CurriculumDbContext dbContext,
-    IOutboxStore outboxStore,
+    [FromKeyedServices(typeof(CurriculumDbContext))] IOutboxStore outboxStore,
     IMultiTenantContextAccessor<AppTenantInfo> multiTenantContextAccessor)
     : ICommandHandler<ArchiveCourseCommand, Unit>
 {

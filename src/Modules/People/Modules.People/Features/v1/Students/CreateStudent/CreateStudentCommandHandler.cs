@@ -1,4 +1,5 @@
 using Finbuckle.MultiTenant.Abstractions;
+using Microsoft.Extensions.DependencyInjection;
 using FSH.Framework.Eventing.Outbox;
 using FSH.Framework.Shared.Multitenancy;
 using FSH.Modules.People.Contracts.Events;
@@ -11,7 +12,7 @@ namespace FSH.Modules.People.Features.v1.Students.CreateStudent;
 
 public sealed class CreateStudentCommandHandler(
     PeopleDbContext dbContext,
-    IOutboxStore outboxStore,
+    [FromKeyedServices(typeof(PeopleDbContext))] IOutboxStore outboxStore,
     IMultiTenantContextAccessor<AppTenantInfo> multiTenantContextAccessor)
     : ICommandHandler<CreateStudentCommand, Guid>
 {

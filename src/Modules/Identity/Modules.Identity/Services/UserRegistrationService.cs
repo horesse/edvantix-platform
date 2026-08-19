@@ -1,4 +1,5 @@
 using Finbuckle.MultiTenant.Abstractions;
+using Microsoft.Extensions.DependencyInjection;
 using FSH.Framework.Core.Common;
 using FSH.Framework.Core.Exceptions;
 using FSH.Framework.Eventing.Outbox;
@@ -27,7 +28,7 @@ internal sealed class UserRegistrationService(
     IJobService jobService,
     IMailService mailService,
     IMultiTenantContextAccessor<AppTenantInfo> multiTenantContextAccessor,
-    IOutboxStore outboxStore) : IUserRegistrationService
+    [FromKeyedServices(typeof(IdentityDbContext))] IOutboxStore outboxStore) : IUserRegistrationService
 {
     public async Task<string> GetOrCreateFromPrincipalAsync(ClaimsPrincipal principal, CancellationToken cancellationToken = default)
     {

@@ -1,8 +1,10 @@
 using FSH.Framework.Eventing.Abstractions;
 using FSH.Framework.Eventing.Inbox;
+using FSH.Framework.Eventing.Outbox;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
+using System.Linq;
 using System.Reflection;
 
 namespace FSH.Framework.Eventing.InMemory;
@@ -16,6 +18,7 @@ public sealed partial class InMemoryEventBus : IEventBus
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<InMemoryEventBus> _logger;
     private readonly IEventTenantScope _tenantScope;
+    private readonly Type? _inboxKey;
 
     // The closed handler interface type and its HandleAsync method are stable per event type, so
     // they are resolved once and cached rather than recomputing reflection on every published event.
@@ -23,11 +26,22 @@ public sealed partial class InMemoryEventBus : IEventBus
 
     private readonly record struct HandlerDispatch(Type HandlerInterfaceType, MethodInfo HandleMethod);
 
-    public InMemoryEventBus(IServiceProvider serviceProvider, ILogger<InMemoryEventBus> logger, IEventTenantScope tenantScope)
+    public InMemoryEventBus(
+        IServiceProvider serviceProvider,
+        ILogger<InMemoryEventBus> logger,
+        IEventTenantScope tenantScope,
+        IEnumerable<EventingDbContextRegistration> registrations)
     {
+        ArgumentNullException.ThrowIfNull(registrations);
         _serviceProvider = serviceProvider;
         _logger = logger;
         _tenantScope = tenantScope;
+
+        // Inbox dedup keys (eventId + handler type FQN) are globally unique regardless of which
+        // module's table stores them, so one shared ledger is correct — deliberately pinned to the
+        // FIRST module that called AddEventingForDbContext (deterministic — Identity, order 1),
+        // rather than "whichever module happened to register last". See eventing.md.
+        _inboxKey = registrations.Select(r => r.DbContextType).FirstOrDefault();
     }
 
     private static HandlerDispatch GetDispatch(Type eventType)
@@ -73,7 +87,7 @@ public sealed partial class InMemoryEventBus : IEventBus
                 return;
             }
 
-            var inbox = provider.GetService<IInboxStore>();
+            var inbox = _inboxKey is null ? null : provider.GetKeyedService<IInboxStore>(_inboxKey);
 
             foreach (var handler in handlers)
             {

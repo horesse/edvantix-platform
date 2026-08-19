@@ -25,7 +25,7 @@ public sealed class InMemoryEventBusTenantScopeTests
         services.AddSingleton<IIntegrationEventHandler<TenantScopedEvent>>(handler);
         using var provider = services.BuildServiceProvider();
 
-        var bus = new InMemoryEventBus(provider, NullLogger<InMemoryEventBus>.Instance, scope);
+        var bus = new InMemoryEventBus(provider, NullLogger<InMemoryEventBus>.Instance, scope, []);
 
         // Act
         await bus.PublishAsync(new TenantScopedEvent("acme"));
