@@ -4,6 +4,7 @@ using FSH.Framework.Eventing.Outbox;
 using FSH.Framework.Persistence.Context;
 using FSH.Framework.Shared.Multitenancy;
 using FSH.Framework.Shared.Persistence;
+using FSH.Modules.Scheduling.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
@@ -23,9 +24,11 @@ public sealed class SchedulingDbContext : BaseDbContext
     {
     }
 
-    // Domain DbSets (ScheduleTemplate/Session/Attendance/Room/NonWorkingDay) land with the
-    // migration in step 2 of the implementation plan — see
-    // docs/04 Задачи/Задачи · Новые модули.md → Scheduling.
+    public DbSet<ScheduleTemplate> ScheduleTemplates => Set<ScheduleTemplate>();
+    public DbSet<Session> Sessions => Set<Session>();
+    public DbSet<Attendance> Attendances => Set<Attendance>();
+    public DbSet<Room> Rooms => Set<Room>();
+    public DbSet<NonWorkingDay> NonWorkingDays => Set<NonWorkingDay>();
 
     // Required by AddEventingForDbContext<SchedulingDbContext>() from the very first migration —
     // added straight away (not patched in later) per the lesson learned from People, see
