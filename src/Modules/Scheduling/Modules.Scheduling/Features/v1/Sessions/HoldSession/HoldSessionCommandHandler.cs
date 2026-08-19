@@ -1,19 +1,26 @@
+using Finbuckle.MultiTenant.Abstractions;
 using FSH.Framework.Core.Exceptions;
+using FSH.Framework.Eventing.Outbox;
+using FSH.Framework.Shared.Multitenancy;
 using FSH.Modules.Multitenancy.Contracts;
 using FSH.Modules.Scheduling.Contracts.Dtos;
+using FSH.Modules.Scheduling.Contracts.Events;
 using FSH.Modules.Scheduling.Contracts.v1.Sessions;
 using FSH.Modules.Scheduling.Data;
 using FSH.Modules.Scheduling.Domain;
 using FSH.Modules.StudyGroups.Contracts;
 using Mediator;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace FSH.Modules.Scheduling.Features.v1.Sessions.HoldSession;
 
 public sealed class HoldSessionCommandHandler(
     SchedulingDbContext dbContext,
     IStudyGroupQueryService studyGroupQueryService,
-    ITenantSettingsService tenantSettingsService)
+    ITenantSettingsService tenantSettingsService,
+    [FromKeyedServices(typeof(SchedulingDbContext))] IOutboxStore outboxStore,
+    IMultiTenantContextAccessor<AppTenantInfo> multiTenantContextAccessor)
     : ICommandHandler<HoldSessionCommand, Unit>
 {
     public async ValueTask<Unit> Handle(HoldSessionCommand command, CancellationToken cancellationToken)
@@ -31,6 +38,21 @@ public sealed class HoldSessionCommandHandler(
         if (!wasAlreadyHeld)
         {
             await SeedAttendanceAsync(session, cancellationToken).ConfigureAwait(false);
+
+            var tenantId = multiTenantContextAccessor.MultiTenantContext.TenantInfo?.Id;
+            var nowUtc = TimeProvider.System.GetUtcNow().UtcDateTime;
+            await outboxStore.AddAsync(
+                new SessionHeldIntegrationEvent(
+                    Id: Guid.NewGuid(),
+                    OccurredOnUtc: nowUtc,
+                    TenantId: tenantId,
+                    CorrelationId: Guid.NewGuid().ToString(),
+                    Source: "Scheduling",
+                    SessionId: session.Id,
+                    StudyGroupId: session.StudyGroupId,
+                    LessonId: session.LessonId,
+                    HeldAtUtc: nowUtc),
+                cancellationToken).ConfigureAwait(false);
         }
 
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

@@ -1,17 +1,24 @@
 using System.Net;
+using Finbuckle.MultiTenant.Abstractions;
 using FSH.Framework.Core.Exceptions;
+using FSH.Framework.Eventing.Outbox;
+using FSH.Framework.Shared.Multitenancy;
+using FSH.Modules.Scheduling.Contracts.Events;
 using FSH.Modules.Scheduling.Contracts.v1.Sessions;
 using FSH.Modules.Scheduling.Data;
 using FSH.Modules.Scheduling.Domain;
 using FSH.Modules.Scheduling.Services;
 using Mediator;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace FSH.Modules.Scheduling.Features.v1.Sessions.RescheduleSession;
 
 public sealed class RescheduleSessionCommandHandler(
     SchedulingDbContext dbContext,
-    ISessionConflictChecker conflictChecker)
+    ISessionConflictChecker conflictChecker,
+    [FromKeyedServices(typeof(SchedulingDbContext))] IOutboxStore outboxStore,
+    IMultiTenantContextAccessor<AppTenantInfo> multiTenantContextAccessor)
     : ICommandHandler<RescheduleSessionCommand, Guid>
 {
     public async ValueTask<Guid> Handle(RescheduleSessionCommand command, CancellationToken cancellationToken)
@@ -65,6 +72,21 @@ public sealed class RescheduleSessionCommandHandler(
             rescheduledFromId: oldSession.Id);
 
         dbContext.Sessions.Add(newSession);
+
+        var tenantId = multiTenantContextAccessor.MultiTenantContext.TenantInfo?.Id;
+        await outboxStore.AddAsync(
+            new SessionRescheduledIntegrationEvent(
+                Id: Guid.NewGuid(),
+                OccurredOnUtc: TimeProvider.System.GetUtcNow().UtcDateTime,
+                TenantId: tenantId,
+                CorrelationId: Guid.NewGuid().ToString(),
+                Source: "Scheduling",
+                SessionId: oldSession.Id,
+                NewSessionId: newSession.Id,
+                OldStartUtc: oldSession.StartUtc,
+                NewStartUtc: newSession.StartUtc),
+            cancellationToken).ConfigureAwait(false);
+
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return newSession.Id;
     }
