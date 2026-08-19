@@ -12,6 +12,7 @@ using FSH.Modules.Catalog;
 using FSH.Modules.People;
 using FSH.Modules.Curriculum;
 using FSH.Modules.StudyGroups;
+using FSH.Modules.Scheduling;
 using FSH.Modules.Tickets;
 using FSH.Modules.Multitenancy.Features.v1.GetTenantStatus;
 using System.Reflection;
@@ -86,6 +87,7 @@ var moduleAssemblies = new Assembly[]
     typeof(PeopleModule).Assembly,
     typeof(CurriculumModule).Assembly,
     typeof(StudyGroupsModule).Assembly,
+    typeof(SchedulingModule).Assembly,
     typeof(TicketsModule).Assembly,
     typeof(FSH.Modules.Chat.ChatModule).Assembly,
     typeof(FSH.Modules.Notifications.NotificationsModule).Assembly,

@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<RootNamespace>FSH.Modules.Scheduling</RootNamespace>
+		<AssemblyName>FSH.Modules.Scheduling</AssemblyName>
+		<NoWarn>$(NoWarn);CA1031;CA1711;CA1812;CA1859;S3267</NoWarn>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\..\BuildingBlocks\Caching\Caching.csproj" />
+		<ProjectReference Include="..\..\..\BuildingBlocks\Eventing\Eventing.csproj" />
+		<ProjectReference Include="..\..\..\BuildingBlocks\Jobs\Jobs.csproj" />
+		<ProjectReference Include="..\..\..\BuildingBlocks\Persistence\Persistence.csproj" />
+		<ProjectReference Include="..\..\..\BuildingBlocks\Web\Web.csproj" />
+		<ProjectReference Include="..\Modules.Scheduling.Contracts\Modules.Scheduling.Contracts.csproj" />
+		<ProjectReference Include="..\..\Identity\Modules.Identity.Contracts\Modules.Identity.Contracts.csproj" />
+		<ProjectReference Include="..\..\Multitenancy\Modules.Multitenancy.Contracts\Modules.Multitenancy.Contracts.csproj" />
+		<ProjectReference Include="..\..\People\Modules.People.Contracts\Modules.People.Contracts.csproj" />
+		<ProjectReference Include="..\..\Curriculum\Modules.Curriculum.Contracts\Modules.Curriculum.Contracts.csproj" />
+		<ProjectReference Include="..\..\StudyGroups\Modules.StudyGroups.Contracts\Modules.StudyGroups.Contracts.csproj" />
+	</ItemGroup>
+
+</Project>
