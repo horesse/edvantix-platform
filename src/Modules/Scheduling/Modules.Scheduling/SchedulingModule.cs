@@ -5,6 +5,10 @@ using FSH.Framework.Shared.Constants;
 using FSH.Framework.Web.Modules;
 using FSH.Modules.Scheduling.Contracts.Authorization;
 using FSH.Modules.Scheduling.Data;
+using FSH.Modules.Scheduling.Features.v1.AttendanceRecords.GetGroupAttendanceReport;
+using FSH.Modules.Scheduling.Features.v1.AttendanceRecords.GetSessionAttendance;
+using FSH.Modules.Scheduling.Features.v1.AttendanceRecords.GetStudentAttendance;
+using FSH.Modules.Scheduling.Features.v1.AttendanceRecords.MarkAttendance;
 using FSH.Modules.Scheduling.Features.v1.Calendar.AddNonWorkingDay;
 using FSH.Modules.Scheduling.Features.v1.Calendar.GetNonWorkingDays;
 using FSH.Modules.Scheduling.Features.v1.Calendar.RemoveNonWorkingDay;
@@ -121,7 +125,9 @@ public sealed class SchedulingModule : IModule
         group.MapCancelSessionEndpoint();
         group.MapRescheduleSessionEndpoint();
 
-        // Remaining endpoints (Attendance) are wired feature-by-feature in later steps — see
-        // docs/04 Задачи/Задачи · Новые модули.md → Scheduling.
+        group.MapMarkAttendanceEndpoint();
+        group.MapGetSessionAttendanceEndpoint();
+        group.MapGetStudentAttendanceEndpoint();
+        group.MapGetGroupAttendanceReportEndpoint();
     }
 }
