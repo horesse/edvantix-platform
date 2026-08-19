@@ -3,6 +3,7 @@ using FSH.Framework.Eventing;
 using FSH.Framework.Persistence;
 using FSH.Framework.Shared.Constants;
 using FSH.Framework.Web.Modules;
+using FSH.Modules.Scheduling.Contracts;
 using FSH.Modules.Scheduling.Contracts.Authorization;
 using FSH.Modules.Scheduling.Data;
 using FSH.Modules.Scheduling.Features.v1.AttendanceRecords.GetGroupAttendanceReport;
@@ -58,6 +59,8 @@ public sealed class SchedulingModule : IModule
         builder.Services.AddScoped<IDbInitializer, SchedulingDbInitializer>();
         builder.Services.AddScoped<ISessionConflictChecker, SessionConflictChecker>();
         builder.Services.AddScoped<IScheduleGeneratorService, ScheduleGeneratorService>();
+        builder.Services.AddScoped<IAttendanceQueryService, AttendanceQueryService>();
+        builder.Services.AddScoped<ISessionPlanQueryService, SessionPlanQueryService>();
 
         // Outbox/Inbox for SchedulingDbContext — publishes SessionScheduled/Cancelled/Rescheduled/
         // Held, AttendanceMarked (added in step 10 of the implementation plan). AddEventingCore() is
