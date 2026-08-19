@@ -120,8 +120,11 @@ public sealed class ScheduleGeneratorService(
 
     /// <summary>Converts a school-local wall-clock time to UTC via <see cref="TimeZoneInfo"/> —
     /// recalculated per occurrence, not by adding 7 days to a UTC instant, so DST transitions land
-    /// correctly (see docs/02 Модули/Scheduling.md → "Время").</summary>
-    private static DateTimeOffset ToUtc(DateOnly localDate, TimeOnly localTime, TimeZoneInfo timeZone)
+    /// correctly (see docs/02 Модули/Scheduling.md → "Время"). Internal (not private) specifically so
+    /// <c>Scheduling.Tests</c> can exercise the DST-transition math directly, without threading a
+    /// mockable "now" through the whole <see cref="PlanAsync"/> pipeline — see the module's
+    /// <c>AssemblyInfo.cs</c> for the <c>InternalsVisibleTo</c> grant.</summary>
+    internal static DateTimeOffset ToUtc(DateOnly localDate, TimeOnly localTime, TimeZoneInfo timeZone)
     {
         var localDateTime = localDate.ToDateTime(localTime, DateTimeKind.Unspecified);
         var utcDateTime = TimeZoneInfo.ConvertTimeToUtc(localDateTime, timeZone);
