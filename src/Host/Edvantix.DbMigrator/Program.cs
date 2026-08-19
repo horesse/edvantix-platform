@@ -104,6 +104,8 @@ builder.Services.AddMediator(o =>
         typeof(FSH.Modules.Curriculum.CurriculumModule),
         typeof(FSH.Modules.StudyGroups.Contracts.StudyGroupsContractsMarker),
         typeof(FSH.Modules.StudyGroups.StudyGroupsModule),
+        typeof(FSH.Modules.Scheduling.Contracts.SchedulingContractsMarker),
+        typeof(FSH.Modules.Scheduling.SchedulingModule),
         typeof(FSH.Modules.Tickets.Contracts.TicketsContractsMarker),
         typeof(FSH.Modules.Tickets.TicketsModule),
         typeof(FSH.Modules.Files.Contracts.v1.Commands.RequestUploadUrlCommand),

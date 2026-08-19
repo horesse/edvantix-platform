@@ -5,6 +5,13 @@ using FSH.Framework.Shared.Constants;
 using FSH.Framework.Web.Modules;
 using FSH.Modules.Scheduling.Contracts.Authorization;
 using FSH.Modules.Scheduling.Data;
+using FSH.Modules.Scheduling.Features.v1.Calendar.AddNonWorkingDay;
+using FSH.Modules.Scheduling.Features.v1.Calendar.GetNonWorkingDays;
+using FSH.Modules.Scheduling.Features.v1.Calendar.RemoveNonWorkingDay;
+using FSH.Modules.Scheduling.Features.v1.Rooms.CreateRoom;
+using FSH.Modules.Scheduling.Features.v1.Rooms.DeleteRoom;
+using FSH.Modules.Scheduling.Features.v1.Rooms.GetRooms;
+using FSH.Modules.Scheduling.Features.v1.Rooms.UpdateRoom;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -70,8 +77,16 @@ public sealed class SchedulingModule : IModule
             .WithApiVersionSet(versionSet)
             .RequireAuthorization();
 
-        // Endpoints are wired feature-by-feature starting step 3 of the implementation plan — see
-        // docs/04 Задачи/Задачи · Новые модули.md → Scheduling.
-        _ = group;
+        group.MapCreateRoomEndpoint();
+        group.MapUpdateRoomEndpoint();
+        group.MapDeleteRoomEndpoint();
+        group.MapGetRoomsEndpoint();
+
+        group.MapAddNonWorkingDayEndpoint();
+        group.MapRemoveNonWorkingDayEndpoint();
+        group.MapGetNonWorkingDaysEndpoint();
+
+        // Remaining endpoints (ScheduleTemplates/Sessions/Attendance) are wired feature-by-feature
+        // in later steps — see docs/04 Задачи/Задачи · Новые модули.md → Scheduling.
     }
 }
