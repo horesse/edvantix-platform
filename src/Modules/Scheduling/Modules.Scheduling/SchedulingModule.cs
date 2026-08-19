@@ -12,6 +12,10 @@ using FSH.Modules.Scheduling.Features.v1.Rooms.CreateRoom;
 using FSH.Modules.Scheduling.Features.v1.Rooms.DeleteRoom;
 using FSH.Modules.Scheduling.Features.v1.Rooms.GetRooms;
 using FSH.Modules.Scheduling.Features.v1.Rooms.UpdateRoom;
+using FSH.Modules.Scheduling.Features.v1.ScheduleTemplates.CreateScheduleTemplate;
+using FSH.Modules.Scheduling.Features.v1.ScheduleTemplates.DeleteScheduleTemplate;
+using FSH.Modules.Scheduling.Features.v1.ScheduleTemplates.GetScheduleTemplates;
+using FSH.Modules.Scheduling.Features.v1.ScheduleTemplates.UpdateScheduleTemplate;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -86,7 +90,12 @@ public sealed class SchedulingModule : IModule
         group.MapRemoveNonWorkingDayEndpoint();
         group.MapGetNonWorkingDaysEndpoint();
 
-        // Remaining endpoints (ScheduleTemplates/Sessions/Attendance) are wired feature-by-feature
-        // in later steps — see docs/04 Задачи/Задачи · Новые модули.md → Scheduling.
+        group.MapCreateScheduleTemplateEndpoint();
+        group.MapUpdateScheduleTemplateEndpoint();
+        group.MapDeleteScheduleTemplateEndpoint();
+        group.MapGetScheduleTemplatesEndpoint();
+
+        // Remaining endpoints (Sessions/Attendance/generation) are wired feature-by-feature in
+        // later steps — see docs/04 Задачи/Задачи · Новые модули.md → Scheduling.
     }
 }
