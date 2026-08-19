@@ -1,5 +1,7 @@
 using System.Net;
+using Finbuckle.MultiTenant.Abstractions;
 using FSH.Framework.Core.Exceptions;
+using FSH.Framework.Shared.Multitenancy;
 using FSH.Modules.Scheduling.Contracts.v1.Sessions;
 using FSH.Modules.Scheduling.Data;
 using FSH.Modules.Scheduling.Services;
@@ -10,7 +12,9 @@ namespace FSH.Modules.Scheduling.Features.v1.Sessions.UpdateSession;
 
 public sealed class UpdateSessionCommandHandler(
     SchedulingDbContext dbContext,
-    ISessionConflictChecker conflictChecker)
+    ISessionConflictChecker conflictChecker,
+    IMultiTenantContextAccessor<AppTenantInfo> multiTenantContextAccessor,
+    ISessionRealtimeNotifier realtimeNotifier)
     : ICommandHandler<UpdateSessionCommand, Unit>
 {
     public async ValueTask<Unit> Handle(UpdateSessionCommand command, CancellationToken cancellationToken)
@@ -54,6 +58,10 @@ public sealed class UpdateSessionCommandHandler(
             command.TeacherComment);
 
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        var tenantId = multiTenantContextAccessor.MultiTenantContext.TenantInfo?.Id;
+        await realtimeNotifier.NotifySessionChangedAsync(tenantId, session.ToDto(), cancellationToken).ConfigureAwait(false);
+
         return Unit.Value;
     }
 }

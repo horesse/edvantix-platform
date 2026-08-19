@@ -18,7 +18,8 @@ public sealed class RescheduleSessionCommandHandler(
     SchedulingDbContext dbContext,
     ISessionConflictChecker conflictChecker,
     [FromKeyedServices(typeof(SchedulingDbContext))] IOutboxStore outboxStore,
-    IMultiTenantContextAccessor<AppTenantInfo> multiTenantContextAccessor)
+    IMultiTenantContextAccessor<AppTenantInfo> multiTenantContextAccessor,
+    ISessionRealtimeNotifier realtimeNotifier)
     : ICommandHandler<RescheduleSessionCommand, Guid>
 {
     public async ValueTask<Guid> Handle(RescheduleSessionCommand command, CancellationToken cancellationToken)
@@ -88,6 +89,12 @@ public sealed class RescheduleSessionCommandHandler(
             cancellationToken).ConfigureAwait(false);
 
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // Two broadcasts: the old session's card should flip to "Rescheduled" in place, and the new
+        // one should appear at its new slot.
+        await realtimeNotifier.NotifySessionChangedAsync(tenantId, oldSession.ToDto(), cancellationToken).ConfigureAwait(false);
+        await realtimeNotifier.NotifySessionChangedAsync(tenantId, newSession.ToDto(), cancellationToken).ConfigureAwait(false);
+
         return newSession.Id;
     }
 }

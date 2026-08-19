@@ -6,6 +6,7 @@ using FSH.Modules.Scheduling.Contracts.Dtos;
 using FSH.Modules.Scheduling.Contracts.Events;
 using FSH.Modules.Scheduling.Contracts.v1.Sessions;
 using FSH.Modules.Scheduling.Data;
+using FSH.Modules.Scheduling.Services;
 using Mediator;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,7 +16,8 @@ namespace FSH.Modules.Scheduling.Features.v1.Sessions.CancelSession;
 public sealed class CancelSessionCommandHandler(
     SchedulingDbContext dbContext,
     [FromKeyedServices(typeof(SchedulingDbContext))] IOutboxStore outboxStore,
-    IMultiTenantContextAccessor<AppTenantInfo> multiTenantContextAccessor)
+    IMultiTenantContextAccessor<AppTenantInfo> multiTenantContextAccessor,
+    ISessionRealtimeNotifier realtimeNotifier)
     : ICommandHandler<CancelSessionCommand, Unit>
 {
     public async ValueTask<Unit> Handle(CancelSessionCommand command, CancellationToken cancellationToken)
@@ -30,9 +32,10 @@ public sealed class CancelSessionCommandHandler(
         bool wasAlreadyCancelled = session.Status == SessionStatus.Cancelled;
         session.Cancel(command.Reason);
 
+        var tenantId = multiTenantContextAccessor.MultiTenantContext.TenantInfo?.Id;
+
         if (!wasAlreadyCancelled)
         {
-            var tenantId = multiTenantContextAccessor.MultiTenantContext.TenantInfo?.Id;
             await outboxStore.AddAsync(
                 new SessionCancelledIntegrationEvent(
                     Id: Guid.NewGuid(),
@@ -47,6 +50,12 @@ public sealed class CancelSessionCommandHandler(
         }
 
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        if (!wasAlreadyCancelled)
+        {
+            await realtimeNotifier.NotifySessionChangedAsync(tenantId, session.ToDto(), cancellationToken).ConfigureAwait(false);
+        }
+
         return Unit.Value;
     }
 }

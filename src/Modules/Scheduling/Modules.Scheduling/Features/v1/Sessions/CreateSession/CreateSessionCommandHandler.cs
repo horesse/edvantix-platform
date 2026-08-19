@@ -7,6 +7,7 @@ using FSH.Modules.Scheduling.Contracts.Events;
 using FSH.Modules.Scheduling.Contracts.v1.Sessions;
 using FSH.Modules.Scheduling.Data;
 using FSH.Modules.Scheduling.Domain;
+using FSH.Modules.Scheduling.Features.v1.Sessions;
 using FSH.Modules.Scheduling.Services;
 using FSH.Modules.StudyGroups.Contracts;
 using Mediator;
@@ -19,7 +20,8 @@ public sealed class CreateSessionCommandHandler(
     ISessionConflictChecker conflictChecker,
     IStudyGroupQueryService studyGroupQueryService,
     [FromKeyedServices(typeof(SchedulingDbContext))] IOutboxStore outboxStore,
-    IMultiTenantContextAccessor<AppTenantInfo> multiTenantContextAccessor)
+    IMultiTenantContextAccessor<AppTenantInfo> multiTenantContextAccessor,
+    ISessionRealtimeNotifier realtimeNotifier)
     : ICommandHandler<CreateSessionCommand, Guid>
 {
     public async ValueTask<Guid> Handle(CreateSessionCommand command, CancellationToken cancellationToken)
@@ -77,6 +79,7 @@ public sealed class CreateSessionCommandHandler(
             cancellationToken).ConfigureAwait(false);
 
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await realtimeNotifier.NotifySessionChangedAsync(tenantId, session.ToDto(), cancellationToken).ConfigureAwait(false);
         return session.Id;
     }
 }

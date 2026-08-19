@@ -8,6 +8,7 @@ using FSH.Modules.Scheduling.Contracts.Events;
 using FSH.Modules.Scheduling.Contracts.v1.Sessions;
 using FSH.Modules.Scheduling.Data;
 using FSH.Modules.Scheduling.Domain;
+using FSH.Modules.Scheduling.Services;
 using FSH.Modules.StudyGroups.Contracts;
 using Mediator;
 using Microsoft.EntityFrameworkCore;
@@ -20,7 +21,8 @@ public sealed class HoldSessionCommandHandler(
     IStudyGroupQueryService studyGroupQueryService,
     ITenantSettingsService tenantSettingsService,
     [FromKeyedServices(typeof(SchedulingDbContext))] IOutboxStore outboxStore,
-    IMultiTenantContextAccessor<AppTenantInfo> multiTenantContextAccessor)
+    IMultiTenantContextAccessor<AppTenantInfo> multiTenantContextAccessor,
+    ISessionRealtimeNotifier realtimeNotifier)
     : ICommandHandler<HoldSessionCommand, Unit>
 {
     public async ValueTask<Unit> Handle(HoldSessionCommand command, CancellationToken cancellationToken)
@@ -35,11 +37,12 @@ public sealed class HoldSessionCommandHandler(
         bool wasAlreadyHeld = session.Status == SessionStatus.Held;
         session.Hold();
 
+        var tenantId = multiTenantContextAccessor.MultiTenantContext.TenantInfo?.Id;
+
         if (!wasAlreadyHeld)
         {
             await SeedAttendanceAsync(session, cancellationToken).ConfigureAwait(false);
 
-            var tenantId = multiTenantContextAccessor.MultiTenantContext.TenantInfo?.Id;
             var nowUtc = TimeProvider.System.GetUtcNow().UtcDateTime;
             await outboxStore.AddAsync(
                 new SessionHeldIntegrationEvent(
@@ -56,6 +59,12 @@ public sealed class HoldSessionCommandHandler(
         }
 
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        if (!wasAlreadyHeld)
+        {
+            await realtimeNotifier.NotifySessionChangedAsync(tenantId, session.ToDto(), cancellationToken).ConfigureAwait(false);
+        }
+
         return Unit.Value;
     }
 

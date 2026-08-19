@@ -63,6 +63,7 @@ public sealed class SchedulingModule : IModule
         builder.Services.AddScoped<IScheduleGeneratorService, ScheduleGeneratorService>();
         builder.Services.AddScoped<IAttendanceQueryService, AttendanceQueryService>();
         builder.Services.AddScoped<ISessionPlanQueryService, SessionPlanQueryService>();
+        builder.Services.AddScoped<ISessionRealtimeNotifier, SessionRealtimeNotifier>();
 
         // Outbox/Inbox for SchedulingDbContext — publishes SessionScheduled/Cancelled/Rescheduled/
         // Held, AttendanceMarked (added in step 10 of the implementation plan). AddEventingCore() is
