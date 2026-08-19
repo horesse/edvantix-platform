@@ -14,8 +14,11 @@ using FSH.Modules.Scheduling.Features.v1.Rooms.GetRooms;
 using FSH.Modules.Scheduling.Features.v1.Rooms.UpdateRoom;
 using FSH.Modules.Scheduling.Features.v1.ScheduleTemplates.CreateScheduleTemplate;
 using FSH.Modules.Scheduling.Features.v1.ScheduleTemplates.DeleteScheduleTemplate;
+using FSH.Modules.Scheduling.Features.v1.ScheduleTemplates.GenerateSessions;
 using FSH.Modules.Scheduling.Features.v1.ScheduleTemplates.GetScheduleTemplates;
+using FSH.Modules.Scheduling.Features.v1.ScheduleTemplates.PreviewGeneration;
 using FSH.Modules.Scheduling.Features.v1.ScheduleTemplates.UpdateScheduleTemplate;
+using FSH.Modules.Scheduling.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -40,6 +43,8 @@ public sealed class SchedulingModule : IModule
 
         builder.Services.AddHeroDbContext<SchedulingDbContext>();
         builder.Services.AddScoped<IDbInitializer, SchedulingDbInitializer>();
+        builder.Services.AddScoped<ISessionConflictChecker, SessionConflictChecker>();
+        builder.Services.AddScoped<IScheduleGeneratorService, ScheduleGeneratorService>();
 
         // Outbox/Inbox for SchedulingDbContext — publishes SessionScheduled/Cancelled/Rescheduled/
         // Held, AttendanceMarked (added in step 10 of the implementation plan). AddEventingCore() is
@@ -94,8 +99,10 @@ public sealed class SchedulingModule : IModule
         group.MapUpdateScheduleTemplateEndpoint();
         group.MapDeleteScheduleTemplateEndpoint();
         group.MapGetScheduleTemplatesEndpoint();
+        group.MapPreviewGenerationEndpoint();
+        group.MapGenerateSessionsEndpoint();
 
-        // Remaining endpoints (Sessions/Attendance/generation) are wired feature-by-feature in
-        // later steps — see docs/04 Задачи/Задачи · Новые модули.md → Scheduling.
+        // Remaining endpoints (Sessions/Attendance) are wired feature-by-feature in later steps —
+        // see docs/04 Задачи/Задачи · Новые модули.md → Scheduling.
     }
 }

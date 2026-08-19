@@ -52,6 +52,6 @@ public sealed class StudyGroupQueryService(StudyGroupsDbContext dbContext) : ISt
 
         return group is null
             ? null
-            : new StudyGroupBriefDto(group.Id, group.Code, group.Name, group.CourseId, group.Status);
+            : new StudyGroupBriefDto(group.Id, group.Code, group.Name, group.CourseId, group.PrimaryTeacherId, group.Status);
     }
 }
