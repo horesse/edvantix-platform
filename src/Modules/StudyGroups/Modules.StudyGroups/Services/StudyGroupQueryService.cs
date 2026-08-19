@@ -43,6 +43,19 @@ public sealed class StudyGroupQueryService(StudyGroupsDbContext dbContext) : ISt
             .ConfigureAwait(false);
     }
 
+    public async ValueTask<IReadOnlyList<Guid>> GetActiveStudyGroupIdsForStudentAsync(
+        Guid studentId, CancellationToken cancellationToken = default)
+    {
+        return await dbContext.GroupEnrollments
+            .AsNoTracking()
+            .Where(e => e.StudentId == studentId
+                && (e.Status == EnrollmentStatus.Active || e.Status == EnrollmentStatus.Paused))
+            .Select(e => e.StudyGroupId)
+            .Distinct()
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     public async ValueTask<StudyGroupBriefDto?> GetBriefAsync(Guid studyGroupId, CancellationToken cancellationToken = default)
     {
         var group = await dbContext.StudyGroups
@@ -52,6 +65,6 @@ public sealed class StudyGroupQueryService(StudyGroupsDbContext dbContext) : ISt
 
         return group is null
             ? null
-            : new StudyGroupBriefDto(group.Id, group.Code, group.Name, group.CourseId, group.Status);
+            : new StudyGroupBriefDto(group.Id, group.Code, group.Name, group.CourseId, group.PrimaryTeacherId, group.Status);
     }
 }

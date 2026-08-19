@@ -169,13 +169,83 @@ tags: [задачи, frontend]
 
 ### Этап 4 · Scheduling
 
-- [ ] `/schedule` — **календарь** неделя/месяц, drag-n-drop переноса, цвета по
-      группам, часовой пояс
-- [ ] `/sessions/:id` — тема, материалы урока, посещаемость, перенос, отмена
-- [ ] `/study-groups/:id/schedule` — шаблон, предпросмотр генерации, конфликты
-- [ ] `/attendance` — **таблица посещаемости**: сетка ученики × занятия,
-      отметка кликом, массовые действия
-- [ ] Подписка на SignalR — обновление календаря без перезагрузки
+> [!note] ✅ Backend готов — можно начинать
+> Модуль [[Scheduling]] полностью реализован (см. [[Задачи · Новые модули]], шаги 0–14):
+> все эндпоинты из `HTTP API` в справочнике работают, права `SchedulingPermissions`
+> зарегистрированы (`Sessions`: `View`/`ViewOwn`/`Create`/`Update`/`Cancel`/`Reschedule`/
+> `Generate`; `Attendance`: `View`/`ViewOwn`/`Mark`/`MarkAny` — `MarkAny` зарегистрировано, но
+> нигде не проверяется, см. ниже; `Rooms`: `View`/`Manage`; `ScheduleTemplates`: `View`/
+> `Manage`, тем же правом гейтятся и нерабочие дни). Роутинг плоский, как у People/Curriculum/
+> StudyGroups, с двумя исключениями, продиктованными самим справочником: список/создание
+> шаблонов вложены под `/study-groups/:id/schedule-templates`, история посещаемости ученика —
+> под `/students/:id/attendance`. Библиотека календаря — открытый вопрос
+> ([[Открытые вопросы]] → «Библиотека календаря расписания»), решить перед стартом этого
+> этапа, от неё зависит структура `/schedule`.
+
+- [ ] `src/api/scheduling.ts` — обёртка над `apiFetch`: типы `SessionDto`/`SessionDetailDto`/
+      `CalendarEntryDto`/`ScheduleTemplateDto`/`RoomDto`/`NonWorkingDayDto`/`AttendanceDto`/
+      `AttendanceReportDto`/`GenerationPreviewDto`/`GenerationResultDto`/`SessionConflictDto`
+      вручную по контрактам (см. [[Scheduling]] → «Контракты»/«DTO»); enum'ы `SessionStatus`
+      (`Planned`/`Held`/`Cancelled`/`Rescheduled`), `AttendanceStatus` (`Present`/`Absent`/
+      `Late`/`Excused`), `SessionConflictType`, `GenerationSkipReason` — string union; ключи
+      TanStack Query на `sessions`/`schedule-templates`/`rooms`/`non-working-days`/`attendance`
+- [ ] `/schedule` — **календарь** неделя/месяц через `GET /sessions/calendar` (фильтры
+      `studyGroupId`/`teacherId`/`roomId`), drag-n-drop переноса → `POST /sessions/{id}/reschedule`
+      (право `Sessions.Reschedule`; сервер вернёт `409` при конфликте с описанием — показать как
+      диалог подтверждения с `force: true`, не глотать), цвета по группам/статусу занятия,
+      часовой пояс школы для отображения (не для расчёта — сервер уже отдаёт `StartUtc`/`EndUtc`
+      в UTC, конвертация в локальное время школы — на клиенте)
+- [ ] `/sessions/:id` — карточка занятия. `GET /sessions/{id}` → `SessionDetailDto` с
+      `ResolvedTopic` (уже посчитан на бэкенде — пусто в `Session.Topic` → подставлена
+      `Lesson.Title`) и вложенным `Attendance[]`. Материалы урока **не** приходят в этом
+      ответе (ADR-006) — если `LessonId` не пусто, отдельным запросом к Curriculum
+      (`GET /lessons/{lessonId}/materials`, право `LessonMaterials.View`) подтянуть материалы.
+      Кнопки жизненного цикла: «Провести» (`POST .../hold`, право `Sessions.Update` — отдельного
+      права `Hold` нет; создаёт посещаемость на сервере, экран должен перезапросить `Attendance`
+      после успеха), «Отменить» (`POST .../cancel`, право `Sessions.Cancel`, с полем причины),
+      «Перенести» (`POST .../reschedule`, право `Sessions.Reschedule`, тот же диалог, что и в
+      календаре). После `Held`/`Cancelled`/`Rescheduled` — не отправлять `PUT` на неизменяемое
+      занятие вхолостую (сервер всё равно вернёт `409`, но UI должен блокировать кнопки заранее)
+- [ ] `/study-groups/:id/schedule` — управление шаблонами группы. `GET .../schedule-templates`
+      (право `ScheduleTemplates.View`) — список; создание/правка/удаление
+      (`ScheduleTemplates.Manage`) — день недели, локальное время начала, длительность,
+      аудитория/преподаватель (оба опциональны — пусто у преподавателя означает «берётся
+      `PrimaryTeacherId` группы», это решает бэкенд, но в форме стоит показать подсказку).
+      **Предпросмотр перед применением** — `POST /schedule-templates/{id}/preview` (право
+      `Sessions.Generate`, `?horizonWeeks=` опционально, по умолчанию 8 недель) возвращает
+      `GenerationPreviewDto` с `ToCreate[]` и `Skipped[]` (`Reason`: `NonWorkingDay` или
+      `Conflict` — для `Conflict` показать `SessionConflictDto[]` с типом ресурса и на что
+      наткнулись). Кнопка «Применить» → `POST /schedule-templates/{id}/generate`
+      (право `Sessions.Generate`, тот же `horizonWeeks`) — массовая операция, отдельное право
+      от `Sessions.Create` не просто так, гейтить кнопку отдельно
+- [ ] `/attendance` — **таблица посещаемости**: сетка ученики × занятия. `GET
+      /sessions/{id}/attendance` (право `Attendance.View`) для одного занятия; массовая отметка —
+      `PUT /sessions/{id}/attendance` (право `Attendance.Mark`) с телом — массив
+      `{studentId, status, comment}`, один запрос на всю сетку занятия, не по ученику. Дефолт
+      новой строки на сервере — `Present`, поэтому типичный сценарий — отмечать только
+      исключения (`Absent`/`Late`/`Excused`), не весь список. **Нет UI-различия для `MarkAny`** —
+      право зарегистрировано, но сервер его не проверяет (Payments ещё нет), можно не закладывать
+      отдельную ветку интерфейса сейчас
+- [ ] `/students/:id/attendance` (в People, Этап 1) — история посещаемости ученика через `GET
+      /students/{studentId}/attendance?from=&to=` (право `Attendance.View`), не под
+      `/attendance` — отдельный сегмент, как в справочнике
+- [ ] `/study-groups/:id` (в StudyGroups, Этап 3) — вкладка «Посещаемость» через `GET
+      /study-groups/{id}/attendance-report?from=&to=` (право `Attendance.View`) —
+      `AttendanceReportDto` со сводкой по каждому ученику (`Present`/`Absent`/`Late`/
+      `Excused`/`Total`)
+- [ ] Справочники: `/settings/rooms` (CRUD аудиторий, `Rooms.Manage`/`.View`, поле `IsVirtual` —
+      исключает аудиторию из проверки конфликта, показать явной пометкой «онлайн») и
+      `/settings/non-working-days` (нерабочие дни школы, гейтится `ScheduleTemplates.Manage`/
+      `.View` — не своё право)
+- [ ] `/sessions/my` (право `Sessions.ViewOwn`) — «моё расписание» для кабинета
+      преподавателя/ученика/представителя (Этап 6), `GET /sessions/my?from=&to=`
+- [ ] Подписка на SignalR — `AppHub`, событие `SessionScheduleChanged` в группе `tenant:{id}`
+      (подключение к хабу и общая инфраструктура уже есть, см. `frontend/dashboard.md`),
+      payload `SessionDto` — обновлять карточку/ячейку календаря по `Id` без перезагрузки
+      страницы. Приходит на создание/правку/отмену/перенос/проведение отдельного занятия;
+      **не приходит** при массовой генерации из шаблона — после применения предпросмотра
+      экран должен сам перезапросить список занятий (`invalidateQueries`), SignalR не оповестит
+      о каждом из сотни созданных занятий
 
 ### Этап 5 · Payments
 

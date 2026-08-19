@@ -1,4 +1,5 @@
 using Finbuckle.MultiTenant.Abstractions;
+using Microsoft.Extensions.DependencyInjection;
 using FSH.Framework.Core.Exceptions;
 using FSH.Framework.Eventing.Outbox;
 using FSH.Framework.Shared.Multitenancy;
@@ -12,7 +13,7 @@ namespace FSH.Modules.People.Features.v1.Students.RestoreStudent;
 
 public sealed class RestoreStudentCommandHandler(
     PeopleDbContext dbContext,
-    IOutboxStore outboxStore,
+    [FromKeyedServices(typeof(PeopleDbContext))] IOutboxStore outboxStore,
     IMultiTenantContextAccessor<AppTenantInfo> multiTenantContextAccessor)
     : ICommandHandler<RestoreStudentCommand, Unit>
 {

@@ -1,4 +1,5 @@
 using Finbuckle.MultiTenant.Abstractions;
+using Microsoft.Extensions.DependencyInjection;
 using FSH.Framework.Caching;
 using FSH.Framework.Core.Exceptions;
 using FSH.Framework.Eventing.Outbox;
@@ -14,7 +15,7 @@ namespace FSH.Modules.People.Features.v1.Students.AddStudentGuardian;
 
 public sealed class AddStudentGuardianCommandHandler(
     PeopleDbContext dbContext,
-    IOutboxStore outboxStore,
+    [FromKeyedServices(typeof(PeopleDbContext))] IOutboxStore outboxStore,
     HybridCache cache,
     IMultiTenantContextAccessor<AppTenantInfo> multiTenantContextAccessor)
     : ICommandHandler<AddStudentGuardianCommand, Guid>
