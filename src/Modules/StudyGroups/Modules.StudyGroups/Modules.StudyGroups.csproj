@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<RootNamespace>FSH.Modules.StudyGroups</RootNamespace>
+		<AssemblyName>FSH.Modules.StudyGroups</AssemblyName>
+		<NoWarn>$(NoWarn);CA1031;CA1711;CA1812;CA1859;S3267</NoWarn>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\..\BuildingBlocks\Caching\Caching.csproj" />
+		<ProjectReference Include="..\..\..\BuildingBlocks\Eventing\Eventing.csproj" />
+		<ProjectReference Include="..\..\..\BuildingBlocks\Persistence\Persistence.csproj" />
+		<ProjectReference Include="..\..\..\BuildingBlocks\Web\Web.csproj" />
+		<ProjectReference Include="..\Modules.StudyGroups.Contracts\Modules.StudyGroups.Contracts.csproj" />
+		<ProjectReference Include="..\..\Identity\Modules.Identity.Contracts\Modules.Identity.Contracts.csproj" />
+		<ProjectReference Include="..\..\People\Modules.People.Contracts\Modules.People.Contracts.csproj" />
+		<ProjectReference Include="..\..\Curriculum\Modules.Curriculum.Contracts\Modules.Curriculum.Contracts.csproj" />
+	</ItemGroup>
+
+</Project>

@@ -25,4 +25,9 @@ public static class TestConstants
     /// <summary>Curriculum uses flat resource routing (no "/curriculum" segment), same
     /// convention as People — see docs/02 Модули/Curriculum.md and CurriculumModule.MapEndpoints.</summary>
     public const string CurriculumBasePath = "/api/v1";
+
+    /// <summary>StudyGroups uses flat resource routing (no "/study-groups" segment prefix beyond
+    /// the resource name itself), same convention as People/Curriculum — see
+    /// docs/02 Модули/StudyGroups.md and StudyGroupsModule.MapEndpoints.</summary>
+    public const string StudyGroupsBasePath = "/api/v1";
 }

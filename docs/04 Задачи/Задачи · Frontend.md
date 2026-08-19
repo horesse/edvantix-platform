@@ -116,9 +116,56 @@ tags: [задачи, frontend]
 
 ### Этап 3 · StudyGroups
 
-- [ ] `/study-groups` — список, фильтры
-- [ ] `/study-groups/:id` — состав, расписание, посещаемость, чат, оплаты
-- [ ] Диалоги зачисления, отчисления, перевода
+> [!note] ✅ Backend готов — можно начинать
+> Модуль [[StudyGroups]] полностью реализован (см. [[Задачи · Новые модули]]): все эндпоинты
+> из `HTTP API` в справочнике работают, права `StudyGroupsPermissions` зарегистрированы
+> (`StudyGroups`: `View`/`ViewOwn`/`Create`/`Update`/`Delete`/`Archive`; `Enrollments`:
+> `View`/`Create`/`Delete`/`Transfer`). Роутинг плоский, без сегмента `/study-groups` сверх имени
+> ресурса — как у People/Curriculum. Расписание/посещаемость/оплаты из пункта ниже принадлежат
+> Scheduling/Payments (Этапы 4–5) и появятся на `/study-groups/:id` только после тех модулей;
+> здесь — только то, что закрывает сам StudyGroups.
+
+- [ ] `src/api/study-groups.ts` — обёртка над `apiFetch`: типы `StudyGroupDto`/
+      `StudyGroupDetailDto`/`GroupEnrollmentDto`/`GroupTeacherDto`/`PagedResponse<T>` вручную по
+      контрактам (см. [[StudyGroups]] → «Контракты»); enum'ы `GroupFormat`/`StudyGroupStatus`/
+      `EnrollmentStatus`/`TeacherRole` — string union, сериализуются как строки; ключи TanStack
+      Query на `study-groups`/`enrollments`
+- [ ] `/study-groups` — список (`GET /study-groups`, право `StudyGroups.View`), фильтры по курсу
+      (`courseId`), преподавателю (`teacherId`), статусу (`StudyGroupStatus`) и формату
+      (`GroupFormat`), поиск (`search`), пагинация и сортировка (`sortBy`/`sortDir`); кнопка
+      создания гейтится `StudyGroups.Create`
+- [ ] `/study-groups/:id` — **конструктор группы**: карточка (редактирование `name`/
+      `primaryTeacherId`/`format`/`capacity`/`startDate`/`endDate`/`meetingUrl`/`roomId`/`notes`
+      через `PUT /study-groups/{id}`, право `StudyGroups.Update`; `code` неизменяем после
+      создания — не редактируется в форме) + состав ниже. `GET /study-groups/{id}` возвращает
+      `StudyGroupDetailDto` с готовыми `enrollments[]`/`teachers[]` — отдельных запросов на
+      состав не нужно. Кнопки жизненного цикла (право `StudyGroups.Archive` на все три):
+      «Активировать» (`POST .../activate`; сервер вернёт 409, если нет ни одного зачисления —
+      показать причину), «Завершить» (`POST .../finish`), «Отменить» (`POST .../cancel`, с
+      полем причины). После `Finished`/`Cancelled` вся карточка и состав — read-only (сервер
+      всё равно вернёт 409 на любую попытку изменения, но не отправлять запрос вхолостую).
+      Удаление (`DELETE /study-groups/{id}`, право `StudyGroups.Delete`)
+- [ ] Ростер преподавателей на `/study-groups/:id` — список `teachers[]` (роль
+      `Primary`/`Assistant`/`Substitute`, `PrimaryTeacherId` самой группы показывать отдельной
+      меткой — они не обязаны совпадать, см. [[StudyGroups]] → примечание о `PrimaryTeacherId`),
+      добавление/удаление (`POST`/`DELETE .../teachers`, право `StudyGroups.Update`)
+- [ ] Диалог **зачисления** — выбор одного или нескольких учеников (`POST
+      /study-groups/{id}/enrollments`, тело — список `studentIds` + опционально
+      `tariffId`/`discountPercent`, право `Enrollments.Create`); сервер вернёт 409 при
+      превышении `Capacity` — показывать как «мест нет», не глотать
+- [ ] Диалог **отчисления** — причина + дата (`DELETE
+      /study-groups/{id}/enrollments/{enrollmentId}`, право `Enrollments.Delete`) — не удаляет
+      строку из UI-списка сразу, а переводит в статус `Left` (список состава показывает ушедших,
+      если фильтр не скрывает их явно)
+- [ ] Диалог **перевода** — целевая группа + дата (`POST
+      /enrollments/{enrollmentId}/transfer`, право `Enrollments.Transfer`); пауза/возобновление
+      — отдельные быстрые действия в строке состава (`POST /enrollments/{id}/pause`|`/resume`,
+      право `Enrollments.Create` — сервер гейтит оба под тем же правом, что и создание)
+- [ ] `/study-groups/my` (право `StudyGroups.ViewOwn`) — «мои группы» для кабинета
+      преподавателя/ученика (Этап 6), список без создания/редактирования
+- [ ] `/students/:id` (в People, Этап 1) — вкладка «Группы» через `GET
+      /students/{studentId}/enrollments` (право `Enrollments.View`) — все группы ученика,
+      включая завершённые, не только активные
 
 ### Этап 4 · Scheduling
 
