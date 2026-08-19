@@ -1,6 +1,6 @@
 ---
 tags: [модуль, новый, scheduling]
-статус: проектируется
+статус: реализован
 порядок: 620
 схема: scheduling
 ---
@@ -9,7 +9,22 @@ tags: [модуль, новый, scheduling]
 
 ← [[Edvantix]] · [[Карта модулей]] · задачи: [[Задачи · Новые модули]]
 
-> 🟡 Проектируется · порядок `620` · схема `scheduling`
+> ✅ Реализован · порядок `620` · схема `scheduling`
+>
+> Домен (`ScheduleTemplate`/`Session`/`Attendance`/`Room`/`NonWorkingDay`, плоская
+> персистентность — не вложенный агрегат, посещаемость ищется независимо от занятий),
+> миграция, CRUD аудиторий/нерабочих дней/шаблонов, генератор с пересчётом через
+> `TimeZoneInfo` на каждое occurrence (тест на переход на летнее время — обязателен и
+> пройден), `ISessionConflictChecker` на три вида конфликтов, CRUD/жизненный цикл занятий
+> (Hold/Cancel/Reschedule), массовая посещаемость, `IAttendanceQueryService`/
+> `ISessionPlanQueryService` для будущего Payments, 5+1 интеграционных события (пятёрка из
+> этого справочника + `SessionReminderDueIntegrationEvent` под `SessionReminderJob`),
+> избирательные подписки (`StudyGroupFinished`/`TeacherDeactivated` — с реальным действием;
+> `StudyGroupActivated`/`StudentEnrolled`/`StudentUnenrolled` — сознательно без обработчика,
+> см. «Подписки» ниже), два ежедневных/ежечасных Hangfire-задания, SignalR-трансляция.
+> `Scheduling.Tests` — 39/39 (юнит), интеграционный тест изоляции тенантов — 6/6.
+> Подробности реализации и отклонения от исходного плана — [[Задачи · Новые модули]] →
+> Scheduling, шаги 0–14. Frontend не начат — [[Задачи · Frontend]] → «Этап 4 · Scheduling».
 
 ## Назначение
 
@@ -186,6 +201,7 @@ flowchart TB
 | `SessionRescheduledIntegrationEvent` | `SessionId`, `NewSessionId`, `OldStartUtc`, `NewStartUtc` |
 | `SessionHeldIntegrationEvent` | `SessionId`, `StudyGroupId`, `LessonId?`, `HeldAtUtc` |
 | `AttendanceMarkedIntegrationEvent` | `SessionId`, `StudentId`, `Status` |
+| `SessionReminderDueIntegrationEvent` | `SessionId`, `StudyGroupId`, `StartUtc` — публикуется `SessionReminderJob`, не событие жизненного цикла занятия, см. «Задания Hangfire» ниже |
 
 ### Сервисы для других модулей
 
@@ -213,18 +229,34 @@ public interface ISessionPlanQueryService
 
 ### Подписки
 
-| Событие | Реакция |
-|---|---|
-| `StudyGroupActivatedIntegrationEvent` | разрешить генерацию |
-| `StudyGroupFinishedIntegrationEvent` | остановить генерацию |
-| `StudentEnrolledIntegrationEvent` | учесть в будущих занятиях |
-| `StudentUnenrolledIntegrationEvent` | снять с будущих занятий |
-| `TeacherDeactivatedIntegrationEvent` (People) | пометить занятия без преподавателя |
+| Событие | Реакция | Реализовано как |
+|---|---|---|
+| `StudyGroupActivatedIntegrationEvent` | разрешить генерацию | синхронная проверка `group.Status == Active` в `GenerateSessionsCommandHandler` — без обработчика, нечего кэшировать |
+| `StudyGroupFinishedIntegrationEvent` | остановить генерацию | `StudyGroupFinishedIntegrationEventHandler` деактивирует все `ScheduleTemplate` группы |
+| `StudentEnrolledIntegrationEvent` | учесть в будущих занятиях | без обработчика — состав для `Attendance` считается на момент `Hold`, не на момент зачисления (сам инвариант ниже это и обеспечивает) |
+| `StudentUnenrolledIntegrationEvent` | снять с будущих занятий | без обработчика, по той же причине |
+| `TeacherDeactivatedIntegrationEvent` (People) | пометить занятия без преподавателя | `TeacherDeactivatedIntegrationEventHandler` помечает будущие `Planned`-занятия через `Session.TeacherComment` |
+
+> [!note] Три из пяти — без отдельного обработчика, сознательно
+> Не пробел в реализации: `StudyGroupActivated`/`StudentEnrolled`/`StudentUnenrolled` не
+> оставляют состояния, которое нужно было бы согласовывать асинхронно — соответствующая
+> проверка либо пересчитывается на каждый вызов (генерация), либо вообще не хранится
+> (посещаемость считается с нуля в момент `Hold`). Подробное обоснование —
+> [[Задачи · Новые модули]] → Scheduling, шаг 10.
 
 ### Реальное время
 
 Изменения расписания транслируются в dashboard через SignalR: у преподавателя открыт
 календарь, менеджер переносит занятие — обновление без перезагрузки.
+
+> [!note] Реализация — `ISessionRealtimeNotifier`
+> Событие `SessionScheduleChanged` в группу `tenant:{id}`, payload `SessionDto`. Подключено к
+> `CreateSession`/`UpdateSession`/`CancelSession`/`RescheduleSession` (два broadcast — старое
+> занятие переходит в `Rescheduled` на месте, новое появляется на новом слоте)/`HoldSession`.
+> **Не** подключено к генерации (ручной и фоновой) — десятки/сотни занятий разом, точечные
+> broadcast-события не подходят; инкрементальная синхронизация календаря при массовой
+> генерации осталась бы отдельной задачей фронтенда. Не подключено и к `MarkAttendance` —
+> посещаемость не двигает карточки на календаре.
 
 ## Права
 
@@ -237,6 +269,14 @@ public interface ISessionPlanQueryService
 
 `Sessions.Generate` отделено от `Create`: затрагивает сотни записей.
 `Attendance.MarkAny` — правка задним числом после закрытия периода.
+
+> [!note] `Attendance.MarkAny` зарегистрировано, но не проверяется
+> Нечего сверять: [[Payments]] не реализован, поэтому «занятие вошло в выставленный счёт» —
+> вопрос без ответа на этой стадии. Единственное право на `PUT /sessions/{id}/attendance`
+> сейчас — `Attendance.Mark`. Добавить row-level проверку `MarkAny` — задача при реализации
+> Payments. `Sessions.Hold` не отдельное право — гейтится `Sessions.Update` (в этом справочнике
+> не заведено собственное действие `Hold`). Нерабочие дни (`NonWorkingDay`) гейтятся
+> `ScheduleTemplates.View`/`.Manage` — отдельного ресурса под календарь не заводили.
 
 ## HTTP API
 
@@ -271,8 +311,12 @@ GET    /api/v1/non-working-days                 + CRUD
 
 | Задание | Расписание | Что делает |
 |---|---|---|
-| `GenerateSessionsJob` | ежедневно | держит горизонт занятий в N недель |
-| `SessionReminderJob` | ежечасно | напоминания за 24 часа → [[Notifications]] |
+| `GenerateSessionsJob` | ежедневно, 02:00 UTC | держит горизонт занятий в N недель — обходит все тенанты, на каждый активный `ScheduleTemplate` зовёт `GenerateSessionsCommand` через `IMediator` |
+| `SessionReminderJob` | ежечасно | окно `[+23ч, +24ч)` от текущего момента — естественная идемпотентность без флага «уже напомнили»; публикует `SessionReminderDueIntegrationEvent`, саму отправку берёт [[Notifications]] (не реализован в этой сессии) |
+
+Оба задания создают отдельный DI-scope на каждый тенант и устанавливают Finbuckle-контекст
+до обращения к `SchedulingDbContext` — фоновая задача не имеет ambient tenant-контекста
+(см. `.agents/rules/jobs.md`).
 
 ## Зависимости
 
