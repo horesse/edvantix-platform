@@ -18,10 +18,13 @@ using FSH.Modules.Scheduling.Features.v1.ScheduleTemplates.GenerateSessions;
 using FSH.Modules.Scheduling.Features.v1.ScheduleTemplates.GetScheduleTemplates;
 using FSH.Modules.Scheduling.Features.v1.ScheduleTemplates.PreviewGeneration;
 using FSH.Modules.Scheduling.Features.v1.ScheduleTemplates.UpdateScheduleTemplate;
+using FSH.Modules.Scheduling.Features.v1.Sessions.CancelSession;
 using FSH.Modules.Scheduling.Features.v1.Sessions.CreateSession;
 using FSH.Modules.Scheduling.Features.v1.Sessions.GetCalendar;
 using FSH.Modules.Scheduling.Features.v1.Sessions.GetMySchedule;
 using FSH.Modules.Scheduling.Features.v1.Sessions.GetSessionById;
+using FSH.Modules.Scheduling.Features.v1.Sessions.HoldSession;
+using FSH.Modules.Scheduling.Features.v1.Sessions.RescheduleSession;
 using FSH.Modules.Scheduling.Features.v1.Sessions.SearchSessions;
 using FSH.Modules.Scheduling.Features.v1.Sessions.UpdateSession;
 using FSH.Modules.Scheduling.Services;
@@ -114,8 +117,11 @@ public sealed class SchedulingModule : IModule
         group.MapCreateSessionEndpoint();
         group.MapGetSessionByIdEndpoint();
         group.MapUpdateSessionEndpoint();
+        group.MapHoldSessionEndpoint();
+        group.MapCancelSessionEndpoint();
+        group.MapRescheduleSessionEndpoint();
 
-        // Remaining endpoints (session lifecycle/Attendance) are wired feature-by-feature in later
-        // steps — see docs/04 Задачи/Задачи · Новые модули.md → Scheduling.
+        // Remaining endpoints (Attendance) are wired feature-by-feature in later steps — see
+        // docs/04 Задачи/Задачи · Новые модули.md → Scheduling.
     }
 }
