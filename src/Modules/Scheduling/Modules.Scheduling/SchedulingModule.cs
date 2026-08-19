@@ -18,6 +18,12 @@ using FSH.Modules.Scheduling.Features.v1.ScheduleTemplates.GenerateSessions;
 using FSH.Modules.Scheduling.Features.v1.ScheduleTemplates.GetScheduleTemplates;
 using FSH.Modules.Scheduling.Features.v1.ScheduleTemplates.PreviewGeneration;
 using FSH.Modules.Scheduling.Features.v1.ScheduleTemplates.UpdateScheduleTemplate;
+using FSH.Modules.Scheduling.Features.v1.Sessions.CreateSession;
+using FSH.Modules.Scheduling.Features.v1.Sessions.GetCalendar;
+using FSH.Modules.Scheduling.Features.v1.Sessions.GetMySchedule;
+using FSH.Modules.Scheduling.Features.v1.Sessions.GetSessionById;
+using FSH.Modules.Scheduling.Features.v1.Sessions.SearchSessions;
+using FSH.Modules.Scheduling.Features.v1.Sessions.UpdateSession;
 using FSH.Modules.Scheduling.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -102,7 +108,14 @@ public sealed class SchedulingModule : IModule
         group.MapPreviewGenerationEndpoint();
         group.MapGenerateSessionsEndpoint();
 
-        // Remaining endpoints (Sessions/Attendance) are wired feature-by-feature in later steps —
-        // see docs/04 Задачи/Задачи · Новые модули.md → Scheduling.
+        group.MapSearchSessionsEndpoint();
+        group.MapGetMyScheduleEndpoint();
+        group.MapGetCalendarEndpoint();
+        group.MapCreateSessionEndpoint();
+        group.MapGetSessionByIdEndpoint();
+        group.MapUpdateSessionEndpoint();
+
+        // Remaining endpoints (session lifecycle/Attendance) are wired feature-by-feature in later
+        // steps — see docs/04 Задачи/Задачи · Новые модули.md → Scheduling.
     }
 }
