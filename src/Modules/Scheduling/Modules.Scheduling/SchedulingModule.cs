@@ -32,7 +32,9 @@ using FSH.Modules.Scheduling.Features.v1.Sessions.HoldSession;
 using FSH.Modules.Scheduling.Features.v1.Sessions.RescheduleSession;
 using FSH.Modules.Scheduling.Features.v1.Sessions.SearchSessions;
 using FSH.Modules.Scheduling.Features.v1.Sessions.UpdateSession;
+using FSH.Modules.Scheduling.Jobs;
 using FSH.Modules.Scheduling.Services;
+using Hangfire;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -132,5 +134,22 @@ public sealed class SchedulingModule : IModule
         group.MapGetSessionAttendanceEndpoint();
         group.MapGetStudentAttendanceEndpoint();
         group.MapGetGroupAttendanceReportEndpoint();
+
+        // Recurring Hangfire jobs — registration here matches the pattern Files/Billing use.
+        var jobManager = endpoints.ServiceProvider.GetService<IRecurringJobManager>();
+        if (jobManager is not null)
+        {
+            jobManager.AddOrUpdate<GenerateSessionsJob>(
+                "scheduling-generate-sessions",
+                j => j.RunAsync(CancellationToken.None),
+                "0 2 * * *", // daily 02:00 UTC
+                new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc });
+
+            jobManager.AddOrUpdate<SessionReminderJob>(
+                "scheduling-session-reminders",
+                j => j.RunAsync(CancellationToken.None),
+                "0 * * * *", // hourly
+                new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc });
+        }
     }
 }
