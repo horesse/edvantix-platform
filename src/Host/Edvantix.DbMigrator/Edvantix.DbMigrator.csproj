@@ -52,6 +52,8 @@
     <ProjectReference Include="..\..\Modules\StudyGroups\Modules.StudyGroups.Contracts\Modules.StudyGroups.Contracts.csproj" />
     <ProjectReference Include="..\..\Modules\Scheduling\Modules.Scheduling\Modules.Scheduling.csproj" />
     <ProjectReference Include="..\..\Modules\Scheduling\Modules.Scheduling.Contracts\Modules.Scheduling.Contracts.csproj" />
+    <ProjectReference Include="..\..\Modules\Payments\Modules.Payments\Modules.Payments.csproj" />
+    <ProjectReference Include="..\..\Modules\Payments\Modules.Payments.Contracts\Modules.Payments.Contracts.csproj" />
     <ProjectReference Include="..\..\Modules\Tickets\Modules.Tickets\Modules.Tickets.csproj" />
     <ProjectReference Include="..\..\Modules\Tickets\Modules.Tickets.Contracts\Modules.Tickets.Contracts.csproj" />
     <ProjectReference Include="..\..\Modules\Webhooks\Modules.Webhooks\Modules.Webhooks.csproj" />
