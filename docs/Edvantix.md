@@ -136,5 +136,5 @@ flowchart TB
 |---|---|
 | Каркас (Identity, Multitenancy, Auditing, Files, Webhooks, Chat, Tickets, Notifications, Billing) | ✅ есть в коде |
 | Catalog (демо e-commerce) | 🔴 удаляется |
-| People, Curriculum, StudyGroups, Scheduling, Payments | 🟡 спроектированы, не реализованы |
+| People, Curriculum, StudyGroups, Scheduling, Payments (бэкенд) | ✅ есть в коде |
 | Frontend школы (учебные экраны) | 🟡 не начат |

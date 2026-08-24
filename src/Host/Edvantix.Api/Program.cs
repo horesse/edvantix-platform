@@ -13,6 +13,7 @@ using FSH.Modules.People;
 using FSH.Modules.Curriculum;
 using FSH.Modules.StudyGroups;
 using FSH.Modules.Scheduling;
+using FSH.Modules.Payments;
 using FSH.Modules.Tickets;
 using FSH.Modules.Multitenancy.Features.v1.GetTenantStatus;
 using System.Reflection;
@@ -67,6 +68,8 @@ builder.Services.AddMediator(o =>
         typeof(FSH.Modules.StudyGroups.StudyGroupsModule),
         typeof(FSH.Modules.Scheduling.Contracts.SchedulingContractsMarker),
         typeof(FSH.Modules.Scheduling.SchedulingModule),
+        typeof(FSH.Modules.Payments.Contracts.PaymentsContractsMarker),
+        typeof(FSH.Modules.Payments.PaymentsModule),
         typeof(FSH.Modules.Tickets.Contracts.TicketsContractsMarker),
         typeof(FSH.Modules.Tickets.TicketsModule),
         typeof(FSH.Modules.Files.Contracts.v1.Commands.RequestUploadUrlCommand),
@@ -90,6 +93,7 @@ var moduleAssemblies = new Assembly[]
     typeof(CurriculumModule).Assembly,
     typeof(StudyGroupsModule).Assembly,
     typeof(SchedulingModule).Assembly,
+    typeof(PaymentsModule).Assembly,
     typeof(TicketsModule).Assembly,
     typeof(FSH.Modules.Chat.ChatModule).Assembly,
     typeof(FSH.Modules.Notifications.NotificationsModule).Assembly,
