@@ -43,6 +43,20 @@ public sealed class StudyGroupQueryService(StudyGroupsDbContext dbContext) : ISt
             .ConfigureAwait(false);
     }
 
+    public async ValueTask<IReadOnlyList<GroupEnrollmentAccrualDto>> GetActiveEnrollmentsWithTariffAsync(
+        Guid studyGroupId, DateOnly onDate, CancellationToken cancellationToken = default)
+    {
+        return await dbContext.GroupEnrollments
+            .AsNoTracking()
+            .Where(e => e.StudyGroupId == studyGroupId
+                && e.Status == EnrollmentStatus.Active
+                && e.EnrolledOn <= onDate
+                && (e.LeftOn == null || e.LeftOn > onDate))
+            .Select(e => new GroupEnrollmentAccrualDto(e.StudentId, e.EnrolledOn, e.LeftOn, e.TariffId, e.DiscountPercent))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     public async ValueTask<IReadOnlyList<Guid>> GetActiveStudyGroupIdsForStudentAsync(
         Guid studentId, CancellationToken cancellationToken = default)
     {

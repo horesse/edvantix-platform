@@ -26,4 +26,11 @@ public interface IStudyGroupQueryService
     /// <c>GroupEnrollment</c> rows across the module boundary.</summary>
     ValueTask<IReadOnlyList<Guid>> GetActiveStudyGroupIdsForStudentAsync(
         Guid studentId, CancellationToken cancellationToken = default);
+
+    /// <summary>Same "active as of <paramref name="onDate"/>" roster as
+    /// <see cref="GetActiveStudentIdsAsync"/>, but carrying each enrollment's per-student tariff
+    /// override, discount and enrollment window — what Payments' bulk invoice generation needs to
+    /// resolve "<c>GroupEnrollment.TariffId</c>, иначе тариф курса" and prorate a partial month.</summary>
+    ValueTask<IReadOnlyList<GroupEnrollmentAccrualDto>> GetActiveEnrollmentsWithTariffAsync(
+        Guid studyGroupId, DateOnly onDate, CancellationToken cancellationToken = default);
 }

@@ -4,6 +4,7 @@ using FSH.Framework.Shared.Constants;
 using FSH.Framework.Web.Modules;
 using FSH.Modules.Payments.Contracts.Authorization;
 using FSH.Modules.Payments.Data;
+using FSH.Modules.Payments.Features.v1.StudentInvoices.BulkGenerateInvoices;
 using FSH.Modules.Payments.Features.v1.StudentInvoices.CreateStudentInvoice;
 using FSH.Modules.Payments.Features.v1.StudentInvoices.GetStudentInvoiceById;
 using FSH.Modules.Payments.Features.v1.StudentInvoices.SearchStudentInvoices;
@@ -12,6 +13,7 @@ using FSH.Modules.Payments.Features.v1.Tariffs.CreateTariff;
 using FSH.Modules.Payments.Features.v1.Tariffs.DeactivateTariff;
 using FSH.Modules.Payments.Features.v1.Tariffs.GetTariffs;
 using FSH.Modules.Payments.Features.v1.Tariffs.UpdateTariff;
+using FSH.Modules.Payments.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -37,10 +39,11 @@ public sealed class PaymentsModule : IModule
 
         builder.Services.AddHeroDbContext<PaymentsDbContext>();
         builder.Services.AddScoped<IDbInitializer, PaymentsDbInitializer>();
+        builder.Services.AddScoped<ITariffAccrualService, TariffAccrualService>();
 
-        // Outbox/Inbox for PaymentsDbContext, eventing trio, jobs, file access policy and the
-        // Mediator handler registrations are wired in as their respective vertical slices land —
-        // see docs/04 Задачи/Задачи · Новые модули.md → Payments for the step-by-step log.
+        // Outbox/Inbox for PaymentsDbContext, eventing trio, jobs, and the file access policy are
+        // wired in as their respective vertical slices land — see
+        // docs/04 Задачи/Задачи · Новые модули.md → Payments for the step-by-step log.
 
         builder.Services.AddHealthChecks()
             .AddDbContextCheck<PaymentsDbContext>(
@@ -75,6 +78,7 @@ public sealed class PaymentsModule : IModule
 
         group.MapCreateStudentInvoiceEndpoint();
         group.MapUpdateStudentInvoiceEndpoint();
+        group.MapGenerateInvoicesEndpoint();
         group.MapGetStudentInvoiceByIdEndpoint();
         group.MapSearchStudentInvoicesEndpoint();
 
