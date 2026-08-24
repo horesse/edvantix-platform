@@ -1,8 +1,10 @@
 using Finbuckle.MultiTenant.Abstractions;
+using Microsoft.Extensions.DependencyInjection;
 using FSH.Framework.Core.Context;
 using FSH.Framework.Eventing.Outbox;
 using FSH.Framework.Shared.Multitenancy;
 using FSH.Modules.Auditing.Contracts;
+using FSH.Modules.Identity.Data;
 using FSH.Modules.Identity.Contracts.DTOs;
 using FSH.Modules.Identity.Contracts.Events;
 using FSH.Modules.Identity.Contracts.Services;
@@ -30,7 +32,7 @@ public sealed class GenerateTokenCommandHandler
         ITokenService tokenService,
         ISecurityAudit securityAudit,
         IRequestContext requestContext,
-        IOutboxStore outboxStore,
+        [FromKeyedServices(typeof(IdentityDbContext))] IOutboxStore outboxStore,
         IMultiTenantContextAccessor<AppTenantInfo> multiTenantContextAccessor,
         ISessionService sessionService,
         ILogger<GenerateTokenCommandHandler> logger)

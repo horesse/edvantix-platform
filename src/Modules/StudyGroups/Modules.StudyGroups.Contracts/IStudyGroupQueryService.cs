@@ -19,4 +19,11 @@ public interface IStudyGroupQueryService
         Guid studentId, Guid studyGroupId, DateOnly onDate, CancellationToken cancellationToken = default);
 
     ValueTask<StudyGroupBriefDto?> GetBriefAsync(Guid studyGroupId, CancellationToken cancellationToken = default);
+
+    /// <summary>Study group ids where the student has an <see cref="EnrollmentStatus.Active"/> or
+    /// <see cref="EnrollmentStatus.Paused"/> enrollment "as of now" — used by Scheduling's
+    /// <c>GetMyScheduleQuery</c> to resolve a student's/guardian's own schedule without exposing
+    /// <c>GroupEnrollment</c> rows across the module boundary.</summary>
+    ValueTask<IReadOnlyList<Guid>> GetActiveStudyGroupIdsForStudentAsync(
+        Guid studentId, CancellationToken cancellationToken = default);
 }

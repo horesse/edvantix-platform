@@ -24,12 +24,51 @@ await _outboxStore.AddAsync(integrationEvent, ct).ConfigureAwait(false);
 ## Wiring (3 calls in the module's `ConfigureServices`)
 
 ```csharp
-services.AddEventingCore(builder.Configuration);                        // serializer + bus + hosted dispatcher
-services.AddEventingForDbContext<MyDbContext>();                        // outbox/inbox stores (scoped)
+services.AddEventingCore(builder.Configuration);                        // serializer + bus + hosted dispatcher — call ONCE, in IdentityModule only
+services.AddEventingForDbContext<MyDbContext>();                        // outbox/inbox stores (scoped, keyed by typeof(MyDbContext))
 services.AddIntegrationEventHandlers(typeof(MyModule).Assembly);        // scans IIntegrationEventHandler<>
 ```
 
 Bus = `EventingOptions.Provider`: `"RabbitMQ"` → `RabbitMqEventBus` (durable topic exchange); else `InMemoryEventBus` (default).
+
+## `IOutboxStore`/`IInboxStore` are keyed by `TDbContext` — inject with `[FromKeyedServices]`
+
+`AddEventingForDbContext<TDbContext>()` registers `IOutboxStore`/`IInboxStore`/`OutboxDispatcher` as
+**keyed** services, key = `typeof(TDbContext)`. This exists because N modules all call this method
+with a *different* `TDbContext`, and a plain unkeyed `AddScoped<IOutboxStore, ...>` from each module
+would mean .NET DI silently resolves every unkeyed `IOutboxStore` injection anywhere in the app to
+whichever module registered **last** — the bug this fixed (see
+`docs/04 Задачи/Задачи · Доработки каркаса.md` → "Eventing (BuildingBlocks)" for the incident: an
+Identity handler was writing `UserRegisteredIntegrationEvent` through a `StudyGroupsDbContext`
+instance it never otherwise touched — a **separate, non-atomic transaction** from the handler's own
+`SaveChanges`, not just "wrong schema").
+
+**Every handler that publishes an event must annotate the parameter**, not just declare the type:
+
+```csharp
+public sealed class CreateFooCommandHandler(
+    MyDbContext dbContext,
+    [FromKeyedServices(typeof(MyDbContext))] IOutboxStore outboxStore,   // <-- required
+    IMultiTenantContextAccessor<AppTenantInfo> multiTenantContextAccessor)
+    : ICommandHandler<CreateFooCommand, Guid>
+{ ... }
+```
+
+A plain `IOutboxStore outboxStore` parameter (no attribute) throws `InvalidOperationException` at
+resolution time — by design, so a missed annotation fails loudly at first request instead of quietly
+writing to someone else's table. Requires `using Microsoft.Extensions.DependencyInjection;` for
+`FromKeyedServicesAttribute`.
+
+`OutboxDispatcherHostedService` already knows to drain every registered `TDbContext`'s outbox each
+tick (it enumerates `EventingDbContextRegistration`, one singleton per `AddEventingForDbContext` call)
+— nothing to do there when adding a module.
+
+**Inbox dedup stays intentionally centralized**, not keyed per-consumer: `InMemoryEventBus` resolves
+`IInboxStore` for the FIRST module that called `AddEventingForDbContext` (deterministic — Identity,
+order 1), because a handler's dedup key (`eventId` + handler type FQN) is globally unique regardless
+of which physical table stores it, and the bus has no reliable way to know which module "owns" an
+arbitrary `IIntegrationEventHandler<T>` it resolves via reflection. Don't try to key Inbox lookups
+per-handler without redesigning that mapping — it isn't needed for correctness.
 
 ## Gotchas
 

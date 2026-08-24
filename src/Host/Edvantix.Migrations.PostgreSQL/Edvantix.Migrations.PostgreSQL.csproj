@@ -19,6 +19,7 @@
 	  <ProjectReference Include="..\..\Modules\People\Modules.People\Modules.People.csproj" />
 	  <ProjectReference Include="..\..\Modules\Curriculum\Modules.Curriculum\Modules.Curriculum.csproj" />
 	  <ProjectReference Include="..\..\Modules\StudyGroups\Modules.StudyGroups\Modules.StudyGroups.csproj" />
+	  <ProjectReference Include="..\..\Modules\Scheduling\Modules.Scheduling\Modules.Scheduling.csproj" />
 	  <ProjectReference Include="..\..\Modules\Tickets\Modules.Tickets\Modules.Tickets.csproj" />
 	  <ProjectReference Include="..\..\Modules\Chat\Modules.Chat\Modules.Chat.csproj" />
 	  <ProjectReference Include="..\..\Modules\Notifications\Modules.Notifications\Modules.Notifications.csproj" />

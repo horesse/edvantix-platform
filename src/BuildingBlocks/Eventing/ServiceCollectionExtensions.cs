@@ -56,7 +56,12 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Registers EF Core-based outbox and inbox stores for the specified DbContext.
+    /// Registers EF Core-based outbox and inbox stores for the specified DbContext, keyed by
+    /// <typeparamref name="TDbContext"/> so that N modules calling this can coexist — see
+    /// <c>.agents/rules/eventing.md</c>. Callers must resolve <c>IOutboxStore</c>/<c>IInboxStore</c>
+    /// with <c>[FromKeyedServices(typeof(TDbContext))]</c>; a plain unkeyed injection will fail to
+    /// resolve (by design — an unkeyed injection silently picking "whichever module registered
+    /// last" is exactly the bug this fixes).
     /// </summary>
     public static IServiceCollection AddEventingForDbContext<TDbContext>(
         this IServiceCollection services)
@@ -64,9 +69,20 @@ public static class ServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        services.AddScoped<IOutboxStore, EfCoreOutboxStore<TDbContext>>();
-        services.AddScoped<IInboxStore, EfCoreInboxStore<TDbContext>>();
-        services.AddScoped<OutboxDispatcher>();
+        var key = typeof(TDbContext);
+
+        services.AddKeyedScoped<IOutboxStore, EfCoreOutboxStore<TDbContext>>(key);
+        services.AddKeyedScoped<IInboxStore, EfCoreInboxStore<TDbContext>>(key);
+
+        // OutboxDispatcher itself must be resolved per-TDbContext too (it wraps that context's own
+        // keyed IOutboxStore) — a keyed factory registration, not AddKeyedScoped<TService,TImpl>,
+        // because the constructor argument to inject (IOutboxStore) is itself keyed.
+        services.AddKeyedScoped<OutboxDispatcher>(key, (sp, _) =>
+            ActivatorUtilities.CreateInstance<OutboxDispatcher>(sp, sp.GetRequiredKeyedService<IOutboxStore>(key)));
+
+        // Lets OutboxDispatcherHostedService (and InMemoryEventBus, for the shared Inbox) discover
+        // every module that participates in eventing — see EventingDbContextRegistration.
+        services.AddSingleton(new EventingDbContextRegistration(key));
 
         return services;
     }

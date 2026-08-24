@@ -290,7 +290,10 @@ public class EndpointConventionTests
                                name.StartsWith("Unlink", StringComparison.Ordinal) ||
                                name.StartsWith("Import", StringComparison.Ordinal) ||
                                name.StartsWith("Publish", StringComparison.Ordinal) ||
-                               name.StartsWith("Duplicate", StringComparison.Ordinal);
+                               name.StartsWith("Duplicate", StringComparison.Ordinal) ||
+                               name.StartsWith("Preview", StringComparison.Ordinal) ||
+                               name.StartsWith("Hold", StringComparison.Ordinal) ||
+                               name.StartsWith("Reschedule", StringComparison.Ordinal);
 
                 if (!hasVerb)
                 {

@@ -1,4 +1,5 @@
 using System.Globalization;
+using Microsoft.Extensions.DependencyInjection;
 using Finbuckle.MultiTenant.Abstractions;
 using FSH.Framework.Eventing.Outbox;
 using FSH.Framework.Shared.Multitenancy;
@@ -14,7 +15,7 @@ namespace FSH.Modules.People.Features.v1.Students.ImportStudents;
 
 public sealed class ImportStudentsCommandHandler(
     PeopleDbContext dbContext,
-    IOutboxStore outboxStore,
+    [FromKeyedServices(typeof(PeopleDbContext))] IOutboxStore outboxStore,
     IMultiTenantContextAccessor<AppTenantInfo> multiTenantContextAccessor)
     : ICommandHandler<ImportStudentsCommand, ImportStudentsResultDto>
 {

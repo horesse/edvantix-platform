@@ -12,16 +12,20 @@ namespace FSH.Framework.Eventing.Outbox;
 public sealed partial class OutboxDispatcherHostedService : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IReadOnlyList<EventingDbContextRegistration> _registrations;
     private readonly ILogger<OutboxDispatcherHostedService> _logger;
     private readonly TimeSpan _interval;
 
     public OutboxDispatcherHostedService(
         IServiceScopeFactory scopeFactory,
+        IEnumerable<EventingDbContextRegistration> registrations,
         IOptions<EventingOptions> options,
         ILogger<OutboxDispatcherHostedService> logger)
     {
         ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(registrations);
         _scopeFactory = scopeFactory;
+        _registrations = registrations.ToList();
         _logger = logger;
         _interval = TimeSpan.FromSeconds(options.Value.OutboxDispatchIntervalSeconds > 0
             ? options.Value.OutboxDispatchIntervalSeconds
@@ -65,9 +69,14 @@ public sealed partial class OutboxDispatcherHostedService : BackgroundService
 
     private async Task DispatchOutboxAsync(CancellationToken ct)
     {
-        using var scope = _scopeFactory.CreateScope();
-        var dispatcher = scope.ServiceProvider.GetRequiredService<OutboxDispatcher>();
-        await dispatcher.DispatchAsync(ct).ConfigureAwait(false);
+        // One outbox table per module (see EventingDbContextRegistration) — drain every one of them
+        // each tick, not just whichever module happened to register last.
+        foreach (var registration in _registrations)
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var dispatcher = scope.ServiceProvider.GetRequiredKeyedService<OutboxDispatcher>(registration.DbContextType);
+            await dispatcher.DispatchAsync(ct).ConfigureAwait(false);
+        }
     }
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Outbox dispatcher hosted service started. Dispatch interval: {Interval}s")]

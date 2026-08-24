@@ -1,4 +1,5 @@
 using System.Net;
+using Microsoft.Extensions.DependencyInjection;
 using Finbuckle.MultiTenant.Abstractions;
 using FSH.Framework.Core.Exceptions;
 using FSH.Framework.Eventing.Outbox;
@@ -13,7 +14,7 @@ namespace FSH.Modules.Curriculum.Features.v1.Courses.PublishCourse;
 
 public sealed class PublishCourseCommandHandler(
     CurriculumDbContext dbContext,
-    IOutboxStore outboxStore,
+    [FromKeyedServices(typeof(CurriculumDbContext))] IOutboxStore outboxStore,
     IMultiTenantContextAccessor<AppTenantInfo> multiTenantContextAccessor)
     : ICommandHandler<PublishCourseCommand, Unit>
 {

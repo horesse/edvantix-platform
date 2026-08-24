@@ -1,4 +1,5 @@
 using Finbuckle.MultiTenant.Abstractions;
+using Microsoft.Extensions.DependencyInjection;
 using FSH.Framework.Core.Exceptions;
 using FSH.Framework.Eventing.Outbox;
 using FSH.Framework.Shared.Multitenancy;
@@ -12,7 +13,7 @@ namespace FSH.Modules.StudyGroups.Features.v1.Enrollments.EnrollStudents;
 
 public sealed class EnrollStudentsCommandHandler(
     StudyGroupsDbContext dbContext,
-    IOutboxStore outboxStore,
+    [FromKeyedServices(typeof(StudyGroupsDbContext))] IOutboxStore outboxStore,
     IMultiTenantContextAccessor<AppTenantInfo> multiTenantContextAccessor,
     TimeProvider timeProvider)
     : ICommandHandler<EnrollStudentsCommand, IReadOnlyList<Guid>>
