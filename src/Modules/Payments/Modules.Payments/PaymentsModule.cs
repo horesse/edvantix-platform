@@ -13,6 +13,7 @@ using FSH.Modules.Payments.Features.v1.StudentInvoices.BulkIssueInvoices;
 using FSH.Modules.Payments.Features.v1.StudentInvoices.CancelInvoice;
 using FSH.Modules.Payments.Features.v1.StudentInvoices.CreateStudentInvoice;
 using FSH.Modules.Payments.Features.v1.StudentInvoices.GetDebtorsReport;
+using FSH.Modules.Payments.Features.v1.StudentInvoices.GetInvoicePdf;
 using FSH.Modules.Payments.Features.v1.StudentInvoices.GetMyInvoices;
 using FSH.Modules.Payments.Features.v1.StudentInvoices.GetRevenueReport;
 using FSH.Modules.Payments.Features.v1.StudentInvoices.GetStudentBalance;
@@ -52,6 +53,7 @@ public sealed class PaymentsModule : IModule
         builder.Services.AddHeroDbContext<PaymentsDbContext>();
         builder.Services.AddScoped<IDbInitializer, PaymentsDbInitializer>();
         builder.Services.AddScoped<ITariffAccrualService, TariffAccrualService>();
+        builder.Services.AddScoped<IInvoicePdfRenderer, InvoicePdfRenderer>();
         builder.Services.AddScoped<IFileAccessPolicy, PaymentProofAccessPolicy>();
 
         // Outbox/Inbox for PaymentsDbContext, eventing trio and jobs are wired in as their
@@ -98,6 +100,7 @@ public sealed class PaymentsModule : IModule
         group.MapGetStudentInvoiceByIdEndpoint();
         group.MapSearchStudentInvoicesEndpoint();
         group.MapGetMyInvoicesEndpoint();
+        group.MapGetInvoicePdfEndpoint();
 
         group.MapConfirmPaymentEndpoint();
         group.MapGetInvoicePaymentsEndpoint();
