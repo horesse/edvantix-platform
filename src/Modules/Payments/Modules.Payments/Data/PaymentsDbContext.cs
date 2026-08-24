@@ -4,6 +4,7 @@ using FSH.Framework.Eventing.Outbox;
 using FSH.Framework.Persistence.Context;
 using FSH.Framework.Shared.Multitenancy;
 using FSH.Framework.Shared.Persistence;
+using FSH.Modules.Payments.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
@@ -23,9 +24,10 @@ public sealed class PaymentsDbContext : BaseDbContext
     {
     }
 
-    // Domain DbSets (Tariff/StudentInvoice/InvoiceLine/PaymentConfirmation) are added in the next
-    // step alongside the entities themselves and the InitialCreate migration — see
-    // docs/04 Задачи/Задачи · Новые модули.md → Payments → шаг 3.
+    public DbSet<Tariff> Tariffs => Set<Tariff>();
+    public DbSet<StudentInvoice> StudentInvoices => Set<StudentInvoice>();
+    public DbSet<InvoiceLine> InvoiceLines => Set<InvoiceLine>();
+    public DbSet<PaymentConfirmation> PaymentConfirmations => Set<PaymentConfirmation>();
 
     // Required by AddEventingForDbContext<PaymentsDbContext>() — present from the first migration
     // (same as StudyGroups/Scheduling; see People's Outbox/Inbox bug note for why this matters).
