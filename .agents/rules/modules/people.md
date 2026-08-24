@@ -8,7 +8,7 @@
 
 ## Gotchas / patterns to copy
 
-- **People — низовой модуль**: ни на что не подписывается (`Подписки: Нет` в справочнике). Загружается до StudyGroups/Scheduling/Payments, которые от него зависят через `.Contracts`.
+- **People — низовой модуль**: ни на что не подписывается (`Подписки: Нет` в справочнике). Загружается до StudyGroups/Scheduling/Payments, которые от него зависят через `.Contracts`. Следствие: если новый запрос People нуждается в данных StudyGroups/Scheduling/Payments (как оказалось с `GetTeacherWorkloadQuery` — исходно числился здесь, реализован в `Modules.Scheduling`, эндпоинт `GET /teachers/{id}/workload` мапит Scheduling под чужим именем ресурса), контракт/хендлер уезжает в тот из вышестоящих модулей, которому реально доступны обе стороны — не тащить People.Contracts → StudyGroups/Scheduling.Contracts.
 - **Не звать `AddEventingCore()` в `PeopleModule`** — `IdentityModule` уже регистрирует его (шина + `OutboxDispatcherHostedService`); повторный вызов заводит второй hosted-dispatcher, читающий тот же outbox параллельно. Модуль вызывает только `AddEventingForDbContext<PeopleDbContext>()`.
 - **`Students.ViewNotes`** — отдельное от `Students.View` право: внутренние заметки менеджеров, преподаватель их не видит.
 - **`IsPrimaryPayer`** — ровно один представитель на ученика с этим флагом. Инвариант в хендлере (`SetPrimaryPayerCommand` снимает флаг с прежнего плательщика в той же транзакции), не в БД — правило похоже на «единственный thumbnail» в Catalog (`database.md`).

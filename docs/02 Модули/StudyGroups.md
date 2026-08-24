@@ -149,12 +149,31 @@ public interface IStudyGroupQueryService
 
     ValueTask<StudyGroupBriefDto?> GetBriefAsync(
         Guid studyGroupId, CancellationToken ct = default);
+
+    ValueTask<IReadOnlyList<Guid>> GetActiveStudyGroupIdsForStudentAsync(
+        Guid studentId, CancellationToken ct = default);
+
+    ValueTask<IReadOnlyList<GroupEnrollmentAccrualDto>> GetActiveEnrollmentsWithTariffAsync(
+        Guid studyGroupId, DateOnly onDate, CancellationToken ct = default);
+
+    ValueTask<IReadOnlyList<Guid>> GetActiveStudyGroupIdsAsync(CancellationToken ct = default);
+
+    ValueTask<IReadOnlyList<Guid>> GetActiveGroupIdsForTeacherAsync(
+        Guid teacherId, CancellationToken ct = default);
 }
 ```
 
 `GetActiveStudentIdsAsync` — [[Scheduling]] использует при создании списка посещаемости
 на дату; [[Payments]] — при расчёте начислений. Синхронный вызов, потому что нужен
 ответ, а не реакция.
+
+> [!note] Методы добавлены аддитивно по мере появления вызывающих модулей
+> Только `GetActiveStudentIdsAsync`/`IsStudentActiveInGroupAsync`/`GetBriefAsync` были в
+> исходной спецификации. `GetActiveStudyGroupIdsForStudentAsync` — [[Scheduling]]
+> (`GetMyScheduleQuery`, «мои группы» ученика/подопечного). `GetActiveEnrollmentsWithTariffAsync`/
+> `GetActiveStudyGroupIdsAsync` — [[Payments]] (массовое выставление счетов). `GetActiveGroupIdsForTeacherAsync`
+> — [[Scheduling]] (`GetTeacherWorkloadQuery` — см. `docs/02 Модули/Scheduling.md`, живёт там,
+> не в [[People]], потому что People не должен зависеть от модулей с бо́льшим порядком).
 
 ### Подписки
 

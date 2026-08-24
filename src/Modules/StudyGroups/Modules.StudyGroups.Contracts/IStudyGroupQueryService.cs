@@ -39,4 +39,12 @@ public interface IStudyGroupQueryService
     /// <c>BulkGenerateInvoicesCommand</c> per group (same shape as Scheduling's
     /// <c>GenerateSessionsJob</c> iterating active <c>ScheduleTemplate</c>s).</summary>
     ValueTask<IReadOnlyList<Guid>> GetActiveStudyGroupIdsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Ids of every <see cref="StudyGroupStatus.Active"/> group the teacher is staffed on —
+    /// either as <see cref="StudyGroupBriefDto.PrimaryTeacherId"/> or via a <c>GroupTeacher</c> roster
+    /// entry in any role. Basis of Scheduling's <c>GetTeacherWorkloadQuery</c> "active groups" count
+    /// (see docs/02 Модули/Scheduling.md — that query lives in Scheduling, not here, because it also
+    /// needs Scheduling's own <c>Session</c> rows).</summary>
+    ValueTask<IReadOnlyList<Guid>> GetActiveGroupIdsForTeacherAsync(
+        Guid teacherId, CancellationToken cancellationToken = default);
 }

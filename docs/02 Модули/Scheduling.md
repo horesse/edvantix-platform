@@ -17,7 +17,8 @@ tags: [модуль, новый, scheduling]
 > `TimeZoneInfo` на каждое occurrence (тест на переход на летнее время — обязателен и
 > пройден), `ISessionConflictChecker` на три вида конфликтов, CRUD/жизненный цикл занятий
 > (Hold/Cancel/Reschedule), массовая посещаемость, `IAttendanceQueryService`/
-> `ISessionPlanQueryService` для будущего Payments, 5+1 интеграционных события (пятёрка из
+> `ISessionPlanQueryService` для [[Payments]], `GetTeacherWorkloadQuery` (нагрузка
+> преподавателя — см. примечание в «Контракты»), 5+1 интеграционных события (пятёрка из
 > этого справочника + `SessionReminderDueIntegrationEvent` под `SessionReminderJob`),
 > избирательные подписки (`StudyGroupFinished`/`TeacherDeactivated` — с реальным действием;
 > `StudyGroupActivated`/`StudentEnrolled`/`StudentUnenrolled` — сознательно без обработчика,
@@ -185,12 +186,24 @@ flowchart TB
 | `GetStudentAttendanceQuery` | история ученика |
 | `GetGroupAttendanceReportQuery` | сводка по группе за период |
 | `GetScheduleTemplatesQuery` · `GetRoomsQuery` · `GetNonWorkingDaysQuery` | справочники |
+| `GetTeacherWorkloadQuery` | `TeacherWorkloadDto` — см. примечание ниже |
+
+> [!note] `GetTeacherWorkloadQuery` живёт здесь, а не в [[People]]
+> Изначально спецификация числила его запросом People (`GET /teachers/{id}/workload`,
+> `TeacherWorkloadDto` в её списке DTO) — но People обязан оставаться низовым модулем
+> (порядок `550`, ни на что не подписывается), а нагрузка преподавателя требует и
+> активных групп ([[StudyGroups]], `IStudyGroupQueryService.GetActiveGroupIdsForTeacherAsync`
+> — аддитивное расширение контракта), и собственных `Session` этого модуля. Тот же приём,
+> что уже применён для `GET /students/{id}/attendance`: Scheduling мапит эндпоинт под чужим
+> именем ресурса (`/teachers/`), гейтит своим правом (`Sessions.View`), не People. Если
+> `From`/`To` не заданы — по умолчанию «сегодня + 7 дней», короче 8-недельного горизонта
+> генерации (`SchedulingDefaults.DefaultWorkloadWindowDays`).
 
 ### DTO
 
 `SessionDto` · `SessionDetailDto` · `CalendarEntryDto` · `AttendanceDto` ·
 `AttendanceReportDto` · `ScheduleTemplateDto` · `GenerationPreviewDto` ·
-`SessionConflictDto` · `RoomDto` · `NonWorkingDayDto`
+`SessionConflictDto` · `RoomDto` · `NonWorkingDayDto` · `TeacherWorkloadDto`
 
 ### Публикуемые события
 
@@ -305,6 +318,8 @@ GET    /api/v1/study-groups/{id}/attendance-report
 
 GET    /api/v1/rooms                            + CRUD
 GET    /api/v1/non-working-days                 + CRUD
+
+GET    /api/v1/teachers/{id}/workload           ?from=&to= — см. примечание в «Контракты»
 ```
 
 ## Задания Hangfire
