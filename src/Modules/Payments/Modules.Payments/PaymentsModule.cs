@@ -4,6 +4,10 @@ using FSH.Framework.Shared.Constants;
 using FSH.Framework.Web.Modules;
 using FSH.Modules.Payments.Contracts.Authorization;
 using FSH.Modules.Payments.Data;
+using FSH.Modules.Payments.Features.v1.StudentInvoices.CreateStudentInvoice;
+using FSH.Modules.Payments.Features.v1.StudentInvoices.GetStudentInvoiceById;
+using FSH.Modules.Payments.Features.v1.StudentInvoices.SearchStudentInvoices;
+using FSH.Modules.Payments.Features.v1.StudentInvoices.UpdateStudentInvoice;
 using FSH.Modules.Payments.Features.v1.Tariffs.CreateTariff;
 using FSH.Modules.Payments.Features.v1.Tariffs.DeactivateTariff;
 using FSH.Modules.Payments.Features.v1.Tariffs.GetTariffs;
@@ -68,6 +72,11 @@ public sealed class PaymentsModule : IModule
         group.MapUpdateTariffEndpoint();
         group.MapDeactivateTariffEndpoint();
         group.MapGetTariffsEndpoint();
+
+        group.MapCreateStudentInvoiceEndpoint();
+        group.MapUpdateStudentInvoiceEndpoint();
+        group.MapGetStudentInvoiceByIdEndpoint();
+        group.MapSearchStudentInvoicesEndpoint();
 
         // Remaining endpoints and recurring jobs are wired in as their features land — see the step
         // log in docs/04 Задачи/Задачи · Новые модули.md → Payments.

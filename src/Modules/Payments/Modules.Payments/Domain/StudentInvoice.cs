@@ -47,7 +47,6 @@ public sealed class StudentInvoice : AggregateRoot<Guid>
     private StudentInvoice() { }
 
     public static StudentInvoice Create(
-        string number,
         Guid studentId,
         Guid? payerGuardianId,
         Guid? studyGroupId,
@@ -57,7 +56,6 @@ public sealed class StudentInvoice : AggregateRoot<Guid>
         string currency,
         string? comment)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(number);
         ArgumentException.ThrowIfNullOrWhiteSpace(currency);
         if (studentId == Guid.Empty)
         {
@@ -68,10 +66,11 @@ public sealed class StudentInvoice : AggregateRoot<Guid>
             throw new ArgumentException("PeriodTo cannot precede PeriodFrom.", nameof(periodTo));
         }
 
+        var id = Guid.CreateVersion7();
         return new StudentInvoice
         {
-            Id = Guid.CreateVersion7(),
-            Number = number.Trim(),
+            Id = id,
+            Number = GenerateNumber(id, DateOnly.FromDateTime(DateTime.UtcNow)),
             StudentId = studentId,
             PayerGuardianId = payerGuardianId,
             StudyGroupId = studyGroupId,
