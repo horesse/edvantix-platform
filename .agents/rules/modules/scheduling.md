@@ -96,3 +96,12 @@ StudyGroups (610): занятие принадлежит учебной груп
   .UseInMemoryDatabase(...)` + самодельный `IMultiTenantContextAccessor`/`IMultiTenantContextSetter`.
   Быстрое покрытие LINQ-сервисов (`SessionConflictChecker`, `ScheduleGeneratorService`), не замена
   интеграционным тестам на реальном Postgres.
+- **Мапить эндпоинт под чужим именем ресурса — устоявшийся приём, не исключение.** `GetTeacherWorkload`
+  (query `GetTeacherWorkloadQuery` в `Modules.Scheduling.Contracts`) мапит `GET /teachers/{id}/workload`
+  — «teachers» принадлежит People, а не Scheduling. Причина: People обязан оставаться низовым модулем
+  (`Order = 550`, ничего не подключает сверху), а нагрузка преподавателя нужна и данные StudyGroups
+  (`IStudyGroupQueryService.GetActiveGroupIdsForTeacherAsync` — ещё одно аддитивное расширение), и
+  собственные `Session`. Тот же приём уже стоял в `GetStudentAttendanceEndpoint` (`/students/{id}/
+  attendance`) — гейтится Scheduling-правом (`Sessions.View`), не People-правом. Если понадобится
+  что-то подобное в другом модуле — не тянуть contracts-зависимость «вниз» по порядку, смотреть, не
+  дешевле ли смапить чужой маршрут из модуля, которому уже доступны обе стороны данных.

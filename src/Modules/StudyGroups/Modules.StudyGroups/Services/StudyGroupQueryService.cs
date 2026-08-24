@@ -80,6 +80,25 @@ public sealed class StudyGroupQueryService(StudyGroupsDbContext dbContext) : ISt
             .ConfigureAwait(false);
     }
 
+    public async ValueTask<IReadOnlyList<Guid>> GetActiveGroupIdsForTeacherAsync(
+        Guid teacherId, CancellationToken cancellationToken = default)
+    {
+        var primaryIds = dbContext.StudyGroups
+            .AsNoTracking()
+            .Where(g => g.Status == StudyGroupStatus.Active && g.PrimaryTeacherId == teacherId)
+            .Select(g => g.Id);
+
+        var rosterIds =
+            from t in dbContext.GroupTeachers.AsNoTracking()
+            join g in dbContext.StudyGroups.AsNoTracking() on t.StudyGroupId equals g.Id
+            where t.TeacherId == teacherId && g.Status == StudyGroupStatus.Active
+            select g.Id;
+
+        return await primaryIds.Union(rosterIds)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     public async ValueTask<StudyGroupBriefDto?> GetBriefAsync(Guid studyGroupId, CancellationToken cancellationToken = default)
     {
         var group = await dbContext.StudyGroups

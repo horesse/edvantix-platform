@@ -5,11 +5,12 @@
 		<AssemblyName>StudyGroups.Tests</AssemblyName>
 		<IsPackable>false</IsPackable>
 		<IsTestProject>true</IsTestProject>
-		<NoWarn>$(NoWarn);CA1515;CA1861;CA1707</NoWarn>
+		<NoWarn>$(NoWarn);CA1515;CA1861;CA1707;S2376</NoWarn>
 	</PropertyGroup>
 
 	<ItemGroup>
 		<PackageReference Include="AutoFixture" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
 		<PackageReference Include="Microsoft.NET.Test.Sdk" />
 		<PackageReference Include="NSubstitute" />
 		<PackageReference Include="Shouldly" />

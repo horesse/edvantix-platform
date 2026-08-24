@@ -13,15 +13,21 @@ tags: [модуль, новый, people]
 >
 > Домен, миграция, CRUD/поиск для трёх сущностей, жизненный цикл ученика, представители,
 > привязка учётной записи, заметки, `IPeopleScopeResolver`, `IPeopleLookupService`, импорт CSV —
-> всё сделано, юнит- и интеграционные тесты зелёные (36 + 7). Не хватает только
-> `GetTeacherWorkloadQuery` (сознательно отложено до [[StudyGroups]]).
+> всё сделано, юнит- и интеграционные тесты зелёные (36 + 7).
 >
-> [!warning] Известный, не исправленный вопрос по `BuildingBlocks/Eventing`
-> `AddEventingForDbContext<T>()` регистрирует `IOutboxStore` без ключа — при двух и более
-> модулях, использующих его (сейчас People и Identity), не-ключевой DI отдаёт **последнюю**
-> регистрацию всем. Тесты зелёные, но это тихая порча схемы у Identity. Требует правки
-> защищённого `src/BuildingBlocks/Eventing/ServiceCollectionExtensions.cs` — нужно согласование.
-> Подробности — [[Задачи · Новые модули]].
+> [!note] `GetTeacherWorkloadQuery` реализован — но в [[Scheduling]], не здесь
+> Исходная спецификация числила его запросом People, ждущим [[StudyGroups]]. При реализации
+> оказалось, что нагрузка преподавателя требует данных StudyGroups (активные группы) и
+> Scheduling (сами занятия) — а People обязан оставаться низовым модулем, ничего не
+> подключающим сверху. Эндпоинт `GET /teachers/{id}/workload` мапит Scheduling под чужим
+> именем ресурса, тем же приёмом, что и `GET /students/{id}/attendance`. Подробности —
+> `docs/02 Модули/Scheduling.md` → «Контракты».
+>
+> [!success] Найденный здесь вопрос по `BuildingBlocks/Eventing` — исправлен
+> `AddEventingForDbContext<T>()` изначально регистрировал `IOutboxStore` без ключа — при
+> двух и более модулях не-ключевой DI отдавал бы последнюю регистрацию всем. Исправлено
+> при подготовке [[Scheduling]] (keyed DI по `TDbContext`, согласовано с пользователем) —
+> см. `.agents/rules/eventing.md`.
 
 ## Назначение
 
@@ -143,7 +149,6 @@ erDiagram
 | `GetStudentNotesQuery`                          | `IReadOnlyList<StudentNoteDto>`                                   |
 | `SearchTeachersQuery`                           | `PagedResponse<TeacherDto>`                                       |
 | `GetTeacherByIdQuery`                           | `TeacherDto`                                                      |
-| `GetTeacherWorkloadQuery`                       | ⏳ **не реализовано** — `TeacherWorkloadDto`, ждёт [[StudyGroups]] |
 | `SearchGuardiansQuery`                          | `PagedResponse<GuardianDto>`                                      |
 | `GetGuardianByIdQuery`                          | `GuardianDto`                                                     |
 | `GetMyPeopleScopeQuery`                         | `PeopleScope`                                                     |
@@ -152,11 +157,16 @@ erDiagram
 (обёртка над `GuardianDto` с `Relation`/`IsPrimaryPayer`) при реализации: экрану «представители
 ученика» нужен не только бриф человека, но и деталь связи.
 
+`GetTeacherWorkloadQuery`/`TeacherWorkloadDto` из исходной спецификации People — реализованы,
+но в [[Scheduling]] (`GET /teachers/{id}/workload`), не здесь. См. примечание в начале файла.
+
 ### DTO
 
 `StudentDto` · `StudentDetailDto` · `StudentNoteDto` · `TeacherDto` ·
-`TeacherWorkloadDto` (⏳ не реализовано) · `GuardianDto` · `StudentGuardianDto` ·
+`GuardianDto` · `StudentGuardianDto` ·
 `PersonBriefDto` · `PeopleScope` · `ImportStudentsResultDto` · `ImportStudentRowResultDto`
+
+(`TeacherWorkloadDto` lives in `Modules.Scheduling.Contracts`, not here.)
 
 ### Публикуемые события
 
@@ -248,7 +258,7 @@ POST   /api/v1/teachers/{id}/deactivate
 POST   /api/v1/teachers/{id}/activate
 POST   /api/v1/teachers/{id}/link-user
 POST   /api/v1/teachers/{id}/unlink-user
-GET    /api/v1/teachers/{id}/workload          ⏳ не реализовано — ждёт StudyGroups
+                                               (workload — mapped by Scheduling, see below)
 
 GET    /api/v1/guardians                      + полный CRUD
 POST   /api/v1/guardians/{id}/link-user
