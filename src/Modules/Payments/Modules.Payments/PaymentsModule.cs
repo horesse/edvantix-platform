@@ -12,6 +12,10 @@ using FSH.Modules.Payments.Features.v1.StudentInvoices.BulkGenerateInvoices;
 using FSH.Modules.Payments.Features.v1.StudentInvoices.BulkIssueInvoices;
 using FSH.Modules.Payments.Features.v1.StudentInvoices.CancelInvoice;
 using FSH.Modules.Payments.Features.v1.StudentInvoices.CreateStudentInvoice;
+using FSH.Modules.Payments.Features.v1.StudentInvoices.GetDebtorsReport;
+using FSH.Modules.Payments.Features.v1.StudentInvoices.GetMyInvoices;
+using FSH.Modules.Payments.Features.v1.StudentInvoices.GetRevenueReport;
+using FSH.Modules.Payments.Features.v1.StudentInvoices.GetStudentBalance;
 using FSH.Modules.Payments.Features.v1.StudentInvoices.GetStudentInvoiceById;
 using FSH.Modules.Payments.Features.v1.StudentInvoices.IssueInvoice;
 using FSH.Modules.Payments.Features.v1.StudentInvoices.SearchStudentInvoices;
@@ -93,10 +97,15 @@ public sealed class PaymentsModule : IModule
         group.MapCancelInvoiceEndpoint();
         group.MapGetStudentInvoiceByIdEndpoint();
         group.MapSearchStudentInvoicesEndpoint();
+        group.MapGetMyInvoicesEndpoint();
 
         group.MapConfirmPaymentEndpoint();
         group.MapGetInvoicePaymentsEndpoint();
         group.MapRevokePaymentEndpoint();
+
+        group.MapGetStudentBalanceEndpoint();
+        group.MapGetDebtorsReportEndpoint();
+        group.MapGetRevenueReportEndpoint();
 
         // Remaining endpoints and recurring jobs are wired in as their features land — see the step
         // log in docs/04 Задачи/Задачи · Новые модули.md → Payments.
