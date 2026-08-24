@@ -102,6 +102,7 @@
     <Project Path="Tests/People.Tests/People.Tests.csproj" />
     <Project Path="Tests/StudyGroups.Tests/StudyGroups.Tests.csproj" />
     <Project Path="Tests/Scheduling.Tests/Scheduling.Tests.csproj" />
+    <Project Path="Tests/Payments.Tests/Payments.Tests.csproj" />
   </Folder>
 
   <Folder Name="/Solution Items/">
