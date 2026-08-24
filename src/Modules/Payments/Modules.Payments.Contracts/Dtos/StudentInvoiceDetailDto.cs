@@ -1,8 +1,7 @@
 namespace FSH.Modules.Payments.Contracts.Dtos;
 
-/// <summary><see cref="StudentInvoiceDto"/> plus <see cref="Lines"/> — payments are added to this
-/// shape once the payments feature lands (see docs/04 Задачи/Задачи · Новые модули.md → Payments →
-/// шаг 8).</summary>
+/// <summary><see cref="StudentInvoiceDto"/> plus <see cref="Lines"/> and <see cref="Payments"/> —
+/// "строки и оплаты" (see docs/02 Модули/Payments.md → «Контракты»).</summary>
 public sealed record StudentInvoiceDetailDto(
     Guid Id,
     string Number,
@@ -21,4 +20,5 @@ public sealed record StudentInvoiceDetailDto(
     string? Comment,
     DateTimeOffset CreatedAtUtc,
     DateTimeOffset? UpdatedAtUtc,
-    IReadOnlyList<InvoiceLineDto> Lines);
+    IReadOnlyList<InvoiceLineDto> Lines,
+    IReadOnlyList<PaymentConfirmationDto> Payments);

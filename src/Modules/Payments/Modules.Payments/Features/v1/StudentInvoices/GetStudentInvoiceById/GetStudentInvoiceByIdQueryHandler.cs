@@ -17,6 +17,7 @@ public sealed class GetStudentInvoiceByIdQueryHandler(PaymentsDbContext dbContex
         var invoice = await dbContext.StudentInvoices
             .AsNoTracking()
             .Include(i => i.Lines)
+            .Include(i => i.Payments)
             .FirstOrDefaultAsync(i => i.Id == query.InvoiceId, cancellationToken)
             .ConfigureAwait(false)
             ?? throw new NotFoundException($"Invoice {query.InvoiceId} not found.");

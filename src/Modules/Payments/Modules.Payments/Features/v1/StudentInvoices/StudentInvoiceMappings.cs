@@ -26,6 +26,9 @@ internal static class StudentInvoiceMappings
 
     public static InvoiceLineDto ToDto(this InvoiceLine l) => new(l.Id, l.Description, l.TariffId, l.Quantity, l.UnitPrice, l.Amount);
 
+    public static PaymentConfirmationDto ToDto(this PaymentConfirmation p) => new(
+        p.Id, p.InvoiceId, p.Amount, p.PaidOn, p.Method, p.Reference, p.ProofFileId, p.ConfirmedByUserId, p.ConfirmedAtUtc, p.ReversesId, p.Note);
+
     public static StudentInvoiceDetailDto ToDetailDto(this StudentInvoice i, DateOnly today) => new(
         i.Id,
         i.Number,
@@ -44,5 +47,6 @@ internal static class StudentInvoiceMappings
         i.Comment,
         i.CreatedAtUtc,
         i.UpdatedAtUtc,
-        i.Lines.Select(l => l.ToDto()).ToList());
+        i.Lines.Select(l => l.ToDto()).ToList(),
+        i.Payments.Select(p => p.ToDto()).ToList());
 }

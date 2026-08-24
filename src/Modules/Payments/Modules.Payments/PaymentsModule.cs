@@ -2,8 +2,12 @@ using Asp.Versioning;
 using FSH.Framework.Persistence;
 using FSH.Framework.Shared.Constants;
 using FSH.Framework.Web.Modules;
+using FSH.Modules.Payments.Authorization;
 using FSH.Modules.Payments.Contracts.Authorization;
 using FSH.Modules.Payments.Data;
+using FSH.Modules.Payments.Features.v1.Payments.ConfirmPayment;
+using FSH.Modules.Payments.Features.v1.Payments.GetInvoicePayments;
+using FSH.Modules.Payments.Features.v1.Payments.ReversePayment;
 using FSH.Modules.Payments.Features.v1.StudentInvoices.BulkGenerateInvoices;
 using FSH.Modules.Payments.Features.v1.StudentInvoices.BulkIssueInvoices;
 using FSH.Modules.Payments.Features.v1.StudentInvoices.CancelInvoice;
@@ -17,6 +21,7 @@ using FSH.Modules.Payments.Features.v1.Tariffs.DeactivateTariff;
 using FSH.Modules.Payments.Features.v1.Tariffs.GetTariffs;
 using FSH.Modules.Payments.Features.v1.Tariffs.UpdateTariff;
 using FSH.Modules.Payments.Services;
+using FSH.Modules.Files.Contracts;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -43,10 +48,11 @@ public sealed class PaymentsModule : IModule
         builder.Services.AddHeroDbContext<PaymentsDbContext>();
         builder.Services.AddScoped<IDbInitializer, PaymentsDbInitializer>();
         builder.Services.AddScoped<ITariffAccrualService, TariffAccrualService>();
+        builder.Services.AddScoped<IFileAccessPolicy, PaymentProofAccessPolicy>();
 
-        // Outbox/Inbox for PaymentsDbContext, eventing trio, jobs, and the file access policy are
-        // wired in as their respective vertical slices land — see
-        // docs/04 Задачи/Задачи · Новые модули.md → Payments for the step-by-step log.
+        // Outbox/Inbox for PaymentsDbContext, eventing trio and jobs are wired in as their
+        // respective vertical slices land — see docs/04 Задачи/Задачи · Новые модули.md → Payments
+        // for the step-by-step log.
 
         builder.Services.AddHealthChecks()
             .AddDbContextCheck<PaymentsDbContext>(
@@ -87,6 +93,10 @@ public sealed class PaymentsModule : IModule
         group.MapCancelInvoiceEndpoint();
         group.MapGetStudentInvoiceByIdEndpoint();
         group.MapSearchStudentInvoicesEndpoint();
+
+        group.MapConfirmPaymentEndpoint();
+        group.MapGetInvoicePaymentsEndpoint();
+        group.MapRevokePaymentEndpoint();
 
         // Remaining endpoints and recurring jobs are wired in as their features land — see the step
         // log in docs/04 Задачи/Задачи · Новые модули.md → Payments.
