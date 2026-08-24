@@ -15,7 +15,7 @@ public static class GetMyInvoicesEndpoint
         => endpoints.MapGet("/student-invoices/my",
                 async (InvoiceStatus? status, IMediator mediator, CancellationToken ct) =>
                     Results.Ok(await mediator.Send(new GetMyInvoicesQuery(status), ct)))
-            .WithName("GetMyInvoices")
+            .WithName("GetMyStudentInvoices")
             .WithSummary("List the caller's own invoices, or their wards' invoices")
             .Produces<IReadOnlyList<StudentInvoiceDto>>()
             .RequirePermission(PaymentsPermissions.StudentInvoices.ViewOwn);

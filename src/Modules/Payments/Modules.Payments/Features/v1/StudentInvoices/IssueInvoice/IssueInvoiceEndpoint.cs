@@ -17,7 +17,7 @@ public static class IssueInvoiceEndpoint
                     await mediator.Send(new IssueInvoiceCommand(invoiceId, body.IssuedOn), ct);
                     return Results.NoContent();
                 })
-            .WithName("IssueInvoice")
+            .WithName("IssueStudentInvoice")
             .WithSummary("Issue a draft invoice")
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status404NotFound)

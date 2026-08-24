@@ -17,7 +17,7 @@ public static class GetInvoicePdfEndpoint
                     var pdf = await mediator.Send(new GetInvoicePdfQuery(invoiceId), ct);
                     return Results.File(pdf, "application/pdf", $"{invoiceId}.pdf");
                 })
-            .WithName("GetInvoicePdf")
+            .WithName("GetStudentInvoicePdf")
             .WithSummary("Download an invoice as PDF")
             .Produces(StatusCodes.Status200OK, contentType: "application/pdf")
             .Produces(StatusCodes.Status404NotFound)
