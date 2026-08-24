@@ -16,13 +16,14 @@ tags: [модуль, новый, payments, деньги]
 > черновики/массовая генерация счетов (`ITariffAccrualService` — все 4 вида тарифа, включая
 > пропорциональный `PerMonth` и `PerLesson` с учётом `ChargeOnExcusedAbsence`), выставление/
 > отмена, подтверждение/сторнирование оплат (`ProofFileId` через `IFileAccessPolicy`), баланс
-> ученика и отчёты (должники/поступления), PDF счёта, 5 интеграционных событий (4 из
-> справочника + `StudentInvoiceDueSoonIntegrationEvent` под `PaymentReminderJob` — добавлено
-> сверх исходного списка, см. ниже), избирательные подписки на Scheduling/StudyGroups/People
-> (`IDraftInvoiceRefreshService` держит ещё не выставленные черновики в актуальном состоянии;
-> `StudentEnrolled` — сознательный no-op), три Hangfire-задания. `Payments.Tests` — 34/34
-> (арифметика начислений и оплат). Подробности реализации — [[Задачи · Новые модули]] →
-> Payments, 15 шагов. Frontend не начат — [[Задачи · Frontend]] → «Этап 5 · Payments».
+> ученика (включая остаток пакета для `PerPackage` — см. ниже) и отчёты (должники/поступления),
+> PDF счёта, 5 интеграционных событий (4 из справочника + `StudentInvoiceDueSoonIntegrationEvent`
+> под `PaymentReminderJob` — добавлено сверх исходного списка, см. ниже), избирательные подписки
+> на Scheduling/StudyGroups/People (`IDraftInvoiceRefreshService` держит ещё не выставленные
+> черновики в актуальном состоянии; `StudentEnrolled` — сознательный no-op), три
+> Hangfire-задания. `Payments.Tests` — 41/41 (арифметика начислений, оплат и остатка пакета).
+> Подробности реализации — [[Задачи · Новые модули]] → Payments, 15 шагов. Frontend не начат —
+> [[Задачи · Frontend]] → «Этап 5 · Payments».
 >
 > **Два отклонения от исходного плана этого справочника**, оба изменяют только реализацию,
 > не наблюдаемое поведение:
@@ -33,6 +34,33 @@ tags: [модуль, новый, payments, деньги]
 > 2. `StudentInvoiceDueSoonIntegrationEvent` добавлен сверх четырёх событий из раздела
 >    «Публикуемые события» — `PaymentReminderJob` («напоминания за N дней до `DueDate`»,
 >    раздел «Задания Hangfire») без события-носителя не имел смысла.
+>
+> [!note] Остаток пакета для `PerPackage` реализован — 2026-08-24, закрывает известный пробел
+> Исходно `TariffAccrualService` начисляло весь пакет одной строкой и оставляло остаток как
+> «проекция» — без реализации ([[Задачи · Новые модули]] → «Остаток пакета для `PerPackage`»).
+> Выбрана проекция на лету (вариант (a) из формулировки задачи), не отдельный ledger:
+> `GetStudentBalanceQueryHandler` считает `UsedCount` через уже существующий
+> `IAttendanceQueryService.CountHeldSessionsAsync`, тем же способом, каким уже считаются
+> `Overdue` и весь `StudentBalance` — «не хранить, что можно посчитать». Ledger-вариант (b) был
+> отклонён: `SessionHeldIntegrationEventHandler` в Payments уже существует и намеренно не
+> трогает выставленные `PerPackage`-строки (`DraftInvoiceRefreshService`: "OneTime/PerPackage
+> lines are fixed at generation time by design") — заводить второй, декрементируемый канал
+> состояния поверх уже сознательно неизменяемых строк добавило бы рассинхронизацию, а не убрало
+> её. Три решения, принятые по ходу (подробности — «Баланс» ниже):
+> 1. **Нет единого «активного» пакета** — у `GetStudentBalanceQuery` нет FIFO/LIFO выбора между
+>    несколькими `PerPackage`-счетами одного ученика/группы; каждый неотменённый счёт-пакет
+>    отдаётся отдельной записью `PackageBalanceDto`. Упрощает модель ценой редкого краевого
+>    случая: если школа держит два параллельно действующих пакета с пересекающимися окнами
+>    `[IssuedOn, ExpiresOn)`, одно и то же проведённое занятие засчитается в обоих.
+>    Принято сознательно — параллельные пакеты на одну группу/ученика не типичный сценарий.
+> 2. **`Tariff.ValidDays` — окно сгорания.** `0` → пакет бессрочен; иначе окно подсчёта —
+>    `[IssuedOn, IssuedOn + ValidDays]`. После истечения `RemainingCount` замораживается на
+>    значении на момент истечения — новые проведённые занятия к сгоревшему пакету не
+>    привязываются (и не списываются с него).
+> 3. **Верхняя граница окна, пока пакет не истёк — не «сегодня».** `CountHeldSessionsAsync`
+>    считает по статусу `Held`, не по дате; искусственный потолок «сегодня» отбрасывал бы
+>    корректно помеченные `Held`-занятия, если часы разъехались или отметку сделали чуть раньше
+>    официального времени урока. Верхняя граница активного (неистёкшего) окна не ограничена.
 
 ## Назначение
 
@@ -137,7 +165,7 @@ erDiagram
 |---|---|---|
 | `PerMonth` | фиксированная сумма за месяц; при зачислении или отчислении посреди месяца — пропорционально числу запланированных занятий | `ISessionPlanQueryService` ([[Scheduling]]) |
 | `PerLesson` | сумма × число **проведённых** занятий | `IAttendanceQueryService.CountHeldSessionsAsync` |
-| `PerPackage` | предоплата за N занятий, списание по мере проведения | остаток пакета — проекция |
+| `PerPackage` | предоплата за N занятий одной строкой при выставлении счёта; списание — не начисление, а отдельная read-side проекция остатка (см. «Баланс») | `IAttendanceQueryService.CountHeldSessionsAsync` |
 | `OneTime` | разовый счёт: учебник, экзамен, пробное | — |
 
 Пропуск при `PerLesson` начисляется, если статус не `Excused`; поведение управляется
@@ -146,9 +174,27 @@ erDiagram
 ### Баланс
 
 `StudentBalance` — не таблица, а проекция по счетам и подтверждениям:
-`charged`, `paid`, `debt`, `advance`, `overdueInvoices[]`. Хранить агрегат опасно —
+`charged`, `paid`, `debt`, `advance`, `overdueInvoices[]`, `packages[]`. Хранить агрегат опасно —
 рассинхронизируется. При проблемах с производительностью — материализованное
 представление, но не денормализованное поле.
+
+`packages[]` (`PackageBalanceDto`) — остаток по каждому `PerPackage`-счёту ученика. Считается
+живьём в `GetStudentBalanceQueryHandler`, не хранится:
+
+- **По одной записи на каждый неотменённый/невыставленный-в-`Draft` счёт**, чья единственная
+  строка ссылается на тариф `PerPackage` (то же распознавание «строка = один тариф», каким уже
+  пользуется `IDraftInvoiceRefreshService` для строк, которые можно безопасно пересчитать —
+  вручную отредактированные многострочные счета в проекцию не попадают). Нет выбора «активного»
+  пакета (не FIFO/LIFO) — при нескольких одновременных пакетах на группу/ученика отдаются все,
+  каждый посчитан независимо; см. примечание в начале файла для обоснования и известного
+  краевого случая (двойной учёт занятия при пересекающихся окнах).
+- `UsedCount` = `IAttendanceQueryService.CountHeldSessionsAsync(studentId, studyGroupId, from:
+  IssuedOn, to: …)` — окно начинается с даты выставления счёта (не с периода счёта).
+  `RemainingCount = max(0, Tariff.LessonsCount - UsedCount)`.
+- `Tariff.ValidDays > 0` → `ExpiresOn = IssuedOn + ValidDays`, верхняя граница окна подсчёта
+  после истечения — `IsExpired = true`, `RemainingCount` больше не меняется. `ValidDays = 0` →
+  пакет бессрочен (`ExpiresOn = null`). Пока пакет не истёк, верхняя граница окна не
+  ограничена «сегодня» — см. примечание в начале файла, пункт 3.
 
 ## Контракты
 
@@ -174,7 +220,7 @@ erDiagram
 | `GetMyInvoicesQuery` | свои счета / счета подопечных |
 | `GetInvoicePdfQuery` | поток PDF |
 | `GetInvoicePaymentsQuery` | `IReadOnlyList<PaymentConfirmationDto>` |
-| `GetStudentBalanceQuery` | `StudentBalanceDto` |
+| `GetStudentBalanceQuery` | `StudentBalanceDto` (включает `packages: PackageBalanceDto[]`) |
 | `GetDebtorsReportQuery` | должники по школе |
 | `GetRevenueReportQuery` | поступления за период |
 | `GetTariffsQuery` | справочник |
@@ -182,7 +228,8 @@ erDiagram
 ### DTO
 
 `TariffDto` · `StudentInvoiceDto` · `StudentInvoiceDetailDto` · `InvoiceLineDto` ·
-`PaymentConfirmationDto` · `StudentBalanceDto` · `DebtorDto` · `RevenueReportDto`
+`PaymentConfirmationDto` · `StudentBalanceDto` · `PackageBalanceDto` · `DebtorDto` ·
+`RevenueReportDto`
 
 ### Публикуемые события
 

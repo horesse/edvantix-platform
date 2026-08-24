@@ -34,4 +34,8 @@ public static class TestConstants
     /// <summary>Scheduling uses flat resource routing, same convention as People/Curriculum/
     /// StudyGroups — see docs/02 Модули/Scheduling.md and SchedulingModule.MapEndpoints.</summary>
     public const string SchedulingBasePath = "/api/v1";
+
+    /// <summary>Payments uses flat resource routing, same convention as the other new-module
+    /// APIs — see docs/02 Модули/Payments.md and PaymentsModule.MapEndpoints.</summary>
+    public const string PaymentsBasePath = "/api/v1";
 }

@@ -71,3 +71,15 @@ Enrollments — не EF `OwnsMany`). `Status` **никогда не задаёт
 - **`PaymentProofAccessPolicy`** — `IFileAccessPolicy` для `OwnerType = "PaymentProof"`, `OwnerId` =
   `InvoiceId` (по образцу Curriculum's `LessonMaterialAccessPolicy`, которая ключуется на урок, а не на
   отдельный файл). Чтение открыто — гейт на уровне эндпоинта (`StudentPayments.View`), не в политике.
+- **Остаток пакета (`PerPackage`) — проекция в `GetStudentBalanceQueryHandler`, не ledger.**
+  `StudentBalanceDto.Packages` (`PackageBalanceDto[]`) считается живьём через тот же
+  `IAttendanceQueryService.CountHeldSessionsAsync`, которым уже пользуется `PerLesson`-начисление
+  — окно `[Invoice.IssuedOn, ExpiresOn или без верхней границы]`, `ExpiresOn = IssuedOn +
+  Tariff.ValidDays` (`ValidDays = 0` → бессрочно). После истечения окно подсчёта замораживается
+  на дате истечения — `RemainingCount` дальше не меняется. Нет выбора «активного» пакета при
+  нескольких одновременных `PerPackage`-счетах — отдаются все независимо друг от друга (известный
+  краевой случай — двойной учёт занятия при пересекающихся окнах, принят сознательно). Ledger-
+  вариант (декремент по `SessionHeldIntegrationEvent`) отклонён — конфликтовал бы с тем, что
+  `SessionHeldIntegrationEventHandler`/`DraftInvoiceRefreshService` уже сознательно не трогают
+  выставленные `PerPackage`-строки («fixed at generation time by design»). Обоснование — docs/02
+  Модули/Payments.md, примечание в начале файла.
