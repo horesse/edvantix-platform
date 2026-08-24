@@ -26,6 +26,7 @@ using FSH.Modules.Payments.Features.v1.Tariffs.CreateTariff;
 using FSH.Modules.Payments.Features.v1.Tariffs.DeactivateTariff;
 using FSH.Modules.Payments.Features.v1.Tariffs.GetTariffs;
 using FSH.Modules.Payments.Features.v1.Tariffs.UpdateTariff;
+using FSH.Modules.Payments.Jobs;
 using FSH.Modules.Payments.Services;
 using FSH.Modules.Files.Contracts;
 using Microsoft.AspNetCore.Builder;
@@ -34,6 +35,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
+using Hangfire;
 
 // Order 630 — right after Scheduling (620): invoices are accrued from planned/held sessions
 // (ISessionPlanQueryService/IAttendanceQueryService) and from group enrollments (StudyGroups, 610),
@@ -120,7 +122,27 @@ public sealed class PaymentsModule : IModule
         group.MapGetDebtorsReportEndpoint();
         group.MapGetRevenueReportEndpoint();
 
-        // Remaining endpoints and recurring jobs are wired in as their features land — see the step
-        // log in docs/04 Задачи/Задачи · Новые модули.md → Payments.
+        // Recurring Hangfire jobs — registration here matches the pattern Files/Billing/Scheduling use.
+        var jobManager = endpoints.ServiceProvider.GetService<IRecurringJobManager>();
+        if (jobManager is not null)
+        {
+            jobManager.AddOrUpdate<DetectOverdueInvoicesJob>(
+                "payments-detect-overdue-invoices",
+                j => j.RunAsync(CancellationToken.None),
+                "0 3 * * *", // daily 03:00 UTC
+                new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc });
+
+            jobManager.AddOrUpdate<PaymentReminderJob>(
+                "payments-payment-reminders",
+                j => j.RunAsync(CancellationToken.None),
+                "0 4 * * *", // daily 04:00 UTC
+                new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc });
+
+            jobManager.AddOrUpdate<MonthlyInvoiceDraftJob>(
+                "payments-monthly-invoice-drafts",
+                j => j.RunAsync(CancellationToken.None),
+                "0 5 1 * *", // 1st of the month, 05:00 UTC
+                new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc });
+        }
     }
 }

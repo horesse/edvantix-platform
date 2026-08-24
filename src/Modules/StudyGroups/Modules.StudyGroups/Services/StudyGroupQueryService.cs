@@ -70,6 +70,16 @@ public sealed class StudyGroupQueryService(StudyGroupsDbContext dbContext) : ISt
             .ConfigureAwait(false);
     }
 
+    public async ValueTask<IReadOnlyList<Guid>> GetActiveStudyGroupIdsAsync(CancellationToken cancellationToken = default)
+    {
+        return await dbContext.StudyGroups
+            .AsNoTracking()
+            .Where(g => g.Status == StudyGroupStatus.Active)
+            .Select(g => g.Id)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     public async ValueTask<StudyGroupBriefDto?> GetBriefAsync(Guid studyGroupId, CancellationToken cancellationToken = default)
     {
         var group = await dbContext.StudyGroups
