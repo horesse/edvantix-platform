@@ -55,6 +55,7 @@ public sealed class PaymentsModule : IModule
         builder.Services.AddScoped<IDbInitializer, PaymentsDbInitializer>();
         builder.Services.AddScoped<ITariffAccrualService, TariffAccrualService>();
         builder.Services.AddScoped<IInvoicePdfRenderer, InvoicePdfRenderer>();
+        builder.Services.AddScoped<IDraftInvoiceRefreshService, DraftInvoiceRefreshService>();
         builder.Services.AddScoped<IFileAccessPolicy, PaymentProofAccessPolicy>();
 
         // Outbox/Inbox for PaymentsDbContext — publishes StudentInvoiceIssued/Cancelled,
