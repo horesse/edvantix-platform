@@ -68,9 +68,8 @@ builder.Services.AddMediator(o =>
         typeof(FSH.Modules.StudyGroups.StudyGroupsModule),
         typeof(FSH.Modules.Scheduling.Contracts.SchedulingContractsMarker),
         typeof(FSH.Modules.Scheduling.SchedulingModule),
-        // Payments markers (PaymentsContractsMarker/PaymentsModule) are added once the module has
-        // its first ICommand/IQuery — the Mediator source generator fails (MSG0007) on an assembly
-        // with none. Assembly is already wired into moduleAssemblies below.
+        typeof(FSH.Modules.Payments.Contracts.PaymentsContractsMarker),
+        typeof(FSH.Modules.Payments.PaymentsModule),
         typeof(FSH.Modules.Tickets.Contracts.TicketsContractsMarker),
         typeof(FSH.Modules.Tickets.TicketsModule),
         typeof(FSH.Modules.Files.Contracts.v1.Commands.RequestUploadUrlCommand),

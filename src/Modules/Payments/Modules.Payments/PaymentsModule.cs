@@ -1,8 +1,13 @@
+using Asp.Versioning;
 using FSH.Framework.Persistence;
 using FSH.Framework.Shared.Constants;
 using FSH.Framework.Web.Modules;
 using FSH.Modules.Payments.Contracts.Authorization;
 using FSH.Modules.Payments.Data;
+using FSH.Modules.Payments.Features.v1.Tariffs.CreateTariff;
+using FSH.Modules.Payments.Features.v1.Tariffs.DeactivateTariff;
+using FSH.Modules.Payments.Features.v1.Tariffs.GetTariffs;
+using FSH.Modules.Payments.Features.v1.Tariffs.UpdateTariff;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -48,9 +53,23 @@ public sealed class PaymentsModule : IModule
     {
         ArgumentNullException.ThrowIfNull(endpoints);
 
-        // Endpoint group (flat routing, same convention as People/Curriculum/StudyGroups/Scheduling)
-        // and recurring jobs are wired in once the first feature lands — see the step log in
-        // docs/04 Задачи/Задачи · Новые модули.md → Payments. An empty MapGroup here would trip
-        // "assigned but never used" under TreatWarningsAsErrors.
+        var versionSet = endpoints.NewApiVersionSet()
+            .HasApiVersion(new ApiVersion(1))
+            .ReportApiVersions()
+            .Build();
+
+        // Flat resource routing — same convention as People/Curriculum/StudyGroups/Scheduling.
+        var group = endpoints.MapGroup("api/v{version:apiVersion}")
+            .WithTags("Payments")
+            .WithApiVersionSet(versionSet)
+            .RequireAuthorization();
+
+        group.MapCreateTariffEndpoint();
+        group.MapUpdateTariffEndpoint();
+        group.MapDeactivateTariffEndpoint();
+        group.MapGetTariffsEndpoint();
+
+        // Remaining endpoints and recurring jobs are wired in as their features land — see the step
+        // log in docs/04 Задачи/Задачи · Новые модули.md → Payments.
     }
 }
