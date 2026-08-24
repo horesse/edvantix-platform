@@ -5,8 +5,11 @@ using FSH.Framework.Web.Modules;
 using FSH.Modules.Payments.Contracts.Authorization;
 using FSH.Modules.Payments.Data;
 using FSH.Modules.Payments.Features.v1.StudentInvoices.BulkGenerateInvoices;
+using FSH.Modules.Payments.Features.v1.StudentInvoices.BulkIssueInvoices;
+using FSH.Modules.Payments.Features.v1.StudentInvoices.CancelInvoice;
 using FSH.Modules.Payments.Features.v1.StudentInvoices.CreateStudentInvoice;
 using FSH.Modules.Payments.Features.v1.StudentInvoices.GetStudentInvoiceById;
+using FSH.Modules.Payments.Features.v1.StudentInvoices.IssueInvoice;
 using FSH.Modules.Payments.Features.v1.StudentInvoices.SearchStudentInvoices;
 using FSH.Modules.Payments.Features.v1.StudentInvoices.UpdateStudentInvoice;
 using FSH.Modules.Payments.Features.v1.Tariffs.CreateTariff;
@@ -79,6 +82,9 @@ public sealed class PaymentsModule : IModule
         group.MapCreateStudentInvoiceEndpoint();
         group.MapUpdateStudentInvoiceEndpoint();
         group.MapGenerateInvoicesEndpoint();
+        group.MapIssueInvoiceEndpoint();
+        group.MapIssueInvoicesEndpoint();
+        group.MapCancelInvoiceEndpoint();
         group.MapGetStudentInvoiceByIdEndpoint();
         group.MapSearchStudentInvoicesEndpoint();
 
