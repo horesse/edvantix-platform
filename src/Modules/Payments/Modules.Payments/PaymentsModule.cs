@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using FSH.Framework.Eventing;
 using FSH.Framework.Persistence;
 using FSH.Framework.Shared.Constants;
 using FSH.Framework.Web.Modules;
@@ -56,9 +57,17 @@ public sealed class PaymentsModule : IModule
         builder.Services.AddScoped<IInvoicePdfRenderer, InvoicePdfRenderer>();
         builder.Services.AddScoped<IFileAccessPolicy, PaymentProofAccessPolicy>();
 
-        // Outbox/Inbox for PaymentsDbContext, eventing trio and jobs are wired in as their
-        // respective vertical slices land — see docs/04 Задачи/Задачи · Новые модули.md → Payments
-        // for the step-by-step log.
+        // Outbox/Inbox for PaymentsDbContext — publishes StudentInvoiceIssued/Cancelled,
+        // StudentPaymentConfirmed, StudentInvoiceOverdue (the last from DetectOverdueInvoicesJob).
+        // AddEventingCore() is NOT called here: IdentityModule already registers it (bus +
+        // OutboxDispatcherHostedService) — see People/StudyGroups for the same note on why calling
+        // it twice would start a second hosted dispatcher.
+        builder.Services.AddEventingForDbContext<PaymentsDbContext>();
+
+        // Payments subscribes to Scheduling/StudyGroups/People integration events (SessionHeld,
+        // SessionCancelled, StudentEnrolled, StudentUnenrolled, StudentArchived) — see
+        // IntegrationEventHandlers/.
+        builder.Services.AddIntegrationEventHandlers(typeof(PaymentsModule).Assembly);
 
         builder.Services.AddHealthChecks()
             .AddDbContextCheck<PaymentsDbContext>(
