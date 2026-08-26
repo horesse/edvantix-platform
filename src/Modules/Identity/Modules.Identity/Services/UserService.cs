@@ -30,6 +30,9 @@ internal sealed class UserService(
         CancellationToken cancellationToken)
         => registrationService.RegisterAsync(firstName, lastName, email, userName, password, confirmPassword, phoneNumber, origin, cancellationToken);
 
+    public Task<string> InviteAsync(string firstName, string lastName, string email, string role, string origin, CancellationToken cancellationToken)
+        => registrationService.InviteAsync(firstName, lastName, email, role, origin, cancellationToken);
+
     public Task<string> GetOrCreateFromPrincipalAsync(ClaimsPrincipal principal, CancellationToken cancellationToken = default)
         => registrationService.GetOrCreateFromPrincipalAsync(principal, cancellationToken);
 

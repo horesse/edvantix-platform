@@ -22,6 +22,21 @@ public interface IUserRegistrationService
         CancellationToken cancellationToken);
 
     /// <summary>
+    /// Invites a new user by e-mail: creates the account with a random, never-revealed
+    /// password and <c>EmailConfirmed = false</c>, assigns <paramref name="role"/>, and sends a
+    /// set-your-password link built from <paramref name="origin"/>. No mail is sent when the
+    /// e-mail already belongs to a user — account creation (and its built-in duplicate-email
+    /// check) happens before any reset token is generated or mail enqueued.
+    /// </summary>
+    Task<string> InviteAsync(
+        string firstName,
+        string lastName,
+        string email,
+        string role,
+        string origin,
+        CancellationToken cancellationToken);
+
+    /// <summary>
     /// Gets or creates a user from an external authentication principal.
     /// </summary>
     Task<string> GetOrCreateFromPrincipalAsync(ClaimsPrincipal principal, CancellationToken cancellationToken = default);

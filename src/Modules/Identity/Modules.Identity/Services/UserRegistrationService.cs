@@ -18,6 +18,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace FSH.Modules.Identity.Services;
@@ -67,6 +68,41 @@ internal sealed class UserRegistrationService(
         await AssignDefaultRoleAndGroupsAsync(user, "System", cancellationToken);
         await SendConfirmationEmailAsync(user, origin, cancellationToken);
         await PublishUserRegisteredAsync(user, "Identity", cancellationToken);
+
+        return user.Id;
+    }
+
+    public async Task<string> InviteAsync(
+        string firstName,
+        string lastName,
+        string email,
+        string role,
+        string origin,
+        CancellationToken cancellationToken)
+    {
+        EnsureValidTenant();
+
+        var userName = await EnsureUniqueUserNameAsync(email.Split('@')[0]);
+        var password = GenerateRandomPassword();
+
+        // CreateUserWithPasswordAsync throws before any reset token is generated or mail
+        // enqueued if the e-mail is already taken (RequireUniqueEmail is on) — that ordering
+        // is the whole "don't invite an existing user" guard, nothing extra to check up front.
+        var user = await CreateUserWithPasswordAsync(firstName, lastName, email, userName, password, phoneNumber: string.Empty);
+
+        // Same baseline every other creation path gets (RegisterAsync, GetOrCreateFromPrincipalAsync):
+        // the framework's Basic role (session/profile self-service permissions the school-role
+        // bundles don't carry, see SchoolRolePermissions) plus the tenant's default access groups.
+        await AssignDefaultRoleAndGroupsAsync(user, "Identity.Invite", cancellationToken);
+
+        var roleResult = await userManager.AddToRoleAsync(user, role);
+        if (!roleResult.Succeeded)
+        {
+            var errors = roleResult.Errors.Select(e => e.Description).ToList();
+            throw new CustomException("error assigning role to invited user", errors);
+        }
+
+        await SendInviteEmailAsync(user, origin);
 
         return user.Id;
     }
@@ -300,6 +336,75 @@ internal sealed class UserRegistrationService(
             emailBody);
 
         jobService.Enqueue("email", () => mailService.SendAsync(mailRequest, cancellationToken));
+    }
+
+    // Enqueues on CancellationToken.None (not the request's token) — same reasoning as
+    // ForgotPasswordAsync: a background job must outlive the HTTP request that queued it.
+    private async Task SendInviteEmailAsync(FshUser user, string origin)
+    {
+        if (string.IsNullOrEmpty(user.Email))
+        {
+            return;
+        }
+
+        // Same token mechanism as ForgotPasswordAsync — no dedicated invite-token entity, TTL and
+        // one-time-in-practice behavior come from DataProtectionTokenProviderOptions plus the
+        // security-stamp invalidation UserManager.ResetPasswordAsync already does on success.
+        var token = await userManager.GeneratePasswordResetTokenAsync(user);
+        token = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
+
+        var tenantInfo = multiTenantContextAccessor?.MultiTenantContext?.TenantInfo;
+
+        // Same link shape as the forgot-password reset link, tenant included: the accept-invite
+        // SPA page needs it to send the X-FSH-App tenant header when it posts the token to
+        // /reset-password, which is also how an invite gets accepted (see ResetPasswordAsync).
+        var inviteUri = QueryHelpers.AddQueryString(
+            $"{origin.TrimEnd('/')}/accept-invite",
+            new Dictionary<string, string?>
+            {
+                ["token"] = token,
+                ["email"] = user.Email,
+                ["tenant"] = tenantInfo?.Id,
+            });
+
+        var mailRequest = new MailRequest(
+            new Collection<string> { user.Email },
+            "You're invited",
+            $"You've been invited to join {tenantInfo?.Name ?? "your school"}. Set your password using the following link: {inviteUri}");
+
+        jobService.Enqueue(() => mailService.SendAsync(mailRequest, CancellationToken.None));
+    }
+
+    /// <summary>
+    /// A random password satisfying the configured password policy (IdentityModule: min length,
+    /// upper/lower/digit required) that is never revealed to anyone — the invited user always
+    /// sets their own via the accept-invite link (UserManager.ResetPasswordAsync). It only needs
+    /// to exist so UserManager.CreateAsync(user, password) has something to validate.
+    /// </summary>
+    private static string GenerateRandomPassword()
+    {
+        const string Lower = "abcdefghijklmnopqrstuvwxyz";
+        const string Upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        const string Digits = "0123456789";
+        const string All = Lower + Upper + Digits;
+
+        Span<char> buffer = stackalloc char[24];
+        buffer[0] = Lower[RandomNumberGenerator.GetInt32(Lower.Length)];
+        buffer[1] = Upper[RandomNumberGenerator.GetInt32(Upper.Length)];
+        buffer[2] = Digits[RandomNumberGenerator.GetInt32(Digits.Length)];
+        for (var i = 3; i < buffer.Length; i++)
+        {
+            buffer[i] = All[RandomNumberGenerator.GetInt32(All.Length)];
+        }
+
+        // Fisher-Yates shuffle so the three guaranteed character classes aren't always up front.
+        for (var i = buffer.Length - 1; i > 0; i--)
+        {
+            var j = RandomNumberGenerator.GetInt32(i + 1);
+            (buffer[i], buffer[j]) = (buffer[j], buffer[i]);
+        }
+
+        return new string(buffer);
     }
 
     private async Task PublishUserRegisteredAsync(

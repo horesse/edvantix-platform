@@ -59,7 +59,7 @@ tags: [модуль, каркас, identity]
 
 | Область | Команды |
 |---|---|
-| Users | `RegisterUserCommand` `UpdateUserCommand` `DeleteUserCommand` `ToggleUserStatusCommand` `SetProfileImageCommand` |
+| Users | `RegisterUserCommand` `InviteUserCommand` `UpdateUserCommand` `DeleteUserCommand` `ToggleUserStatusCommand` `SetProfileImageCommand` |
 | Users · почта | `ConfirmEmailCommand` `AdminConfirmEmailCommand` `ResendConfirmationEmailCommand` |
 | Users · пароль | `ChangePasswordCommand` `ForgotPasswordCommand` `ResetPasswordCommand` |
 | Users · роли | `AssignUserRolesCommand` |
@@ -69,6 +69,76 @@ tags: [модуль, каркас, identity]
 | Tokens | `GenerateTokenCommand` `RefreshTokenCommand` |
 | 2FA | `EnrollTwoFactorCommand` `VerifyEnrollTwoFactorCommand` `DisableTwoFactorCommand` |
 | Impersonation | `StartImpersonationCommand` `EndImpersonationCommand` `RevokeImpersonationGrantCommand` |
+
+### Приглашение по e-mail
+
+`InviteUserCommand` (email, ФИО, роль — `RegisterUserCommand` без `Password`/`ConfirmPassword`)
+реализован, замыкая последний пункт [[Задачи · Доработки каркаса]] по Identity. Гейт —
+`IdentityPermissions.Users.Invite` (в бандле `Manager`).
+
+`UserRegistrationService.InviteAsync`:
+
+1. Создаёт `FshUser` со случайным неиспользуемым паролем (никому не показывается, только
+   чтобы `UserManager.CreateAsync` было что валидировать по политике паролей) и
+   `EmailConfirmed = false`. Дубликат e-mail (`RequireUniqueEmail`) роняет `CreateAsync` раньше,
+   чем сгенерирован токен или поставлено письмо в очередь, — отдельной проверки «уже
+   приглашён» не нужно.
+2. Роль ограничена `SchoolRoleConstants.All` — валидатор команды отбрасывает произвольную
+   строку (сознательное решение первой итерации, см. [[Задачи · Доработки каркаса]]).
+3. Пользователь получает баланс `Basic` + дефолтные группы доступа, как любой другой способ
+   создания пользователя (`RegisterAsync`, вход через внешнего провайдера) — иначе
+   Teacher/Student/Guardian (бандл только `*.ViewOwn`) не смогут даже посмотреть свои сессии.
+4. Токен — `UserManager.GeneratePasswordResetTokenAsync`, тот же вызов и та же цель токена,
+   что и в `ForgotPasswordCommand`. Отдельной сущности токена нет: TTL и одноразовость по факту
+   даёт `DataProtectionTokenProviderOptions` + инвалидация security stamp при успешном сбросе —
+   заводить что-то новое не потребовалось.
+5. Письмо — тем же каналом, что `ForgotPasswordCommand` (`IMailService` + `IJobService.Enqueue`,
+   `CancellationToken.None` — фоновая задача не должна зависеть от токена HTTP-запроса).
+   Отдельного механизма подстановки в шаблон в `BuildingBlocks/Mailing` нет — оба письма
+   собираются обычной C#-интерполяцией строки, как и раньше; исследование из бэклога
+   [[Задачи · Доработки каркаса]] → Notifications не дублировалось. Ссылка —
+   `{Origin}/accept-invite?email=…&token=…&tenant=…` (origin из конфигурации, как в
+   `ForgotPasswordCommand`, а не из хоста API-запроса, как в `RegisterUserCommand` — страница
+   `/accept-invite` живёт в дашборде, а не в API). `tenant` в спецификации не значился явно, но
+   добавлен по факту — страница `/accept-invite` вызывает `/reset-password`, а тому заголовок
+   `X-FSH-App`/tenant обязателен (как и странице `/reset-password`, которая его тоже требует).
+6. `UserRegisteredIntegrationEvent` **не публикуется** для приглашённого пользователя (в отличие
+   от `RegisterAsync`/входа через внешнего провайдера). Причина — `UserRegisteredEmailHandler`
+   на это событие уже шлёт письмо «Welcome! thanks for registering», которое наложилось бы на
+   письмо-приглашение с точно противоположным смыслом («у вас ещё нет пароля, установите его по
+   ссылке»). Другие подписчики на это событие вне Identity на сегодня отсутствуют, так что
+   ничего не теряется; если появится модуль, которому нужно узнавать про новых пользователей
+   независимо от способа создания — заводить для этого более узкое событие, а не переиспользовать
+   `UserRegisteredIntegrationEvent`.
+
+**Приём приглашения переиспользует существующий `ResetPasswordCommand`** — новой команды не
+заводилось. Единственное дополнение — `UserPasswordService.ResetPasswordAsync` при успешном
+сбросе выставляет `EmailConfirmed = true`, если оно ещё не было `true`.
+
+> [!note] Как отличить приём приглашения от обычного «забыл пароль»
+> Никак — и это осознанный выбор, а не недоделка. `InviteUserCommandHandler` минтит токен тем
+> же вызовом `UserManager.GeneratePasswordResetTokenAsync` (та же цель токена в
+> `DataProtectionTokenProviderOptions`), что и `ForgotPasswordCommand`, — то есть два сценария
+> неразличимы на уровне `ResetPasswordCommand` по построению, отдельный флаг «это был инвайт» в
+> команду/токен добавлять незачем. Единственный доступный на этот момент сигнал — текущее
+> значение `EmailConfirmed`: `false` бывает только у аккаунта, созданного через `InviteAsync` и
+> ещё не принявшего приглашение (обычная регистрация подтверждает почту через
+> `ConfirmEmailCommand` до входа). Успешный `ResetPasswordAsync` уже доказывает владение
+> почтовым ящиком не хуже, чем токен подтверждения адреса, — так что проставить
+> `EmailConfirmed = true` в этот момент корректно для обоих сценариев, а не только для инвайта.
+
+**Привязка приглашённого пользователя к `Guardian`/`Student`** — отдельным шагом, вызовом
+[[People]]: `InviteUserCommand` возвращает `userId`, дальше —
+`POST /api/v1/people/students/{studentId}/link-user` или
+`.../guardians/{guardianId}/link-user` с этим `userId` в теле. Identity не может звать People
+напрямую (правило 1 из `AGENTS.md` — только через `.Contracts`, а People уже зависит от
+Identity.Contracts, обратная ссылка создала бы цикл), поэтому оркестрация — на стороне
+вызывающего (dashboard UI или скрипт админа), не на бэкенде Identity.
+
+`/self-register` (`SelfRegisterUserCommand`) не тронут — как и раньше, анонимная
+самостоятельная регистрация. Приглашение стало основным способом получить доступ
+представителю/ученику на практике, но self-register остаётся рабочим путём (backend), просто
+дашборд-UI на него больше не ссылается.
 
 ### Запросы
 
@@ -113,11 +183,10 @@ tags: [модуль, каркас, identity]
 Действия `Users`: `View` (basic) `Search` `Create` `Update` `Delete` `Export`
 `ManageRoles` `Impersonate` `ConfirmEmail` `Invite`.
 
-`Users.Invite` — зарезервировано под приглашение по e-mail без установки пароля
-приглашающим (см. [[Задачи · Доработки каркаса]]); сама команда/эндпоинт ещё не
-реализованы, право заведено заранее, потому что бандл роли `Manager` уже на него
-ссылается — единственное действие `Users`, которое получает эта роль, остальное
-управление пользователями остаётся за `SchoolAdmin`.
+`Users.Invite` — приглашение по e-mail без установки пароля приглашающим (см.
+[[Задачи · Доработки каркаса]] → раздел «Приглашение по e-mail» выше). В бандле роли
+`Manager` — единственное действие `Users`, которое получает эта роль, остальное управление
+пользователями остаётся за `SchoolAdmin`.
 
 Реестр прав — `PermissionConstants` в `BuildingBlocks/Shared`; каждый модуль
 регистрирует свои в `ConfigureServices`. Механика — [[Модель прав доступа]].
@@ -129,6 +198,8 @@ POST   /api/v1/token                            вход
 POST   /api/v1/token/refresh
 GET    /api/v1/users                            + CRUD, поиск
 POST   /api/v1/users/register
+POST   /api/v1/users/invite                     приглашение по e-mail (Users.Invite)
+POST   /api/v1/users/reset-password             тоже приём приглашения (см. раздел выше)
 POST   /api/v1/users/{id}/roles
 GET    /api/v1/roles                            + CRUD
 PUT    /api/v1/roles/{id}/permissions

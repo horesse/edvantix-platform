@@ -36,6 +36,10 @@ These are the model for background loops: stay alive, log with context, never sw
 
 Login `POST /api/v1/identity/token/issue` (header `X-FSH-App` enforces the operator/tenant app boundary). Refresh `POST /api/v1/identity/token/refresh` cross-checks subject. Session rows are written best-effort during login — failures log a warning and login still succeeds. Admin can't demote/deactivate the last admin or the root-tenant seed admin (guards in `UserRoleService`/`UserStatusService`).
 
+## Invite-by-e-mail
+
+`InviteUserCommand` → `UserRegistrationService.InviteAsync` (gated by `IdentityPermissions.Users.Invite`, granted only to `Manager`+`SchoolAdmin`). Creates an `FshUser` with a random never-revealed password and `EmailConfirmed = false`, restricted to a `SchoolRoleConstants.All` role (validator rejects free-form roles), then mints a link via `UserManager.GeneratePasswordResetTokenAsync` — the exact same call `ForgotPasswordCommand` uses, no separate token entity. Acceptance reuses `ResetPasswordCommand` as-is: `UserPasswordService.ResetPasswordAsync` sets `EmailConfirmed = true` whenever it was `false` on success, since a successful reset already proves mailbox control and the two flows share one token purpose — there is no "was this an invite" flag anywhere, and none should be added. `UserRegisteredIntegrationEvent` is deliberately **not** published for invited users (would double up with `UserRegisteredEmailHandler`'s welcome email, which contradicts the invite's "set your password" message). Binding the invited user to a `Guardian`/`Student` is a separate People call (`.../link-user`) made by the caller — Identity cannot call People (module boundary). Full rationale: docs/02 Модули/Identity.md → "Приглашение по e-mail".
+
 ## Tests
 
-`Identity.Tests` is the largest unit suite. When asserting a forwarded `CancellationToken`, assert the specific token (see `testing.md`).
+`Identity.Tests` is the largest unit suite. When asserting a forwarded `CancellationToken`, assert the specific token (see `testing.md`). DB-touching behavior (role assignment past `CreateAsync`, `EmailConfirmed` flip, token single-use) is covered in `Integration.Tests` instead — `UserManager<FshUser>` substituted in a unit test can't exercise EF Core Identity's real duplicate-email or security-stamp mechanics.
