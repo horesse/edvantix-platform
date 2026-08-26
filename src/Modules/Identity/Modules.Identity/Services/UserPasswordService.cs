@@ -78,6 +78,19 @@ internal sealed class UserPasswordService(
             throw new CustomException("error resetting password", errors);
         }
 
+        // A successful reset proves control of the mailbox exactly like an email-confirmation
+        // token would — so this is also how an accepted invite gets confirmed. InviteUserCommandHandler
+        // creates the account with EmailConfirmed = false and mints its link with this exact same
+        // UserManager.GeneratePasswordResetTokenAsync call (same purpose string) that
+        // ForgotPasswordCommandHandler uses, so "reset after a forgot-password request" and "accept
+        // an invite" are indistinguishable at this point by design — there is no separate flag to
+        // check. EmailConfirmed's current value is the only signal available, and it's a sufficient
+        // one: it's only ever false here for an invited account that hasn't accepted yet.
+        if (!user.EmailConfirmed)
+        {
+            user.EmailConfirmed = true;
+        }
+
         // Raise domain event for password reset
         var tenantId = multiTenantContextAccessor?.MultiTenantContext?.TenantInfo?.Id;
         user.RecordPasswordChanged(wasReset: true, tenantId);

@@ -57,6 +57,7 @@ using FSH.Modules.Identity.Features.v1.Users.GetUserPermissions;
 using FSH.Modules.Identity.Features.v1.Users.GetUserProfile;
 using FSH.Modules.Identity.Features.v1.Users.GetUserRoles;
 using FSH.Modules.Identity.Features.v1.Users.GetUsers;
+using FSH.Modules.Identity.Features.v1.Users.InviteUser;
 using FSH.Modules.Identity.Features.v1.Users.RegisterUser;
 using FSH.Modules.Identity.Features.v1.Users.ResetPassword;
 using FSH.Modules.Identity.Features.v1.Users.SearchUsers;
@@ -215,6 +216,7 @@ public class IdentityModule : IModule
         group.MapGetUsersListEndpoint();
         group.MapSearchUsersEndpoint();
         group.MapRegisterUserEndpoint();
+        group.MapInviteUserEndpoint();
         group.MapForgotPasswordEndpoint().RequireRateLimiting("auth");
         group.MapResetPasswordEndpoint().RequireRateLimiting("auth");
         group.MapSelfRegisterUserEndpoint().RequireRateLimiting("auth");
