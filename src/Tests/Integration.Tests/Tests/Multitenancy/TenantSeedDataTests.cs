@@ -1,4 +1,7 @@
+using FSH.Modules.Curriculum.Contracts.Dtos;
+using FSH.Modules.Payments.Contracts.Dtos;
 using Integration.Tests.Infrastructure;
+using Integration.Tests.Infrastructure.Extensions;
 
 namespace Integration.Tests.Tests.Multitenancy;
 
@@ -40,6 +43,46 @@ public sealed class TenantSeedDataTests
         var permissionsBody = await permissionsResponse.Content.ReadAsStringAsync();
         // A newly-seeded tenant admin must have at least one permission attached via a seeded role.
         permissionsBody.ShouldContain("Permissions.");
+    }
+
+    /// <summary>
+    /// Curriculum/Payments provisioning defaults — see docs/04 Задачи/Задачи · Доработки
+    /// каркаса.md → Multitenancy → "Шаги провижининга под новые модули". Both
+    /// <c>CurriculumDbInitializer</c> and <c>PaymentsDbInitializer</c> run as part of the same
+    /// <c>SeedTenantAsync</c> step exercised above — asserted here rather than in a parallel test
+    /// so both new-tenant defaults are covered by one real Postgres-backed provisioning run.
+    /// </summary>
+    [Fact]
+    public async Task NewTenant_Should_BeSeededWith_DefaultSubjects_And_DefaultTariff()
+    {
+        using var rootClient = await _auth.CreateRootAdminClientAsync();
+        var uniqueId = Guid.NewGuid().ToString("N")[..8];
+        var tenantId = $"seed-cp-{uniqueId}";
+        var adminEmail = $"seed-cp-admin-{uniqueId}@tenant.com";
+
+        await CreateTenantAsync(rootClient, tenantId, adminEmail);
+        await WaitForProvisioningAsync(rootClient, tenantId);
+
+        using var tenantAdminClient = await CreateTenantAdminClientWithRetryAsync(
+            adminEmail, TestConstants.DefaultPassword, tenantId);
+
+        using var subjectsResponse = await tenantAdminClient.GetAsync(
+            $"{TestConstants.CurriculumBasePath}/subjects/tree");
+        subjectsResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var subjects = await subjectsResponse.DeserializeAsync<List<SubjectNodeDto>>();
+        // Two top-level default directions — "Английский язык" / "Математика", see
+        // CurriculumDbInitializer.SeedAsync. Not "ровно один": the task brief for this
+        // initializer explicitly allows one-or-two default subjects and names both.
+        subjects.Count.ShouldBe(2);
+        subjects.ShouldContain(s => s.Name == "Английский язык");
+        subjects.ShouldContain(s => s.Name == "Математика");
+
+        using var tariffsResponse = await tenantAdminClient.GetAsync($"{TestConstants.PaymentsBasePath}/tariffs");
+        tariffsResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var tariffs = await tariffsResponse.DeserializeAsync<List<TariffDto>>();
+        tariffs.Count.ShouldBe(1);
+        tariffs[0].Kind.ShouldBe(TariffKind.OneTime);
+        tariffs[0].CourseId.ShouldBeNull();
     }
 
     private async Task<HttpClient> CreateTenantAdminClientWithRetryAsync(
