@@ -8,7 +8,6 @@ using FSH.Modules.Multitenancy;
 using FSH.Modules.Multitenancy.Contracts.v1.GetTenantStatus;
 using FSH.Modules.Webhooks;
 using FSH.Modules.Billing;
-using FSH.Modules.Catalog;
 using FSH.Modules.People;
 using FSH.Modules.Curriculum;
 using FSH.Modules.StudyGroups;
@@ -58,8 +57,6 @@ builder.Services.AddMediator(o =>
         typeof(FSH.Modules.Webhooks.WebhooksModule),
         typeof(FSH.Modules.Billing.Contracts.BillingContractsMarker),
         typeof(FSH.Modules.Billing.BillingModule),
-        typeof(FSH.Modules.Catalog.Contracts.CatalogContractsMarker),
-        typeof(FSH.Modules.Catalog.CatalogModule),
         typeof(FSH.Modules.People.Contracts.PeopleContractsMarker),
         typeof(FSH.Modules.People.PeopleModule),
         typeof(FSH.Modules.Curriculum.Contracts.CurriculumContractsMarker),
@@ -88,7 +85,6 @@ var moduleAssemblies = new Assembly[]
     typeof(FSH.Modules.Files.FilesModule).Assembly,
     typeof(WebhooksModule).Assembly,
     typeof(BillingModule).Assembly,
-    typeof(CatalogModule).Assembly,
     typeof(PeopleModule).Assembly,
     typeof(CurriculumModule).Assembly,
     typeof(StudyGroupsModule).Assembly,

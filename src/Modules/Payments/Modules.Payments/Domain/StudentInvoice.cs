@@ -89,9 +89,16 @@ public sealed class StudentInvoice : AggregateRoot<Guid>
     /// <summary>Best-effort human-readable numbering — <c>INV-{year}-{short id}</c>. The final format
     /// (sequential per school, gaps on cancellation, etc.) is an open question — see
     /// docs/04 Задачи/Открытые вопросы.md → «Payments» → «Нумерация счетов». This is a working
-    /// placeholder, not the resolved design.</summary>
+    /// placeholder, not the resolved design.
+    /// <para>
+    /// Takes the LAST 8 hex chars of <paramref name="id"/>, not the first: <c>id</c> is a
+    /// <see cref="Guid.CreateVersion7()"/> value, whose leading bits are a millisecond timestamp —
+    /// the first 8 hex chars only change once per ~65s window, so any two invoices created
+    /// within the same window (e.g. issuing a batch for a whole class) would collide on this
+    /// unique column. The trailing chars fall inside the random bits and don't have that problem.
+    /// </para></summary>
     public static string GenerateNumber(Guid id, DateOnly issuedOrCreatedOn) =>
-        $"INV-{issuedOrCreatedOn.Year}-{id.ToString("N", System.Globalization.CultureInfo.InvariantCulture)[..8].ToUpperInvariant()}";
+        $"INV-{issuedOrCreatedOn.Year}-{id.ToString("N", System.Globalization.CultureInfo.InvariantCulture)[^8..].ToUpperInvariant()}";
 
     // ─── Draft editing ──────────────────────────────────────────────────────────────────
 

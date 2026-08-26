@@ -13,6 +13,42 @@ tags: [задачи, миграция, удаление]
 > Catalog — эталон конвенций проекта. Держать его рабочим, пока [[Curriculum]] не написан
 > и не проходит тесты. Иначе примеры придётся выкапывать из истории git.
 
+> [!success] Backend — готово (2026-08-27)
+> Модуль `Catalog` (оба проекта), `Catalog.Tests`, 9 миграций + snapshot удалены; все четыре
+> точки регистрации (`Edvantix.Api/Program.cs`, `Edvantix.DbMigrator/Program.cs` — Mediator
+> markers ×2 + `moduleAssemblies`) сняты вместе с `ProjectReference` в трёх `.csproj`
+> (`Edvantix.Api`, `Edvantix.DbMigrator`, `Edvantix.Migrations.PostgreSQL`) и записью в
+> `src/Edvantix.slnx`. `HandlerValidatorPairingTests` очищен от Catalog-исключений.
+> `DemoSeeder.SeedTenantCatalogAsync` заменён на `SeedTenantSchoolAsync` (курсы/разделы/уроки,
+> преподаватели, ученики+опекуны, группы, расписание на ±2 недели с посещаемостью, выставленные
+> и частично/полностью оплаченные счета) — Acme получает полный объём из «Предложения»
+> ([[Открытые вопросы]] → Демо-данные: 3 курса/5 групп/30 учеников/4 преподавателя), Globex —
+> облегчённую версию (как и для остального демо-контента этого тенанта). Роль `Manager`
+> лишилась прав `CatalogPermissions.*`, взамен получила права People/Curriculum/StudyGroups.
+> `.agents/rules/modules/catalog.md` удалён (curriculum.md уже существовал), индекс правил в
+> `AGENTS.md` поправлен. `DROP SCHEMA catalog CASCADE` — отдельный SQL-скрипт (не EF-миграция,
+> модуля больше нет) в `src/Host/Edvantix.Migrations.PostgreSQL/Cleanup/
+> 2026-08-27_DropCatalogSchema.sql`, не выполнялся автоматически (прод-чувствительная операция).
+>
+> **Проверено:** `dotnet build src/Edvantix.slnx` (0 warnings/errors, `TreatWarningsAsErrors`) ·
+> `dotnet test src/Tests/Architecture.Tests` (51/51) · `dotnet test src/Tests/Integration.Tests`
+> (665/666, 1 preexisting skip) · `dotnet test src/Tests/Integration.Middleware.Tests` (5/5) ·
+> юнит-тесты People/Curriculum/StudyGroups/Scheduling/Payments/Identity — все зелёные ·
+> сквозной прогон `DbMigrator apply` + `seed-demo` (дважды, включая повторный запуск на уже
+> заполненной БД — идемпотентность подтверждена) на одноразовом Postgres-контейнере.
+>
+> **Попутные находки, исправлены в этом же PR (иначе `seed-demo` падал):**
+> `StudentInvoice.GenerateNumber` (Payments) брал первые 8 hex-символов
+> `Guid.CreateVersion7()` — это верхние биты миллисекундного таймстампа, они почти не меняются
+> в окне ~65 секунд, поэтому ЛЮБЫЕ два счёта, выставленные в этом окне (например, пакетный
+> выпуск счетов на класс), падали на `IX_StudentInvoices_Number`. Переключено на последние 8
+> hex-символов (случайные биты). Это баг Payments, не связанный с удалением Catalog напрямую,
+> но блокировал требуемые «выставленные счета» в демо-сиде — исправлен точечно, одна строка.
+>
+> **Не сделано:** публичный docs-репозиторий (`github.com/fullstackhero/docs`) и changelog —
+> правило 10 `AGENTS.md`, как и для «Задачи · Новые модули» ни у одной сессии не было доступа к
+> этому репозиторию. **Frontend не начат** — раздел ниже, [[Задачи · Frontend]].
+
 > [!warning] Три ловушки слепого поиска по строке `catalog`
 > 1. **`--catalog-only`** и `MigratorCommand.CatalogOnly` — это «каталог тенантов»
 >    (реестр школ), к модулю Catalog отношения не имеет. **Не трогать.**
@@ -21,7 +57,7 @@ tags: [задачи, миграция, удаление]
 >    **Не трогать.**
 > 3. **`GetPermissionCatalog`** в Identity — то же самое. **Не трогать.**
 
-## Backend
+## Backend — готово ✅
 
 ### Удалить целиком
 
@@ -65,24 +101,29 @@ src/Host/Edvantix.Migrations.PostgreSQL/Catalog/        9 миграций + sna
 
 ### Демо-данные
 
-- `src/Host/Edvantix.DbMigrator/DemoSeed/DemoSeeder.cs` — убрать сид товаров, брендов,
-  категорий. Заменить на сид курсов, групп, учеников (см. [[Задачи · Новые модули]]).
-- `src/Host/Edvantix.DbMigrator/MigratorCommand.cs` — строка 67, справка `seed-demo`:
-  слово «catalog» в описании демо-тенантов.
+- [x] `src/Host/Edvantix.DbMigrator/DemoSeed/DemoSeeder.cs` — сид товаров/брендов/категорий
+  убран. Заменён на `SeedTenantSchoolAsync` (курсы+разделы+уроки, преподаватели,
+  ученики+опекуны, группы, расписание, счета) — см. подробности в статусе выше и
+  [[Задачи · Новые модули]].
+- [x] `src/Host/Edvantix.DbMigrator/MigratorCommand.cs` — справка `seed-demo` переписана,
+  слово «catalog» (товарный каталог) убрано из описания демо-тенантов.
 
 ### Схема БД
 
-Отдельной миграцией в новой папке (не в удаляемой `Catalog/`):
+- [x] SQL-скрипт (не EF-миграция — модуля больше нет) добавлен в
+  `src/Host/Edvantix.Migrations.PostgreSQL/Cleanup/2026-08-27_DropCatalogSchema.sql`:
 
 ```sql
 DROP SCHEMA IF EXISTS catalog CASCADE;
 ```
 
-> [!warning] На проде — только после резервной копии
+> [!warning] На проде — только после резервной копии, скрипт НЕ выполнялся автоматически
 > Если где-то уже развёрнута база с данными Catalog, сначала бэкап. На пустой
-> инсталляции можно просто удалить папку миграций и пересоздать БД.
+> инсталляции можно просто удалить папку миграций и пересоздать БД. Эта сессия только
+> добавила скрипт — прогон против любой реальной БД (dev/staging/prod) должен быть отдельным,
+> осознанным шагом оператора.
 
-## Frontend (`clients/dashboard`)
+## Frontend — остаётся (`clients/dashboard`)
 
 ### Удалить файлы
 
@@ -134,21 +175,25 @@ categories: "Permissions.Catalog.Categories.Restore",
 
 ## Тесты
 
-- `src/Tests/Catalog.Tests/` — удалить
-- `src/Tests/Architecture.Tests` — убрать Catalog из списков модулей, если перечислен явно
-- `src/Tests/Integration.Tests` — сценарии с товарами
-- `clients/dashboard/tests/` — спеки каталога
-- `clients/admin/tests/roles/roles.spec.ts` — проверить: если ожидает права Catalog
-  в каталоге прав, поправить
+- [x] `src/Tests/Catalog.Tests/` — удалён
+- [x] `src/Tests/Architecture.Tests` — Catalog убран из allowlist'а
+      `HandlerValidatorPairingTests` (8 записей), 51/51 зелёных
+- [x] `src/Tests/Integration.Tests` — `Tests/Catalog/` (10 файлов) удалён, 665/666
+      (1 пропуск не связан), `TestConstants.CatalogBasePath` убран из обоих проектов
+      (`Integration.Tests`, `Integration.Middleware.Tests`) как мёртвый код
+- [ ] `clients/dashboard/tests/` — спеки каталога (frontend, вне скоупа этой сессии)
+- [ ] `clients/admin/tests/roles/roles.spec.ts` — проверить: если ожидает права Catalog
+  в каталоге прав, поправить (frontend, вне скоупа этой сессии)
 
 ## Прочее в репозитории
 
-| Файл | Что |
-|---|---|
-| `.agents/rules/modules/catalog.md` | удалить, создать `curriculum.md` |
-| `AGENTS.md` | в индексе правил заменить `catalog` на `curriculum` |
-| `README.md` | упоминания демо-каталога |
-| `.github/workflows/` | проверить пути в path-фильтрах |
+| Файл | Что | Статус |
+|---|---|---|
+| `.agents/rules/modules/catalog.md` | удалить, создать `curriculum.md` | ✅ удалён (`curriculum.md` уже существовал) |
+| `AGENTS.md` | в индексе правил заменить `catalog` на `curriculum` | ✅ сделано (заодно вписаны people/study-groups/scheduling/payments — тот же список тоже был устаревшим) |
+| `README.md` | упоминания демо-каталога | ✅ сделано |
+| `.github/workflows/` | проверить пути в path-фильтрах | ✅ явных path-фильтров не было; но `backend.yml`'s unit-test loop содержал жёсткий список `Тесты/{module}.Tests` — `Catalog` убран, заодно вписаны Curriculum/People/StudyGroups/Scheduling/Payments (были пропущены в CI до этой сессии) |
+| `.csproj` (Api/DbMigrator/Migrations.PostgreSQL) | — (не было в доке) | ✅ `ProjectReference` на `Modules.Catalog*` убраны — обнаружено через `dotnet build` (MSB9008), не через grep |
 
 ## Проверка после удаления
 
@@ -164,6 +209,14 @@ dotnet test src/Tests/Architecture.Tests
 cd clients/dashboard && npm run build
 ```
 
+> [!success] Backend-проверки прогнаны 2026-08-27
+> `dotnet build` — 0 warnings/0 errors · `Architecture.Tests` 51/51 · `Integration.Tests`
+> 665/666 (1 preexisting skip) · `Integration.Middleware.Tests` 5/5 · юнит-тесты пяти школьных
+> модулей + Identity.Tests — зелёные · сквозной `DbMigrator apply` + `seed-demo` дважды подряд
+> (идемпотентность) на одноразовом Postgres-контейнере, данные проверены через `psql`.
+> `cd clients/dashboard && npm run build` **не запускался** — frontend вне скоупа
+> backend-сессии, см. [[Задачи · Frontend]].
+
 Затем — поиск остатков (помня о трёх ловушках выше):
 
 ```bash
@@ -171,7 +224,9 @@ grep -rn "Catalog" --include=*.cs --include=*.ts --include=*.tsx src clients --e
 ```
 
 Ожидаемые допустимые совпадения: `permissions-catalog`, `GetPermissionCatalog`,
-`CatalogOnly` / `--catalog-only`, `[tenant-catalog]`.
+`CatalogOnly` / `--catalog-only`, `[tenant-catalog]`, плюс исторические упоминания Catalog в
+doc-комментариях модулей People/Curriculum/Files/Identity (сравнение с бывшим эталоном
+конвенций — не остаток зависимости, проверено построчно в этой сессии).
 
 ## Что НЕ вырезаем
 
