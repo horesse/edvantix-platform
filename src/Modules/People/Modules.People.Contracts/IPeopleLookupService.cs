@@ -13,4 +13,17 @@ public interface IPeopleLookupService
         IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken = default);
 
     ValueTask<PersonBriefDto?> GetTeacherBriefAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Resolves, per student, the people who should be notified about things that happen to them:
+    /// the student's own account (<see cref="StudentContactsDto.Student"/> — <see cref="ContactDto.UserId"/>
+    /// null when there is no login) and each active guardian, with the primary payer flagged.
+    /// Used by Notifications (recipient fan-out) and Chat (study-group channel membership fallback
+    /// when the student has no account). Batched — pass every id at once.
+    /// </summary>
+    ValueTask<IReadOnlyList<StudentContactsDto>> GetStudentContactsAsync(
+        IReadOnlyCollection<Guid> studentIds, CancellationToken cancellationToken = default);
+
+    /// <summary>The teacher as a notification/chat target, or null if unknown.</summary>
+    ValueTask<ContactDto?> GetTeacherContactAsync(Guid teacherId, CancellationToken cancellationToken = default);
 }

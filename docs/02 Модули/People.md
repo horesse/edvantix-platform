@@ -210,10 +210,23 @@ public interface IPeopleLookupService
         IReadOnlyCollection<Guid> ids, CancellationToken ct = default);
 
     ValueTask<PersonBriefDto?> GetTeacherBriefAsync(Guid id, CancellationToken ct = default);
+
+    // Кого уведомлять/добавлять в чат по событиям об ученике: сам ученик (UserId может быть
+    // null — нет учётки) + активные опекуны с пометкой плательщика. E-mail присутствует даже
+    // без учётки (Student/Guardian/Teacher хранят Email). Потребители — [[Notifications]]
+    // (разлив адресатов) и [[Chat]] (участники канала группы, подстановка опекуна при
+    // Student.UserId == null). Батч — все id разом, один join-запрос.
+    ValueTask<IReadOnlyList<StudentContactsDto>> GetStudentContactsAsync(
+        IReadOnlyCollection<Guid> studentIds, CancellationToken ct = default);
+
+    ValueTask<ContactDto?> GetTeacherContactAsync(Guid teacherId, CancellationToken ct = default);
 }
 ```
 
-Пакетное получение ФИО для списков — иначе [[Scheduling]] и [[Payments]] упрутся в N+1.
+`GetStudentsBrief`/`GetTeacherBrief` — пакетное ФИО для списков (иначе [[Scheduling]] и
+[[Payments]] упрутся в N+1). `GetStudentContacts`/`GetTeacherContact` (`ContactDto` —
+`UserId?`, `Email?`, `DisplayName`, `ContactRole`) — резолв адресатов для уведомлений и
+членства в чате учебной группы; тесты — `Integration.Tests/Tests/People/PeopleLookupContactsTests.cs`.
 
 ### Подписки
 
