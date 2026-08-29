@@ -12,6 +12,9 @@ public sealed record StudentInvoiceOverdueIntegrationEvent(
     string Source,
     Guid InvoiceId,
     Guid StudentId,
+    Guid? PayerGuardianId,
     decimal Debt,
-    int DaysOverdue)
+    int DaysOverdue,
+    string Number,
+    string Currency)
     : IIntegrationEvent;

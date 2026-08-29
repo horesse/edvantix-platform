@@ -60,7 +60,8 @@ public sealed class BulkIssueInvoicesCommandHandler(
             await outboxStore.AddAsync(
                 new StudentInvoiceIssuedIntegrationEvent(
                     Guid.NewGuid(), now.UtcDateTime, tenantId, Guid.NewGuid().ToString(), "Payments",
-                    invoice.Id, invoice.StudentId, invoice.PayerGuardianId, invoice.Total, invoice.DueDate),
+                    invoice.Id, invoice.StudentId, invoice.PayerGuardianId, invoice.Total, invoice.DueDate,
+                    invoice.Number, invoice.Currency),
                 cancellationToken).ConfigureAwait(false);
 
             issued.Add(invoice.Id);

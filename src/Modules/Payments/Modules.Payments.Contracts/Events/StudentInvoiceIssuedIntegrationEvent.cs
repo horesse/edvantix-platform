@@ -12,5 +12,7 @@ public sealed record StudentInvoiceIssuedIntegrationEvent(
     Guid StudentId,
     Guid? PayerGuardianId,
     decimal Total,
-    DateOnly DueDate)
+    DateOnly DueDate,
+    string Number,
+    string Currency)
     : IIntegrationEvent;

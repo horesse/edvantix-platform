@@ -77,7 +77,9 @@ public sealed class DetectOverdueInvoicesJob(
             await outboxStore.AddAsync(
                 new StudentInvoiceOverdueIntegrationEvent(
                     Guid.NewGuid(), now.UtcDateTime, tenant.Id, Guid.NewGuid().ToString(), "Payments",
-                    invoice.Id, invoice.StudentId, invoice.Total - invoice.PaidAmount, today.DayNumber - invoice.DueDate.DayNumber),
+                    invoice.Id, invoice.StudentId, invoice.PayerGuardianId,
+                    invoice.Total - invoice.PaidAmount, today.DayNumber - invoice.DueDate.DayNumber,
+                    invoice.Number, invoice.Currency),
                 cancellationToken).ConfigureAwait(false);
         }
 

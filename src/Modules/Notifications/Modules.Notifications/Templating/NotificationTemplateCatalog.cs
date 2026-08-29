@@ -45,24 +45,23 @@ public sealed class NotificationTemplateCatalog : INotificationTemplateCatalog
             new(
                 NotificationTypes.SessionReminder,
                 TitleTemplate: "Lesson tomorrow: {{group}}",
-                BodyTemplate: "{{group}} on {{date}} at {{time}}.",
+                BodyTemplate: "{{group}} — {{start}}.",
                 LinkTemplate: "/schedule/sessions/{{sessionId}}",
-                EmailSubjectTemplate: "Reminder: {{group}} lesson on {{date}}",
+                EmailSubjectTemplate: "Reminder: {{group}} lesson {{start}}",
                 EmailHtmlBodyTemplate: Email(
                     "Lesson tomorrow",
-                    "<p>This is a reminder that <strong>{{group}}</strong> has a lesson on " +
-                    "<strong>{{date}}</strong> at <strong>{{time}}</strong>.</p>")),
+                    "<p>This is a reminder that <strong>{{group}}</strong> has a lesson " +
+                    "<strong>{{start}}</strong>.</p>")),
 
             new(
                 NotificationTypes.SessionCancelled,
                 TitleTemplate: "Lesson cancelled: {{group}}",
-                BodyTemplate: "The {{date}} {{time}} lesson for {{group}} was cancelled. {{reason}}",
+                BodyTemplate: "The upcoming {{group}} lesson has been cancelled. {{reason}}",
                 LinkTemplate: "/schedule/sessions/{{sessionId}}",
-                EmailSubjectTemplate: "Lesson cancelled: {{group}} on {{date}}",
+                EmailSubjectTemplate: "Lesson cancelled: {{group}}",
                 EmailHtmlBodyTemplate: Email(
                     "Lesson cancelled",
-                    "<p>The <strong>{{date}}</strong> {{time}} lesson for <strong>{{group}}</strong> " +
-                    "has been cancelled.</p><p>{{reason}}</p>")),
+                    "<p>The upcoming <strong>{{group}}</strong> lesson has been cancelled.</p><p>{{reason}}</p>")),
 
             new(
                 NotificationTypes.SessionRescheduled,
@@ -78,13 +77,12 @@ public sealed class NotificationTemplateCatalog : INotificationTemplateCatalog
             new(
                 NotificationTypes.AttendanceUnexcused,
                 TitleTemplate: "Unexcused absence: {{student}}",
-                BodyTemplate: "{{student}} was marked absent without an excuse for the {{date}} {{group}} lesson.",
+                BodyTemplate: "{{student}} was marked absent from a lesson without an excuse.",
                 LinkTemplate: "/students/{{studentId}}/attendance",
                 EmailSubjectTemplate: "{{student}} missed a lesson",
                 EmailHtmlBodyTemplate: Email(
                     "Unexcused absence",
-                    "<p><strong>{{student}}</strong> was marked absent without an excuse for the " +
-                    "<strong>{{date}}</strong> <strong>{{group}}</strong> lesson.</p>")),
+                    "<p><strong>{{student}}</strong> was marked absent from a lesson without an excuse.</p>")),
 
             new(
                 NotificationTypes.InvoiceIssued,
@@ -106,13 +104,13 @@ public sealed class NotificationTemplateCatalog : INotificationTemplateCatalog
             new(
                 NotificationTypes.InvoiceOverdue,
                 TitleTemplate: "Invoice {{invoiceNumber}} overdue",
-                BodyTemplate: "Invoice {{invoiceNumber}} for {{amount}} was due on {{dueDate}} and is now overdue.",
+                BodyTemplate: "Invoice {{invoiceNumber}} for {{amount}} is {{daysOverdue}} day(s) overdue.",
                 LinkTemplate: "/billing/invoices/{{invoiceId}}",
                 EmailSubjectTemplate: "Invoice {{invoiceNumber}} is overdue",
                 EmailHtmlBodyTemplate: Email(
                     "Invoice overdue",
                     "<p>Invoice <strong>{{invoiceNumber}}</strong> for <strong>{{amount}}</strong> " +
-                    "was due on <strong>{{dueDate}}</strong> and is now overdue.</p>")),
+                    "is <strong>{{daysOverdue}}</strong> day(s) overdue.</p>")),
 
             new(
                 NotificationTypes.EnrolledInGroup,

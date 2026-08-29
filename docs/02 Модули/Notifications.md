@@ -61,6 +61,39 @@ tags: [модуль, каркас, notifications]
 а не пишут `Notification` напрямую. `MentionedInChannelIntegrationEventHandler`
 переведён на диспетчер (канал `InApp`). Тесты — `src/Tests/Notifications.Tests/Channels/`.
 
+## Подписчики школьных событий (`IntegrationEventHandlers/`)
+
+`SchoolNotificationFanout` резолвит адресатов (через `IStudyGroupQueryService` +
+`IPeopleLookupService.GetStudentContactsAsync/GetTeacherContactAsync`),
+`NotificationTimeFormatter` печатает время в часовом поясе школы (`TenantSettings`).
+
+| Событие | Кому | Каналы |
+|---|---|---|
+| `SessionCancelledIntegrationEvent` ([[Scheduling]]) | ученики + опекуны + преподаватель группы | приложение + почта |
+| `SessionRescheduledIntegrationEvent` | те же | приложение + почта |
+| `SessionReminderDueIntegrationEvent` | ученики + опекуны | приложение + почта |
+| `AttendanceMarkedIntegrationEvent` (только `Absent`) | опекуны ученика | приложение + почта |
+| `StudentInvoiceIssuedIntegrationEvent` ([[Payments]]) | плательщик (опекун-плательщик, иначе ученик) | приложение + почта |
+| `StudentInvoiceOverdueIntegrationEvent` | плательщик | приложение + почта |
+| `StudentPaymentConfirmedIntegrationEvent` | плательщик | только приложение |
+| `StudentEnrolledIntegrationEvent` ([[StudyGroups]]) | ученик + опекуны | приложение + почта |
+
+У кого нет учётки — уходит только письмо (адрес хранит People). Дедупликация
+адресатов — `SchoolNotificationFanout.Distinct` (по `UserId`, иначе e-mail).
+
+> [!note] Что осталось и осознанные упрощения
+> - **«Группа без преподавателя»** и **«Новый материал урока»** — не сделаны: у первой
+>   нет события и нет резолва менеджеров, вторая — [[Curriculum]] (вне этапа 6).
+> - **Копирайт под данные событий.** `SessionCancelled` не несёт времени → текст без
+>   даты/времени; `AttendanceMarked` не несёт группы/даты → текст без них.
+> - **Обогащены события** (аддитивно, без изменения поведения издателей):
+>   `SessionRescheduledIntegrationEvent` +`StudyGroupId`; Payments-события
+>   `Issued`/`Overdue`/`PaymentConfirmed` +`Number`/`Currency` (и `StudentId`/
+>   `PayerGuardianId`, где их не было). См. справочники [[Scheduling]]/[[Payments]].
+> - **Настройки подписок** (следующий пункт бэклога) ещё не фильтруют — обработчики
+>   рассылают по умолчаниям каталога; когда появится `NotificationPreference`,
+>   фильтр встанет в `INotificationDispatcher`.
+
 > [!note] Публичный docs-репозиторий и changelog — открытый пункт
 > Правило 10 `AGENTS.md`: `github.com/fullstackhero/docs` и changelog для этой доработки
 > не обновлялись в этой сессии — как и у всех предыдущих backend-сессий, доступа к тому
@@ -125,10 +158,14 @@ GET    /api/v1/notifications/stream          SSE
 
 ## Зависимости
 
-**Ссылается на:** `Identity.Contracts`, `Multitenancy.Contracts`,
-`BuildingBlocks/Mailing`, `BuildingBlocks/Eventing`.
+**Ссылается на:** `Identity.Contracts`, `Multitenancy.Contracts`, `People.Contracts`,
+`StudyGroups.Contracts`, `Scheduling.Contracts`, `Payments.Contracts`, `Chat.Contracts`,
+`Billing.Contracts`, `BuildingBlocks/Mailing`, `BuildingBlocks/Eventing`.
 
-**Подписан на события:** [[Scheduling]], [[Payments]], [[StudyGroups]], [[Chat]],
+**Подписан на события:** [[Chat]] (`MentionedInChannel`), [[Scheduling]]
+(`SessionCancelled`/`Rescheduled`/`ReminderDue`, `AttendanceMarked`), [[Payments]]
+(`StudentInvoiceIssued`/`Overdue`, `StudentPaymentConfirmed`), [[StudyGroups]]
+(`StudentEnrolled`), [[Billing]] (tenant billing письма). Ещё не подписан:
 [[Tickets]], [[Curriculum]].
 
 ## Связанное

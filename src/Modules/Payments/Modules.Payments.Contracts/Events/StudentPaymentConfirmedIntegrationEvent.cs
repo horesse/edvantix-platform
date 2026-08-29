@@ -10,7 +10,11 @@ public sealed record StudentPaymentConfirmedIntegrationEvent(
     string CorrelationId,
     string Source,
     Guid InvoiceId,
+    Guid StudentId,
+    Guid? PayerGuardianId,
     decimal Amount,
     DateOnly PaidOn,
-    PaymentMethod Method)
+    PaymentMethod Method,
+    string Number,
+    string Currency)
     : IIntegrationEvent;
