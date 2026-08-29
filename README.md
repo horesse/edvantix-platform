@@ -52,7 +52,8 @@ The React apps read their API URL at runtime from `public/config.json` — no re
 src/
   BuildingBlocks/      Shared framework libraries — yours to modify
   Modules/             Bounded contexts: Identity, Multitenancy, Auditing, Billing,
-                       Catalog, Chat, Files, Notifications, Tickets, Webhooks
+                       People, Curriculum, StudyGroups, Scheduling, Payments,
+                       Chat, Files, Notifications, Tickets, Webhooks
   Host/
     Edvantix.Api/                    API composition root
     Edvantix.AppHost/                .NET Aspire orchestrator

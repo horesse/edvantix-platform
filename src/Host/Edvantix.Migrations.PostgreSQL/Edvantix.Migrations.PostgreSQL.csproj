@@ -15,7 +15,6 @@
 	  <ProjectReference Include="..\..\Modules\Multitenancy\Modules.Multitenancy\Modules.Multitenancy.csproj" />
 	  <ProjectReference Include="..\..\Modules\Webhooks\Modules.Webhooks\Modules.Webhooks.csproj" />
 	  <ProjectReference Include="..\..\Modules\Billing\Modules.Billing\Modules.Billing.csproj" />
-	  <ProjectReference Include="..\..\Modules\Catalog\Modules.Catalog\Modules.Catalog.csproj" />
 	  <ProjectReference Include="..\..\Modules\People\Modules.People\Modules.People.csproj" />
 	  <ProjectReference Include="..\..\Modules\Curriculum\Modules.Curriculum\Modules.Curriculum.csproj" />
 	  <ProjectReference Include="..\..\Modules\StudyGroups\Modules.StudyGroups\Modules.StudyGroups.csproj" />
@@ -31,7 +30,6 @@
 	  <Folder Include="Audit\" />
 	  <Folder Include="MultiTenancy\" />
 	  <Folder Include="Billing\" />
-	  <Folder Include="Catalog\" />
 	  <Folder Include="People\" />
 	  <Folder Include="Curriculum\" />
 	  <Folder Include="Tickets\" />

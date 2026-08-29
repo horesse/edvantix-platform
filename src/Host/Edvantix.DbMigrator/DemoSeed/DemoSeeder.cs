@@ -7,17 +7,32 @@ using FSH.Framework.Shared.Multitenancy;
 using FSH.Modules.Billing.Contracts;
 using FSH.Modules.Billing.Data;
 using FSH.Modules.Billing.Domain;
-using FSH.Modules.Catalog.Contracts.Authorization;
-using FSH.Modules.Catalog.Data;
-using FSH.Modules.Catalog.Domain;
 using FSH.Modules.Chat.Data;
 using FSH.Modules.Chat.Domain;
+using FSH.Modules.Curriculum.Contracts.Authorization;
+using FSH.Modules.Curriculum.Contracts.Dtos;
+using FSH.Modules.Curriculum.Data;
+using FSH.Modules.Curriculum.Domain;
 using FSH.Modules.Identity.Contracts.Authorization;
 using FSH.Modules.Identity.Data;
 using FSH.Modules.Identity.Domain;
 using FSH.Modules.Multitenancy.Contracts;
 using FSH.Modules.Multitenancy.Data;
 using FSH.Modules.Multitenancy.Provisioning;
+using FSH.Modules.Payments.Contracts.Dtos;
+using FSH.Modules.Payments.Data;
+using FSH.Modules.Payments.Domain;
+using FSH.Modules.People.Contracts.Authorization;
+using FSH.Modules.People.Contracts.Dtos;
+using FSH.Modules.People.Data;
+using FSH.Modules.People.Domain;
+using FSH.Modules.Scheduling.Contracts.Dtos;
+using FSH.Modules.Scheduling.Data;
+using FSH.Modules.Scheduling.Domain;
+using FSH.Modules.StudyGroups.Contracts.Authorization;
+using FSH.Modules.StudyGroups.Contracts.Dtos;
+using FSH.Modules.StudyGroups.Data;
+using FSH.Modules.StudyGroups.Domain;
 using FSH.Modules.Tickets.Contracts.Authorization;
 using FSH.Modules.Tickets.Contracts.Dtos;
 using FSH.Modules.Tickets.Data;
@@ -33,8 +48,9 @@ namespace Edvantix.DbMigrator.DemoSeed;
 /// <summary>
 /// Owns the "rich demo content" that the dev environment needs to feel lived-in:
 /// the <c>acme</c> and <c>globex</c> tenants, their demo users, custom roles,
-/// catalog content, tickets, and chat. Invoked by the migrator's
-/// <c>seed-demo</c> verb — never by the API runtime.
+/// a school (courses, teachers, students, study groups, schedule, invoices),
+/// tickets, and chat. Invoked by the migrator's <c>seed-demo</c> verb — never
+/// by the API runtime.
 ///
 /// Idempotent: every step checks before writing, so re-running the verb
 /// against an already-seeded database is a no-op.
@@ -86,7 +102,7 @@ internal sealed class DemoSeeder
         {
             await SeedTenantSubscriptionAsync(demo, cancellationToken).ConfigureAwait(false);
             await SeedTenantUsersAsync(demo, cancellationToken).ConfigureAwait(false);
-            await SeedTenantCatalogAsync(demo, cancellationToken).ConfigureAwait(false);
+            await SeedTenantSchoolAsync(demo, cancellationToken).ConfigureAwait(false);
             await SeedTenantTicketsAsync(demo, cancellationToken).ConfigureAwait(false);
             await SeedTenantChatAsync(demo, cancellationToken).ConfigureAwait(false);
         }
@@ -94,7 +110,7 @@ internal sealed class DemoSeeder
         if (_logger.IsEnabled(LogLevel.Information))
         {
             _logger.LogInformation(
-                "[demo-seed] complete · root superadmin + {Acme} + {Globex} populated with users / catalog / tickets / chat",
+                "[demo-seed] complete · root superadmin + {Acme} + {Globex} populated with users / school / tickets / chat",
                 Acme.Id, Globex.Id);
         }
     }
@@ -132,7 +148,7 @@ internal sealed class DemoSeeder
             }
 
             // Same per-tenant path the migrator's apply verb uses. The Identity initializer creates
-            // the tenant admin, while Catalog/Tickets/Chat initializers are no-ops today.
+            // the tenant admin, while the school modules'/Tickets/Chat initializers are no-ops today.
             await tenantService.MigrateTenantAsync(existing, cancellationToken).ConfigureAwait(false);
             await tenantService.SeedTenantAsync(existing, cancellationToken).ConfigureAwait(false);
 
@@ -418,14 +434,23 @@ internal sealed class DemoSeeder
         }
     }
 
-    // ─── Catalog ────────────────────────────────────────────────────────
+    // ─── School (Curriculum / People / StudyGroups / Scheduling / Payments) ──────────
 
     /// <summary>
-    /// Idempotently seeds the Catalog demo dataset (4 brands / 11 categories /
-    /// 10 products) into the demo tenant. Bails when any catalog row already
-    /// exists for that tenant.
+    /// Idempotently seeds a lived-in school into the demo tenant. Acme (the rich, paid-plan
+    /// tenant) gets the full footprint: 3 courses (with sections and lessons), 4 teachers,
+    /// 30 students each linked to a guardian, 5 study groups (6 students each), a month of
+    /// scheduled sessions with attendance for the ones already held, and issued tuition
+    /// invoices for the current period. Globex (the minimal free-plan tenant — same asymmetry
+    /// as its users/tickets/chat elsewhere in this class) gets a single course/group instead.
+    /// Finbuckle's <c>IsMultiTenant()</c> (see <c>BaseDbContext.OnModelCreating</c>) folds
+    /// TenantId into every unique index it manages, so Acme and Globex could safely reuse the
+    /// same names — the split here is purely to keep Globex's footprint minimal, not to dodge
+    /// a collision. Replaces the old product-catalog demo data — see docs/05 Решения (ADR)/
+    /// ADR-002 Catalog заменяется на Curriculum.md and docs/04 Задачи/Открытые вопросы.md →
+    /// «Демо-данные». Bails per sub-step when that step's rows already exist for the tenant.
     /// </summary>
-    private async Task SeedTenantCatalogAsync(DemoTenant demo, CancellationToken cancellationToken)
+    private async Task SeedTenantSchoolAsync(DemoTenant demo, CancellationToken cancellationToken)
     {
         using var scope = _services.CreateScope();
         var tenantStore = scope.ServiceProvider.GetRequiredService<IMultiTenantStore<AppTenantInfo>>();
@@ -435,33 +460,397 @@ internal sealed class DemoSeeder
         scope.ServiceProvider.GetRequiredService<IMultiTenantContextSetter>()
             .MultiTenantContext = new MultiTenantContext<AppTenantInfo>(tenant);
 
-        var dbContext = scope.ServiceProvider.GetRequiredService<CatalogDbContext>();
-        bool alreadySeeded = await dbContext.Brands.AnyAsync(cancellationToken).ConfigureAwait(false)
-            || await dbContext.Categories.AnyAsync(cancellationToken).ConfigureAwait(false)
-            || await dbContext.Products.AnyAsync(cancellationToken).ConfigureAwait(false);
-        if (alreadySeeded) return;
+        // Records created here are attributed to the tenant admin (ManagerUserId) — the
+        // Identity initializer guarantees this user exists before any per-tenant seed runs.
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<FshUser>>();
+        var manager = string.IsNullOrWhiteSpace(tenant.AdminEmail)
+            ? null
+            : await userManager.FindByEmailAsync(tenant.AdminEmail).ConfigureAwait(false);
+        if (manager is null) return;
 
-        var brands = CatalogSeedData.BuildBrands();
-        dbContext.Brands.AddRange(brands);
+        bool isAcme = demo.Id == Acme.Id;
 
-        var (roots, children) = CatalogSeedData.BuildCategories();
-        dbContext.Categories.AddRange(roots);
-        dbContext.Categories.AddRange(children);
+        var courses = await SeedTenantCurriculumAsync(scope.ServiceProvider, isAcme, cancellationToken).ConfigureAwait(false);
+        var (teachers, students, primaryGuardianByStudent) = await SeedTenantPeopleAsync(
+            scope.ServiceProvider, manager.Id, isAcme, cancellationToken).ConfigureAwait(false);
+        if (courses.Count == 0 || teachers.Count == 0 || students.Count == 0) return;
 
-        await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
-        var brandsByName = brands.ToDictionary(b => b.Name, b => b);
-        var categoriesByName = roots.Concat(children).ToDictionary(c => c.Name, c => c);
-        var products = CatalogSeedData.BuildProducts(brandsByName, categoriesByName);
-        dbContext.Products.AddRange(products);
-        await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        var groups = await SeedTenantStudyGroupsAsync(
+            scope.ServiceProvider, courses, teachers, students, isAcme, cancellationToken).ConfigureAwait(false);
+        await SeedTenantSchedulingAsync(scope.ServiceProvider, groups, cancellationToken).ConfigureAwait(false);
+        await SeedTenantPaymentsAsync(
+            scope.ServiceProvider, courses, groups, primaryGuardianByStudent, cancellationToken).ConfigureAwait(false);
 
         if (_logger.IsEnabled(LogLevel.Information))
         {
             _logger.LogInformation(
-                "[demo-seed] [{Tenant}] seeded {BrandCount} brands, {CategoryCount} categories, {ProductCount} products",
-                tenant.Id, brands.Count, roots.Count + children.Count, products.Count);
+                "[demo-seed] [{Tenant}] seeded {CourseCount} courses, {TeacherCount} teachers, " +
+                "{StudentCount} students, {GroupCount} study groups",
+                tenant.Id, courses.Count, teachers.Count, students.Count, groups.Count);
         }
+    }
+
+    /// <summary>3 published courses for Acme (one per subject, each with 2 sections of 2
+    /// lessons); 1 for Globex. Reuses a subject <c>CurriculumDbInitializer.SeedAsync</c> already
+    /// created for this tenant (it seeds "Английский язык" for every new school) by name instead
+    /// of inserting a second row — that class's own <c>Subject.Slug</c> uniqueness would reject
+    /// the duplicate.</summary>
+    private static async Task<IReadOnlyList<Course>> SeedTenantCurriculumAsync(
+        IServiceProvider services, bool isAcme, CancellationToken cancellationToken)
+    {
+        var dbContext = services.GetRequiredService<CurriculumDbContext>();
+
+        if (!await dbContext.Courses.AnyAsync(cancellationToken).ConfigureAwait(false))
+        {
+            var courseSpecs = isAcme
+                ? new (string SubjectName, string Title, CourseLevel Level, int Hours)[]
+                  {
+                      ("Английский язык", "Английский язык — групповой курс", CourseLevel.Intermediate, 64),
+                      ("Немецкий язык", "Немецкий язык — групповой курс", CourseLevel.Beginner, 48),
+                      ("Испанский язык", "Испанский язык — групповой курс", CourseLevel.Beginner, 48),
+                  }
+                : [("Французский язык", "Французский язык — групповой курс", CourseLevel.Beginner, 40)];
+
+            var existingSubjectsByName = await dbContext.Subjects
+                .ToDictionaryAsync(s => s.Name, cancellationToken).ConfigureAwait(false);
+            int nextSortOrder = existingSubjectsByName.Count;
+
+            Subject GetOrCreateSubject(string name)
+            {
+                if (existingSubjectsByName.TryGetValue(name, out var existing))
+                {
+                    return existing;
+                }
+                var created = Subject.Create(name, null, nextSortOrder++);
+                dbContext.Subjects.Add(created);
+                existingSubjectsByName[name] = created;
+                return created;
+            }
+
+            var subjects = courseSpecs.Select(spec => GetOrCreateSubject(spec.SubjectName)).ToList();
+
+            foreach (var ((_, title, level, hours), subject) in courseSpecs.Zip(subjects))
+            {
+                var course = Course.Create(
+                    subject.Id, title, "Демо-курс, сгенерирован seed-demo.", level, hours, coverFileId: null);
+                dbContext.Courses.Add(course);
+
+                for (int m = 0; m < 2; m++)
+                {
+                    var module = CourseModule.Create(course.Id, $"Раздел {m + 1}", null, m);
+                    dbContext.CourseModules.Add(module);
+
+                    for (int l = 0; l < 2; l++)
+                    {
+                        dbContext.Lessons.Add(Lesson.Create(module.Id, $"Урок {l + 1}", null, null, 60, l));
+                    }
+                }
+
+                course.Publish();
+            }
+
+            await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        return await dbContext.Courses.OrderBy(c => c.CreatedAtUtc).ToListAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Acme: 4 teachers and 30 students. Globex: 1 teacher and 6 students (enough for
+    /// its single study group). Each student is linked to one guardian marked as primary payer.
+    /// Teacher/student emails are reused across tenants on purpose — People has no cross-tenant
+    /// uniqueness on Email, so this is safe (unlike Curriculum/StudyGroups' slugs/codes).</summary>
+    private static async Task<(
+        IReadOnlyList<Teacher> Teachers,
+        IReadOnlyList<Student> Students,
+        IReadOnlyDictionary<Guid, Guid> PrimaryGuardianByStudent)> SeedTenantPeopleAsync(
+        IServiceProvider services, string managerUserId, bool isAcme, CancellationToken cancellationToken)
+    {
+        var dbContext = services.GetRequiredService<PeopleDbContext>();
+
+        if (!await dbContext.Students.AnyAsync(cancellationToken).ConfigureAwait(false))
+        {
+            var teacherSpecs = isAcme
+                ? new (string Last, string First, string[] Specializations)[]
+                  {
+                      ("Волкова", "Мария", ["Английский"]),
+                      ("Соколов", "Дмитрий", ["Немецкий"]),
+                      ("Морозова", "Анна", ["Испанский"]),
+                      ("Кузнецов", "Иван", ["Английский", "Испанский"]),
+                  }
+                : [("Дюбуа", "Клэр", ["Французский"])];
+            for (int i = 0; i < teacherSpecs.Length; i++)
+            {
+                var (last, first, specializations) = teacherSpecs[i];
+                dbContext.Teachers.Add(Teacher.Create(
+                    last, first, null,
+                    phone: $"+7 900 000-00-{10 + i:00}",
+                    email: $"teacher{i + 1}@demo.local",
+                    bio: null,
+                    specializations: specializations,
+                    hourlyRate: 1500m));
+            }
+
+            string[] firstNames =
+            [
+                "Александр", "Мария", "Дмитрий", "Елена", "Иван", "Ольга", "Сергей", "Наталья", "Андрей", "Татьяна",
+                "Максим", "Юлия", "Артём", "Виктория", "Кирилл", "Полина", "Никита", "Дарья", "Роман", "Ксения",
+                "Егор", "Софья", "Владимир", "Алиса", "Павел", "Вероника", "Тимофей", "Милана", "Глеб", "Есения",
+            ];
+            string[] lastNames =
+                ["Иванов", "Петров", "Сидоров", "Смирнов", "Кузнецов", "Попов", "Васильев", "Соколов", "Михайлов", "Новиков"];
+            string[] guardianFirstNames =
+                ["Елена", "Сергей", "Наталья", "Андрей", "Марина", "Алексей", "Ирина", "Виктор", "Светлана", "Павел"];
+
+            int birthYearStart = DateTime.UtcNow.Year - 16;
+            int studentCount = isAcme ? 30 : 6;
+            for (int i = 0; i < studentCount; i++)
+            {
+                var birthDate = new DateOnly(birthYearStart + (i % 10), 1 + (i % 12), 1 + (i % 28));
+                var student = Student.Create(
+                    lastNames[i % lastNames.Length], firstNames[i], null, birthDate,
+                    phone: $"+7 900 000-{10 + i:00}-00",
+                    email: $"student{i + 1}@demo.local",
+                    managerUserId: managerUserId,
+                    source: "seed-demo");
+                student.ChangeStatus(StudentStatus.Active);
+
+                var guardian = Guardian.Create(
+                    lastNames[i % lastNames.Length], guardianFirstNames[i % guardianFirstNames.Length],
+                    phone: $"+7 900 100-{10 + i:00}-00",
+                    email: $"guardian{i + 1}@demo.local");
+                dbContext.Guardians.Add(guardian);
+
+                student.AddGuardianLink(guardian.Id, "Родитель", isPrimaryPayer: true);
+                dbContext.Students.Add(student);
+            }
+
+            await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        var teachers = await dbContext.Teachers.OrderBy(t => t.CreatedAtUtc).ToListAsync(cancellationToken).ConfigureAwait(false);
+        var students = await dbContext.Students
+            .Include(s => s.GuardianLinks)
+            .OrderBy(s => s.CreatedAtUtc)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+        var primaryGuardianByStudent = students.ToDictionary(
+            s => s.Id,
+            s => s.GuardianLinks.First(g => g.IsPrimaryPayer).GuardianId);
+
+        return (teachers, students, primaryGuardianByStudent);
+    }
+
+    /// <summary>Acme: 5 study groups (one primary teacher + 6 students each) across its 3
+    /// courses. Globex: 1 study group covering its single course/teacher/6 students. All
+    /// activated.</summary>
+    private static async Task<IReadOnlyList<StudyGroup>> SeedTenantStudyGroupsAsync(
+        IServiceProvider services,
+        IReadOnlyList<Course> courses,
+        IReadOnlyList<Teacher> teachers,
+        IReadOnlyList<Student> students,
+        bool isAcme,
+        CancellationToken cancellationToken)
+    {
+        var dbContext = services.GetRequiredService<StudyGroupsDbContext>();
+
+        if (!await dbContext.StudyGroups.AnyAsync(cancellationToken).ConfigureAwait(false))
+        {
+            var startDate = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-14);
+            var groupSpecs = isAcme
+                ? new (string Code, string Name, int CourseIndex, int TeacherIndex, GroupFormat Format)[]
+                  {
+                      ("ENG-A1", "Английский, группа A1", 0, 0, GroupFormat.Offline),
+                      ("ENG-A2", "Английский, группа A2", 0, 3, GroupFormat.Online),
+                      ("DEU-A1", "Немецкий, группа A1", 1, 1, GroupFormat.Offline),
+                      ("SPA-A1", "Испанский, группа A1", 2, 2, GroupFormat.Offline),
+                      ("SPA-A2", "Испанский, группа A2", 2, 3, GroupFormat.Hybrid),
+                  }
+                : [("FRA-A1", "Французский, группа A1", 0, 0, GroupFormat.Offline)];
+
+            int studentCursor = 0;
+            foreach (var spec in groupSpecs)
+            {
+                var teacher = teachers[spec.TeacherIndex];
+                var group = StudyGroup.Create(
+                    spec.Code, spec.Name, courses[spec.CourseIndex].Id, teacher.Id,
+                    spec.Format, capacity: 8, startDate: startDate, endDate: null,
+#pragma warning disable CA1308 // demo slug is canonical lowercase, not security-sensitive
+                    meetingUrl: spec.Format == GroupFormat.Offline ? null : $"https://meet.demo.local/{spec.Code.ToLowerInvariant()}",
+#pragma warning restore CA1308
+                    roomId: null, notes: null);
+                group.AddTeacher(teacher.Id, TeacherRole.Primary);
+
+                for (int i = 0; i < 6; i++)
+                {
+                    group.Enroll(students[studentCursor].Id, startDate, tariffId: null, discountPercent: 0);
+                    studentCursor++;
+                }
+                group.Activate();
+
+                dbContext.StudyGroups.Add(group);
+            }
+
+            await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        return await dbContext.StudyGroups
+            .Include(g => g.Enrollments)
+            .Include(g => g.Teachers)
+            .OrderBy(g => g.CreatedAtUtc)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Two weekly slots per group for ±2 weeks around today (≈ a month of schedule). Past
+    /// sessions are held with attendance seeded (one in eleven marked absent for variety); future
+    /// sessions stay planned.</summary>
+    private static async Task SeedTenantSchedulingAsync(
+        IServiceProvider services, IReadOnlyList<StudyGroup> groups, CancellationToken cancellationToken)
+    {
+        var dbContext = services.GetRequiredService<SchedulingDbContext>();
+        if (await dbContext.Sessions.AnyAsync(cancellationToken).ConfigureAwait(false))
+        {
+            return;
+        }
+
+        var room = Room.Create("Кабинет 1", 10, "2 этаж", isVirtual: false);
+        var virtualRoom = Room.Create("Онлайн-класс", 20, null, isVirtual: true);
+        dbContext.Rooms.AddRange(room, virtualRoom);
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var horizonStart = today.AddDays(-14);
+        var horizonEnd = today.AddDays(14);
+
+        // Two weekday slots per group — enough occurrences to fill ±2 weeks of history/upcoming.
+        (DayOfWeek Day, TimeOnly Time)[][] slotsByGroup =
+        [
+            [(DayOfWeek.Monday, new TimeOnly(18, 0)), (DayOfWeek.Thursday, new TimeOnly(18, 0))],
+            [(DayOfWeek.Tuesday, new TimeOnly(19, 0)), (DayOfWeek.Friday, new TimeOnly(19, 0))],
+            [(DayOfWeek.Monday, new TimeOnly(17, 0)), (DayOfWeek.Wednesday, new TimeOnly(17, 0))],
+            [(DayOfWeek.Tuesday, new TimeOnly(16, 0)), (DayOfWeek.Thursday, new TimeOnly(16, 0))],
+            [(DayOfWeek.Wednesday, new TimeOnly(18, 30)), (DayOfWeek.Saturday, new TimeOnly(11, 0))],
+        ];
+
+        for (int g = 0; g < groups.Count; g++)
+        {
+            var group = groups[g];
+            var groupRoom = group.Format == GroupFormat.Online ? virtualRoom : room;
+            var teacherId = group.Teachers[0].TeacherId;
+
+            foreach (var (day, time) in slotsByGroup[g % slotsByGroup.Length])
+            {
+                dbContext.ScheduleTemplates.Add(ScheduleTemplate.Create(
+                    group.Id, day, time, durationMinutes: 60, groupRoom.Id, teacherId, horizonStart, validTo: null));
+
+                for (var date = horizonStart; date <= horizonEnd; date = date.AddDays(1))
+                {
+                    if (date.DayOfWeek != day || date < group.StartDate)
+                    {
+                        continue;
+                    }
+
+                    var startUtc = new DateTimeOffset(date.ToDateTime(time, DateTimeKind.Utc));
+                    var session = Session.Create(
+                        group.Id, lessonId: null, teacherId, groupRoom.Id,
+                        startUtc: startUtc, endUtc: startUtc.AddMinutes(60),
+                        topic: null, meetingUrl: group.MeetingUrl);
+
+                    if (date < today)
+                    {
+                        session.Hold();
+                        var activeStudentIds = group.Enrollments
+                            .Where(e => e.Status is EnrollmentStatus.Active)
+                            .Select(e => e.StudentId);
+                        foreach (var studentId in activeStudentIds)
+                        {
+                            var attendance = Attendance.CreateDefault(session.Id, studentId);
+                            if ((date.DayNumber + studentId.GetHashCode()) % 11 == 0)
+                            {
+                                attendance.Mark(AttendanceStatus.Absent, "Заболел(а)", markedByUserId: null);
+                            }
+                            dbContext.Attendances.Add(attendance);
+                        }
+                    }
+
+                    dbContext.Sessions.Add(session);
+                }
+            }
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>One PerMonth tariff per course; every active enrollment gets an issued invoice for
+    /// the current period, billed to its student's primary-payer guardian. Every 3rd invoice is paid
+    /// in full, every 3rd+1 partially paid, the rest left open — a realistic status mix.</summary>
+    private static async Task SeedTenantPaymentsAsync(
+        IServiceProvider services,
+        IReadOnlyList<Course> courses,
+        IReadOnlyList<StudyGroup> groups,
+        IReadOnlyDictionary<Guid, Guid> primaryGuardianByStudent,
+        CancellationToken cancellationToken)
+    {
+        var dbContext = services.GetRequiredService<PaymentsDbContext>();
+        if (await dbContext.StudentInvoices.AnyAsync(cancellationToken).ConfigureAwait(false))
+        {
+            return;
+        }
+
+        decimal[] tariffAmounts = [120m, 100m, 100m];
+        var tariffs = new List<Tariff>();
+        for (int i = 0; i < courses.Count; i++)
+        {
+            tariffs.Add(Tariff.Create(
+                $"{courses[i].Title} — абонемент (месяц)", courses[i].Id, TariffKind.PerMonth,
+                amount: tariffAmounts[i % tariffAmounts.Length], currency: "USD",
+                lessonsCount: 8, validDays: 30, chargeOnExcusedAbsence: false));
+        }
+        dbContext.Tariffs.AddRange(tariffs);
+        var tariffByCourse = tariffs.ToDictionary(t => t.CourseId!.Value, t => t);
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var periodFrom = new DateOnly(today.Year, today.Month, 1);
+        var periodTo = periodFrom.AddMonths(1).AddDays(-1);
+        var dueDate = periodFrom.AddDays(10);
+
+        int invoiceIndex = 0;
+        foreach (var group in groups)
+        {
+            var tariff = tariffByCourse[group.CourseId];
+            var activeStudentIds = group.Enrollments
+                .Where(e => e.Status is EnrollmentStatus.Active)
+                .Select(e => e.StudentId);
+            foreach (var studentId in activeStudentIds)
+            {
+                if (!primaryGuardianByStudent.TryGetValue(studentId, out var guardianId))
+                {
+                    continue;
+                }
+
+                var invoice = StudentInvoice.Create(
+                    studentId, guardianId, group.Id, periodFrom, periodTo, dueDate,
+                    currency: tariff.Currency, comment: null);
+                invoice.ReplaceLines([(tariff.Name, tariff.Id, 1m, tariff.Amount)]);
+                invoice.Issue(periodFrom);
+
+                switch (invoiceIndex % 3)
+                {
+                    case 0:
+                        invoice.ConfirmPayment(
+                            invoice.Total, periodFrom.AddDays(2), PaymentMethod.BankTransfer,
+                            reference: null, proofFileId: null, confirmedByUserId: "seed-demo", note: null);
+                        break;
+                    case 1:
+                        invoice.ConfirmPayment(
+                            decimal.Round(invoice.Total / 2, 2), periodFrom.AddDays(3), PaymentMethod.Cash,
+                            reference: null, proofFileId: null, confirmedByUserId: "seed-demo", note: null);
+                        break;
+                }
+                invoiceIndex++;
+
+                dbContext.StudentInvoices.Add(invoice);
+            }
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     // ─── Tickets ────────────────────────────────────────────────────────
@@ -745,7 +1134,7 @@ internal sealed class DemoSeeder
     [
         new(
             "Manager",
-            "Operations manager — full catalog + tickets + read-only users.",
+            "Operations manager — full students/courses/groups + tickets + read-only users.",
             [
                 IdentityPermissions.Users.View,
                 IdentityPermissions.Users.Update,
@@ -754,18 +1143,26 @@ internal sealed class DemoSeeder
                 IdentityPermissions.Sessions.View,
                 IdentityPermissions.Sessions.Revoke,
                 IdentityPermissions.Groups.View,
-                CatalogPermissions.Brands.View,
-                CatalogPermissions.Brands.Create,
-                CatalogPermissions.Brands.Update,
-                CatalogPermissions.Brands.Delete,
-                CatalogPermissions.Categories.View,
-                CatalogPermissions.Categories.Create,
-                CatalogPermissions.Categories.Update,
-                CatalogPermissions.Categories.Delete,
-                CatalogPermissions.Products.View,
-                CatalogPermissions.Products.Create,
-                CatalogPermissions.Products.Update,
-                CatalogPermissions.Products.Delete,
+                PeoplePermissions.Students.View,
+                PeoplePermissions.Students.Create,
+                PeoplePermissions.Students.Update,
+                PeoplePermissions.Students.Delete,
+                PeoplePermissions.Teachers.View,
+                PeoplePermissions.Teachers.Create,
+                PeoplePermissions.Teachers.Update,
+                PeoplePermissions.Guardians.View,
+                PeoplePermissions.Guardians.Create,
+                PeoplePermissions.Guardians.Update,
+                CurriculumPermissions.Courses.View,
+                CurriculumPermissions.Courses.Create,
+                CurriculumPermissions.Courses.Update,
+                CurriculumPermissions.Courses.Publish,
+                CurriculumPermissions.Subjects.View,
+                StudyGroupsPermissions.StudyGroups.View,
+                StudyGroupsPermissions.StudyGroups.Create,
+                StudyGroupsPermissions.StudyGroups.Update,
+                StudyGroupsPermissions.Enrollments.View,
+                StudyGroupsPermissions.Enrollments.Create,
                 TicketsPermissions.Tickets.View,
                 TicketsPermissions.Tickets.Create,
                 TicketsPermissions.Tickets.Update,
