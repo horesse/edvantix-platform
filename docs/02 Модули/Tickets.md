@@ -116,9 +116,25 @@ GET    /api/v1/tickets/trash
 (нормализуется в домене, плюс отклоняется валидатором). Обращение «верните деньги»
 теперь можно привязать к счёту; на карточке ученика — история его обращений.
 
+## Вложения
+
+Файлы прикрепляются через общие эндпоинты [[Files]] с `ownerType=Ticket`,
+`ownerId={ticketId}` — в контрактах команд Tickets ничего для вложений нет
+(как и у [[Chat]] по факту: вложение — это отдельный `FileAsset`, а не поле команды).
+Единственный гейт — `TicketFileAccessPolicy` (`Modules.Tickets/Authorization/`):
+
+| Операция | Кто |
+|---|---|
+| Attach / Read | автор (`ReporterUserId`) или исполнитель (`AssignedToUserId`) обращения |
+| Delete / смена видимости | только загрузивший |
+
+Более широкий доступ (менеджер, не назначенный на тикет) — через назначение
+на обращение (`AssignTicket`); аналог membership-правила [[Chat]]. Проверки прав
+`Tickets.View` в политику не заводили, чтобы не тянуть в модуль `Identity.Contracts`.
+
 ## Зависимости
 
-**Ссылается на:** `Identity.Contracts`, `Multitenancy.Contracts`.
+**Ссылается на:** `Identity.Contracts`, `Multitenancy.Contracts`, `Files.Contracts`.
 
 **Подписаны на его события:** [[Notifications]].
 
