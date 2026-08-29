@@ -1,3 +1,4 @@
+using System.Net;
 using FSH.Framework.Core.Context;
 using FSH.Framework.Core.Exceptions;
 using FSH.Framework.Web.Realtime;
@@ -5,6 +6,7 @@ using FSH.Modules.Chat.Contracts.v1.Commands;
 using FSH.Modules.Chat.Contracts.v1.DTOs;
 using FSH.Modules.Chat.Data;
 using FSH.Modules.Chat.Domain;
+using FSH.Modules.Chat.Features.v1.Channels.DmPolicy;
 using Mediator;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -14,7 +16,8 @@ namespace FSH.Modules.Chat.Features.v1.Channels.FindOrCreateDm;
 public sealed class FindOrCreateDmCommandHandler(
     ChatDbContext db,
     IHubContext<AppHub> hub,
-    ICurrentUser currentUser)
+    ICurrentUser currentUser,
+    IChatDmPolicy dmPolicy)
     : ICommandHandler<FindOrCreateDmCommand, Guid>
 {
     public async ValueTask<Guid> Handle(FindOrCreateDmCommand cmd, CancellationToken cancellationToken)
@@ -27,7 +30,19 @@ public sealed class FindOrCreateDmCommandHandler(
         var otherIds = cmd.UserIds.Distinct(StringComparer.Ordinal).ToList();
         if (otherIds.Any(id => string.Equals(id, currentUserId, StringComparison.Ordinal)))
         {
-            throw new CustomException("Cannot DM yourself.", (IEnumerable<string>?)null, System.Net.HttpStatusCode.BadRequest);
+            throw new CustomException("Cannot DM yourself.", (IEnumerable<string>?)null, HttpStatusCode.BadRequest);
+        }
+
+        // Who-may-DM-whom (docs/02 Модули/Chat.md → «Ограничение личных сообщений»).
+        foreach (var target in otherIds)
+        {
+            if (!await dmPolicy.CanStartDmAsync(currentUserId, target, cancellationToken).ConfigureAwait(false))
+            {
+                throw new CustomException(
+                    "You cannot start a direct message with this person.",
+                    (IEnumerable<string>?)null,
+                    HttpStatusCode.Forbidden);
+            }
         }
 
         if (otherIds.Count == 1)

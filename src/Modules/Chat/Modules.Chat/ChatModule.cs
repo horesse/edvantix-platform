@@ -11,6 +11,7 @@ using FSH.Modules.Chat.Features.v1.Channels.AddChannelMembers;
 using FSH.Modules.Chat.Features.v1.Channels.ArchiveChannel;
 using FSH.Modules.Chat.Features.v1.Channels.CreateChannel;
 using FSH.Modules.Chat.Features.v1.Channels.DiscoverChannels;
+using FSH.Modules.Chat.Features.v1.Channels.DmPolicy;
 using FSH.Modules.Chat.Features.v1.Channels.FindOrCreateDm;
 using FSH.Modules.Chat.Features.v1.Channels.GetChannelById;
 using FSH.Modules.Chat.Features.v1.Channels.ListMyChannels;
@@ -70,6 +71,10 @@ public sealed class ChatModule : IModule
         // directory stays the single source of truth.
         builder.Services.AddScoped<IMentionResolver, MentionResolver>();
 
+        // Who-may-DM-whom + the per-school toggle behind it. See docs/02 Модули/Chat.md.
+        builder.Services.AddScoped<Features.v1.Channels.DmPolicy.IChatDmSettingsService, Features.v1.Channels.DmPolicy.ChatDmSettingsService>();
+        builder.Services.AddScoped<Features.v1.Channels.DmPolicy.IChatDmPolicy, Features.v1.Channels.DmPolicy.ChatDmPolicy>();
+
         // File attachments: members attach+read, only the uploader deletes. Registered as
         // IFileAccessPolicy so Files endpoints route through it for OwnerType=ChatChannel.
         builder.Services.AddScoped<FSH.Modules.Files.Contracts.IFileAccessPolicy, Authorization.ChatChannelFileAccessPolicy>();
@@ -98,6 +103,8 @@ public sealed class ChatModule : IModule
         group.MapDiscoverChannelsEndpoint();         // GET /channels/discover
 
         // Channel lifecycle
+        group.MapGetChatDmSettingsEndpoint();        // GET /dm-settings — literal, before /{id}
+        group.MapSetChatDmSettingsEndpoint();        // PUT /dm-settings
         group.MapCreateChannelEndpoint();
         group.MapFindOrCreateDmEndpoint();           // POST /dms — literal route comes before /{id}
         group.MapRestoreChannelEndpoint();           // literal /restore must precede catch-alls

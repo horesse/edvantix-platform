@@ -20,6 +20,7 @@
 		<ProjectReference Include="..\..\Identity\Modules.Identity.Contracts\Modules.Identity.Contracts.csproj" />
 		<ProjectReference Include="..\..\People\Modules.People.Contracts\Modules.People.Contracts.csproj" />
 		<ProjectReference Include="..\..\StudyGroups\Modules.StudyGroups.Contracts\Modules.StudyGroups.Contracts.csproj" />
+		<ProjectReference Include="..\..\Multitenancy\Modules.Multitenancy.Contracts\Modules.Multitenancy.Contracts.csproj" />
 	</ItemGroup>
 
 </Project>

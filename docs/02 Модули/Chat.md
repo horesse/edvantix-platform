@@ -98,7 +98,9 @@ GET    /api/v1/chat/channels/{id}
 PUT    /api/v1/chat/channels/{id}
 POST   /api/v1/chat/channels/{id}/archive
 POST   /api/v1/chat/channels/{id}/restore
-POST   /api/v1/chat/dm                          найти или создать диалог
+POST   /api/v1/chat/dm                          найти или создать диалог (гейтится IChatDmPolicy)
+GET    /api/v1/chat/dm-settings
+PUT    /api/v1/chat/dm-settings
 POST   /api/v1/chat/channels/{id}/members
 DELETE /api/v1/chat/channels/{id}/members/{uid}
 POST   /api/v1/chat/channels/{id}/read
@@ -128,6 +130,25 @@ GET    /api/v1/chat/search
 Канал ищется по `SourceStudyGroupId` (частичный индекс) — прямой ссылки
 StudyGroups → Chat в рантайме нет.
 
+### Ограничение личных сообщений
+
+`IChatDmPolicy` (`Features/v1/Channels/DmPolicy/`) гейтит `FindOrCreateDmCommand`
+(существующие диалоги не закрываются задним числом):
+
+| Кто | Кому | Можно |
+|---|---|---|
+| менеджер / школьный админ / платформенный админ | кому угодно | да (и к нему — тоже) |
+| преподаватель | преподаватель | да |
+| ученик / представитель | преподавателю своих групп (у представителя — групп подопечных) | да, в обе стороны |
+| ученик | ученик | по настройке школы `ChatDmSettings.AllowStudentToStudentDm` (по умолчанию **нет**) |
+| остальное (представитель ↔ представитель, ученик ↔ чужой преподаватель) | | нет |
+
+Роли резолвятся через `IUserService.GetUserRolesAsync` (менеджер/админ) и
+`IPeopleScopeResolver` (`PeopleScope`); «преподаватель моих групп» — пересечение
+`IStudyGroupQueryService.GetActiveGroupIdsForTeacherAsync` и
+`GetActiveStudyGroupIdsForStudentAsync`. Настройка — `GET`/`PUT /api/v1/chat/dm-settings`
+(права `SchoolSettings.View`/`.Manage`). Модуль получил ссылку на `Multitenancy.Contracts`.
+
 > [!note] Ученик без учётной записи
 > `StudyGroupChannelSync.ResolveChatUserId`: свой `UserId` ученика → иначе `UserId`
 > опекуна-плательщика → иначе любой опекун с учёткой. Если ни у кого в семье учётки
@@ -136,8 +157,9 @@ StudyGroups → Chat в рантайме нет.
 
 ## Зависимости
 
-**Ссылается на:** `Identity.Contracts`, `Multitenancy.Contracts`, `Files.Contracts`,
-`People.Contracts` (резолв контактов), `StudyGroups.Contracts` (события + `IStudyGroupQueryService`).
+**Ссылается на:** `Identity.Contracts`, `Multitenancy.Contracts` (`SchoolSettings`-права),
+`Files.Contracts`, `People.Contracts` (`IPeopleScopeResolver` + резолв контактов),
+`StudyGroups.Contracts` (события + `IStudyGroupQueryService`).
 
 **Подписан на события:** [[StudyGroups]] (`StudyGroupCreated`, `StudentEnrolled/Unenrolled`,
 `StudyGroupFinished`).

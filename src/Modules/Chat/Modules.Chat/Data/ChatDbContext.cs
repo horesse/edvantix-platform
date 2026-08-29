@@ -21,6 +21,7 @@ public sealed class ChatDbContext : BaseDbContext
 
     public DbSet<ChatChannel> Channels => Set<ChatChannel>();
     public DbSet<Message> Messages => Set<Message>();
+    public DbSet<ChatDmSettings> DmSettings => Set<ChatDmSettings>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
