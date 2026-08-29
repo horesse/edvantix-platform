@@ -182,6 +182,7 @@ public interface IStudyGroupQueryService
 | `StudentArchivedIntegrationEvent` (People) | закрыть активные зачисления |
 | `TeacherDeactivatedIntegrationEvent` (People) | пометить группы без преподавателя |
 | `CourseArchivedIntegrationEvent` (Curriculum) | запретить новые группы по курсу |
+| `StudyGroupChannelLinkedIntegrationEvent` ([[Chat]]) | `StudyGroup.SetChatChannel(channelId)` — заполнить `ChatChannelId` (идемпотентно) |
 
 ## Права
 

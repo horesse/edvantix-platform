@@ -29,6 +29,11 @@ public sealed class ChatChannelConfiguration : IEntityTypeConfiguration<ChatChan
             .IsUnique()
             .HasFilter("\"Type\" = 0 AND \"IsDeleted\" = FALSE");
 
+        builder.Property(x => x.SourceStudyGroupId);
+        builder.HasIndex(x => x.SourceStudyGroupId)
+            .HasFilter("\"SourceStudyGroupId\" IS NOT NULL");
+        builder.Property(x => x.IsLocked).IsRequired();
+
         builder.Property(x => x.CreatedByUserId).IsRequired().HasMaxLength(64);
         builder.Property(x => x.CreatedAtUtc).IsRequired();
         builder.Property(x => x.UpdatedAtUtc);

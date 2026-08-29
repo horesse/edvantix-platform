@@ -1,5 +1,6 @@
 using Asp.Versioning;
 using FluentValidation;
+using FSH.Framework.Eventing;
 using FSH.Framework.Persistence;
 using FSH.Framework.Shared.Constants;
 using FSH.Framework.Web.Modules;
@@ -54,6 +55,11 @@ public sealed class ChatModule : IModule
         builder.Services.AddHeroDbContext<ChatDbContext>();
         builder.Services.AddScoped<IDbInitializer, ChatDbInitializer>();
         builder.Services.AddValidatorsFromAssembly(typeof(ChatModule).Assembly);
+
+        // Study-group channel sync: provision a private channel on StudyGroupCreated, keep its
+        // membership in step with enrolments, lock it when the group finishes. See
+        // IntegrationEventHandlers/ and docs/02 Модули/Chat.md → «Применение в Edvantix».
+        builder.Services.AddIntegrationEventHandlers(typeof(ChatModule).Assembly);
 
         // Realtime adapters consumed by AppHub (BuildingBlocks/Web). These let the shared hub
         // verify channel membership and pre-join channel groups without depending on Chat.

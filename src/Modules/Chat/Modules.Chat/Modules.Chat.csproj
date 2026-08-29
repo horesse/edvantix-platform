@@ -3,7 +3,7 @@
 	<PropertyGroup>
 		<RootNamespace>FSH.Modules.Chat</RootNamespace>
 		<AssemblyName>FSH.Modules.Chat</AssemblyName>
-		<NoWarn>$(NoWarn);CA1031;CA1812;CA1859;CA1002;CA2227;S3267</NoWarn>
+		<NoWarn>$(NoWarn);CA1031;CA1711;CA1812;CA1859;CA1002;CA2227;S3267</NoWarn>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -18,6 +18,8 @@
 		<ProjectReference Include="..\Modules.Chat.Contracts\Modules.Chat.Contracts.csproj" />
 		<ProjectReference Include="..\..\Files\Modules.Files.Contracts\Modules.Files.Contracts.csproj" />
 		<ProjectReference Include="..\..\Identity\Modules.Identity.Contracts\Modules.Identity.Contracts.csproj" />
+		<ProjectReference Include="..\..\People\Modules.People.Contracts\Modules.People.Contracts.csproj" />
+		<ProjectReference Include="..\..\StudyGroups\Modules.StudyGroups.Contracts\Modules.StudyGroups.Contracts.csproj" />
 	</ItemGroup>
 
 </Project>

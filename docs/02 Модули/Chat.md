@@ -20,7 +20,7 @@ tags: [модуль, каркас, chat]
 
 | Сущность | Назначение |
 |---|---|
-| `ChatChannel` | канал: `Channel` / `DirectMessage` / `GroupMessage` |
+| `ChatChannel` | канал: `Channel` / `DirectMessage` / `GroupMessage`. `SourceStudyGroupId` (nullable) — канал учебной группы; `IsLocked` — «только чтение» (история видна, писать нельзя), отдельно от `IsDeleted` |
 | `ChannelMember` | участник с ролью и отметкой прочтения |
 | `Message` | сообщение, поддерживает ответы (треды) |
 | `MessageAttachment` | вложение → [[Files]] |
@@ -66,6 +66,9 @@ tags: [модуль, каркас, chat]
 ### Публикуемые события
 
 `MentionedInChannelIntegrationEvent` → [[Notifications]]
+`StudyGroupChannelLinkedIntegrationEvent` (`StudyGroupId`, `ChannelId`) → [[StudyGroups]]
+— обратная связь после провижининга канала группы (Chat не может звать StudyGroups напрямую).
+Публикуется прямо через `IEventBus`, тем же приёмом, что и `MentionedInChannelIntegrationEvent`.
 
 ### Реальное время
 
@@ -112,21 +115,34 @@ GET    /api/v1/chat/search
 
 ## Применение в Edvantix
 
-Каждая учебная группа получает приватный канал: `StudyGroup.ChatChannelId`
-заполняется по событию `StudyGroupCreated`, состав синхронизируется по
-`StudentEnrolled` / `StudentUnenrolled`.
+Каждая учебная группа получает приватный канал (`IntegrationEventHandlers/`,
+`StudyGroupChannelSync`):
 
-> [!warning] Ученик без учётной записи в канал не попадает
-> `ChannelMember.UserId` требует `FshUser`, а у ученика `UserId` может быть `null`
-> ([[People]]). Обработчик события должен подставлять представителя-плательщика,
-> а не падать.
+| Событie [[StudyGroups]] | Что делает Chat |
+|---|---|
+| `StudyGroupCreated` | создаёт `ChatChannel` с `SourceStudyGroupId`, сидит преподавателя (если у него есть учётка), публикует `StudyGroupChannelLinkedIntegrationEvent` — StudyGroups кладёт id в `StudyGroup.ChatChannelId`. Идемпотентно: повтор находит канал и просто перепубликует связь. |
+| `StudentEnrolled` | добавляет ученика в канал |
+| `StudentUnenrolled` | убирает ученика — **но не**, если его чат-аккаунт всё ещё представляет другого активного ученика группы (общий опекун-плательщик на двоих детей) |
+| `StudyGroupFinished` | `channel.Lock()` — история остаётся, `SendMessage` в заблокированный канал отдаёт `409` |
+
+Канал ищется по `SourceStudyGroupId` (частичный индекс) — прямой ссылки
+StudyGroups → Chat в рантайме нет.
+
+> [!note] Ученик без учётной записи
+> `StudyGroupChannelSync.ResolveChatUserId`: свой `UserId` ученика → иначе `UserId`
+> опекуна-плательщика → иначе любой опекун с учёткой. Если ни у кого в семье учётки
+> нет — ученик просто не добавляется (обработчик не падает). E-mail-канал уведомлений
+> при этом работает (People хранит `Email`), in-app — нет.
 
 ## Зависимости
 
-**Ссылается на:** `Identity.Contracts`, `Multitenancy.Contracts`, `Files.Contracts`.
+**Ссылается на:** `Identity.Contracts`, `Multitenancy.Contracts`, `Files.Contracts`,
+`People.Contracts` (резолв контактов), `StudyGroups.Contracts` (события + `IStudyGroupQueryService`).
 
-**Подписан на события:** [[StudyGroups]].
-**Подписаны на его события:** [[Notifications]].
+**Подписан на события:** [[StudyGroups]] (`StudyGroupCreated`, `StudentEnrolled/Unenrolled`,
+`StudyGroupFinished`).
+**Подписаны на его события:** [[Notifications]] (`MentionedInChannel`), [[StudyGroups]]
+(`StudyGroupChannelLinked`).
 
 ## Связанное
 

@@ -169,6 +169,22 @@ public sealed class StudyGroup : AggregateRoot<Guid>, ISoftDeletable
         UpdatedAtUtc = DateTimeOffset.UtcNow;
     }
 
+    /// <summary>
+    /// Records the private chat channel Chat provisioned for this group (via
+    /// <c>StudyGroupChannelLinkedIntegrationEvent</c> — Chat cannot call StudyGroups directly).
+    /// Idempotent; ignores a repeat of the same id.
+    /// </summary>
+    public void SetChatChannel(Guid channelId)
+    {
+        if (channelId == Guid.Empty || ChatChannelId == channelId)
+        {
+            return;
+        }
+
+        ChatChannelId = channelId;
+        UpdatedAtUtc = DateTimeOffset.UtcNow;
+    }
+
     // ─── Lifecycle: Forming → Active → Finished, Forming/Active → Cancelled ────────────────
 
     /// <summary>Requires at least one enrollment — "группа без учеников не запускается"
