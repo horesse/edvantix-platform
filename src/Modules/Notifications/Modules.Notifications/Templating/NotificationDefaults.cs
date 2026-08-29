@@ -26,4 +26,17 @@ public static class NotificationDefaults
         NotificationChannelKind.Email => EmailOnByDefault.Contains(type),
         _ => false,
     };
+
+    /// <summary>
+    /// Types whose e-mail is batched into one summary instead of one message each — the ones that
+    /// arrive in bursts (a whole class's lessons cancelled, a roster's attendance marked at once).
+    /// </summary>
+    private static readonly HashSet<string> Digestable = new(StringComparer.Ordinal)
+    {
+        NotificationTypes.SessionCancelled,
+        NotificationTypes.SessionRescheduled,
+        NotificationTypes.AttendanceUnexcused,
+    };
+
+    public static bool IsDigestable(string type) => Digestable.Contains(type);
 }

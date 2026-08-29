@@ -2,6 +2,8 @@ using Asp.Versioning;
 using FluentValidation;
 using FSH.Framework.Eventing;
 using FSH.Framework.Persistence;
+using FSH.Modules.Notifications.Features.v1.Digest;
+using Hangfire;
 using FSH.Framework.Shared.Constants;
 using FSH.Framework.Web.Modules;
 using FSH.Modules.Notifications.Contracts.Authorization;
@@ -55,6 +57,9 @@ public sealed class NotificationsModule : IModule
         // School-wide quiet hours — the dispatcher holds e-mail during the window.
         builder.Services.AddScoped<INotificationQuietHoursService, NotificationQuietHoursService>();
 
+        // Digest buffer — the dispatcher writes digestable e-mails here; NotificationDigestJob flushes.
+        builder.Services.AddScoped<INotificationDigestBuffer, NotificationDigestBuffer>();
+
         // Recipient resolution + school-local time formatting shared by the school-domain handlers.
         builder.Services.AddScoped<IntegrationEventHandlers.SchoolNotificationFanout>();
         builder.Services.AddScoped<IntegrationEventHandlers.NotificationTimeFormatter>();
@@ -90,5 +95,13 @@ public sealed class NotificationsModule : IModule
         group.MapSetNotificationQuietHoursEndpoint();      // PUT /quiet-hours
         group.MapMarkAllNotificationsReadEndpoint();       // POST /read-all
         group.MapMarkNotificationReadEndpoint();           // POST /{id:guid}/read
+
+        // Recurring digest flush — same registration pattern as Payments/Scheduling jobs.
+        var jobManager = endpoints.ServiceProvider.GetService<IRecurringJobManager>();
+        jobManager?.AddOrUpdate<NotificationDigestJob>(
+            "notifications-digest-flush",
+            j => j.RunAsync(CancellationToken.None),
+            "*/5 * * * *", // every 5 minutes
+            new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc });
     }
 }

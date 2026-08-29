@@ -15,6 +15,8 @@ Per-user in-app inbox (bell icon) driven by cross-module integration events, wit
 
 **Quiet hours:** `NotificationQuietHours` entity (one row per tenant; `Enabled`, `StartLocal`/`EndLocal` `TimeOnly`; `Start > End` spans midnight). Kept in this module, NOT `TenantSettings` (avoids a cross-module Multitenancy change). `INotificationQuietHoursService.IsQuietNowAsync()` converts `TenantSettings.TimeZoneId` and checks the window; `NotificationDispatcher` strips the `Email` bit when true (in-app unaffected), for **all** recipients regardless of `PreferenceUserId`. `GET`/`PUT /notifications/quiet-hours` gated by `MultitenancyPermissions.SchoolSettings.View`/`.Manage`.
 
+**Digest:** `NotificationDefaults.IsDigestable(type)` (cancel/reschedule/attendance) — the dispatcher writes a `PendingNotificationDigest` row instead of running the `Email` channel (in-app still runs); computed **after** quiet-hours (nothing to digest if e-mail was already held). `NotificationDigestJob` (Hangfire `*/5 * * * *`, module needs `BuildingBlocks/Jobs` + `using Hangfire`): groups unsent rows by e-mail, flushes a group into one summary once its oldest row is older than `AggregationWindow` (7 min), best-effort send then `MarkSent`. **No root-tenant skip** (acts only on existing rows).
+
 ## Gotchas
 
 - **It's a consumer.** New notification types come from **handling another module's integration event** (`AddIntegrationEventHandlers`), not from new endpoints. The handler renders copy via `INotificationTemplateRenderer`, writes an inbox row **and** pushes `"NotificationCreated"` to SignalR group `user:{userId}` via `IHubContext<AppHub>`.

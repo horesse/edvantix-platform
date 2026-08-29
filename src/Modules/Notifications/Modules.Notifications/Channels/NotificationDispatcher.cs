@@ -1,5 +1,6 @@
 using Finbuckle.MultiTenant.Abstractions;
 using FSH.Framework.Shared.Multitenancy;
+using FSH.Modules.Notifications.Features.v1.Digest;
 using FSH.Modules.Notifications.Features.v1.Preferences;
 using FSH.Modules.Notifications.Features.v1.QuietHours;
 using FSH.Modules.Notifications.Templating;
@@ -19,6 +20,7 @@ public sealed class NotificationDispatcher(
     INotificationTemplateRenderer templateRenderer,
     INotificationPreferenceService preferences,
     INotificationQuietHoursService quietHours,
+    INotificationDigestBuffer digestBuffer,
     IMultiTenantContextAccessor<AppTenantInfo> tenantAccessor,
     ILogger<NotificationDispatcher> logger)
     : INotificationDispatcher
@@ -51,7 +53,18 @@ public sealed class NotificationDispatcher(
             effectiveChannels &= ~NotificationChannelKind.Email;
         }
 
-        if (effectiveChannels == NotificationChannelKind.None)
+        // Digestable types don't e-mail one message each — the e-mail is buffered and a job sends
+        // one summary per recipient. In-app is untouched. (Computed after quiet-hours: if e-mail
+        // was already held, there is nothing to digest.)
+        var digestEmail = NotificationDefaults.IsDigestable(request.TemplateKey)
+            && effectiveChannels.HasFlag(NotificationChannelKind.Email)
+            && !string.IsNullOrWhiteSpace(request.RecipientEmail);
+        if (digestEmail)
+        {
+            effectiveChannels &= ~NotificationChannelKind.Email;
+        }
+
+        if (effectiveChannels == NotificationChannelKind.None && !digestEmail)
         {
             return;
         }
@@ -73,6 +86,12 @@ public sealed class NotificationDispatcher(
             }
 
             await channel.SendAsync(delivery, ct).ConfigureAwait(false);
+        }
+
+        if (digestEmail && content.HasEmail)
+        {
+            await digestBuffer.EnqueueAsync(
+                request.RecipientUserId, request.RecipientEmail!, request.TemplateKey, content, ct).ConfigureAwait(false);
         }
 
         if (logger.IsEnabled(LogLevel.Debug))

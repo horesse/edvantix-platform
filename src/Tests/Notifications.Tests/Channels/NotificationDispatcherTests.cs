@@ -1,6 +1,7 @@
 using Finbuckle.MultiTenant.Abstractions;
 using FSH.Framework.Shared.Multitenancy;
 using FSH.Modules.Notifications.Channels;
+using FSH.Modules.Notifications.Features.v1.Digest;
 using FSH.Modules.Notifications.Features.v1.Preferences;
 using FSH.Modules.Notifications.Features.v1.QuietHours;
 using FSH.Modules.Notifications.Templating;
@@ -38,7 +39,7 @@ public sealed class NotificationDispatcherTests
             .Returns(ci => Task.FromResult(ci.ArgAt<NotificationChannelKind>(2)));
 
         return new NotificationDispatcher(
-            [inApp, email], renderer, preferences, NotQuiet(), accessor, NullLogger<NotificationDispatcher>.Instance);
+            [inApp, email], renderer, preferences, NotQuiet(), NoDigest(), accessor, NullLogger<NotificationDispatcher>.Instance);
     }
 
     private static INotificationQuietHoursService NotQuiet()
@@ -47,6 +48,8 @@ public sealed class NotificationDispatcherTests
         q.IsQuietNowAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult(false));
         return q;
     }
+
+    private static INotificationDigestBuffer NoDigest() => Substitute.For<INotificationDigestBuffer>();
 
     [Fact]
     public async Task Dispatch_Fans_Out_To_All_Requested_Channels()
@@ -121,7 +124,7 @@ public sealed class NotificationDispatcherTests
         preferences.EffectiveChannelsAsync(
                 Arg.Any<string>(), Arg.Any<string>(), Arg.Any<NotificationChannelKind>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(effective));
-        return (new NotificationDispatcher([inApp, email], renderer, preferences, NotQuiet(), accessor,
+        return (new NotificationDispatcher([inApp, email], renderer, preferences, NotQuiet(), NoDigest(), accessor,
             NullLogger<NotificationDispatcher>.Instance), inApp, email);
     }
 
@@ -152,6 +155,39 @@ public sealed class NotificationDispatcherTests
     }
 
     [Fact]
+    public async Task Dispatch_Buffers_Email_For_A_Digestable_Type_Instead_Of_Sending()
+    {
+        var inApp = new RecordingChannel(NotificationChannelKind.InApp);
+        var email = new RecordingChannel(NotificationChannelKind.Email);
+        var renderer = Substitute.For<INotificationTemplateRenderer>();
+        renderer.Render(Arg.Any<string>(), Arg.Any<IReadOnlyDictionary<string, string?>>())
+            .Returns(new RenderedNotification("Lesson cancelled", "…", "/x", "S", "<p>b</p>"));
+        var accessor = Substitute.For<IMultiTenantContextAccessor<AppTenantInfo>>();
+        var context = Substitute.For<IMultiTenantContext<AppTenantInfo>>();
+        context.TenantInfo.Returns((AppTenantInfo?)null);
+        accessor.MultiTenantContext.Returns(context);
+        var preferences = Substitute.For<INotificationPreferenceService>();
+        preferences.EffectiveChannelsAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<NotificationChannelKind>(), Arg.Any<CancellationToken>())
+            .Returns(ci => Task.FromResult(ci.ArgAt<NotificationChannelKind>(2)));
+        var digest = Substitute.For<INotificationDigestBuffer>();
+
+        var dispatcher = new NotificationDispatcher(
+            [inApp, email], renderer, preferences, NotQuiet(), digest, accessor, NullLogger<NotificationDispatcher>.Instance);
+
+        await dispatcher.DispatchAsync(new NotificationRequest("u1", NotificationTypes.SessionCancelled, NoTokens)
+        {
+            Channels = NotificationChannelKind.All,
+            RecipientEmail = "parent@example.com",
+        });
+
+        inApp.Deliveries.Count.ShouldBe(1);
+        email.Deliveries.ShouldBeEmpty("digestable e-mail is buffered, not sent inline");
+        await digest.Received(1).EnqueueAsync(
+            "u1", "parent@example.com", NotificationTypes.SessionCancelled,
+            Arg.Any<RenderedNotification>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task Dispatch_Holds_Email_During_Quiet_Hours_But_Keeps_InApp()
     {
         var inApp = new RecordingChannel(NotificationChannelKind.InApp);
@@ -170,7 +206,7 @@ public sealed class NotificationDispatcherTests
         quiet.IsQuietNowAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult(true));
 
         var dispatcher = new NotificationDispatcher(
-            [inApp, email], renderer, preferences, quiet, accessor, NullLogger<NotificationDispatcher>.Instance);
+            [inApp, email], renderer, preferences, quiet, NoDigest(), accessor, NullLogger<NotificationDispatcher>.Instance);
 
         await dispatcher.DispatchAsync(new NotificationRequest("u1", "t", NoTokens)
         {
