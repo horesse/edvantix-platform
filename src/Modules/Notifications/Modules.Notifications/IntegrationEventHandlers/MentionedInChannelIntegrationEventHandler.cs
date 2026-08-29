@@ -5,6 +5,7 @@ using FSH.Framework.Web.Realtime;
 using FSH.Modules.Chat.Contracts.Events;
 using FSH.Modules.Notifications.Data;
 using FSH.Modules.Notifications.Domain;
+using FSH.Modules.Notifications.Templating;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 
@@ -23,6 +24,7 @@ namespace FSH.Modules.Notifications.IntegrationEventHandlers;
 public sealed class MentionedInChannelIntegrationEventHandler(
     NotificationsDbContext db,
     IHubContext<AppHub> hub,
+    INotificationTemplateRenderer templateRenderer,
     IMultiTenantContextAccessor<AppTenantInfo> tenantAccessor,
     ILogger<MentionedInChannelIntegrationEventHandler> logger)
     : IIntegrationEventHandler<MentionedInChannelIntegrationEvent>
@@ -42,14 +44,22 @@ public sealed class MentionedInChannelIntegrationEventHandler(
                 "establish the tenant's Finbuckle context before publishing (see eventing rules).");
         }
 
+        var rendered = templateRenderer.Render(NotificationTypes.ChatMention, new Dictionary<string, string?>(StringComparer.Ordinal)
+        {
+            ["channel"] = @event.ChannelName,
+            ["preview"] = @event.BodyPreview,
+            ["channelId"] = @event.ChannelId.ToString(),
+            ["messageId"] = @event.MessageId.ToString(),
+        });
+
         var notification = Notification.Create(
             userId: @event.MentionedUserId,
-            type: "chat.mention",
+            type: NotificationTypes.ChatMention,
             title: string.IsNullOrEmpty(@event.ChannelName)
                 ? "You were mentioned in a conversation"
-                : $"You were mentioned in #{@event.ChannelName}",
-            body: @event.BodyPreview,
-            link: $"/chat/{@event.ChannelId}?messageId={@event.MessageId}",
+                : rendered.Title,
+            body: rendered.Body,
+            link: rendered.Link,
             source: @event.Source,
             metadata: new
             {

@@ -24,6 +24,30 @@ tags: [модуль, каркас, notifications]
 Почта идёт мимо этого модуля, через `BuildingBlocks/Mailing` (используется в
 [[Identity]]: подтверждение адреса, сброс пароля).
 
+## Шаблоны сообщений с подстановкой
+
+`Templating/` — минимальный движок подстановки внутри модуля. `BuildingBlocks/Mailing`
+шаблонизатора не содержит (проверено; правило 4 — трогать `BuildingBlocks` без
+согласования нельзя), поэтому механизм живёт здесь и намеренно скромный: только
+подстановка `{{token}}`, без условий и циклов.
+
+| Тип | Назначение |
+|---|---|
+| `NotificationTypes` | стабильные строковые ключи всех типов уведомлений Edvantix (пишутся в `Notification.Type`, они же ключи шаблонов) — зеркало таблицы «Каталог уведомлений Edvantix» ниже |
+| `NotificationTemplate` | `TitleTemplate` / `BodyTemplate` / `LinkTemplate` для ленты + опциональные `EmailSubjectTemplate` / `EmailHtmlBodyTemplate` для письма |
+| `INotificationTemplateCatalog` | справочник встроенных шаблонов, один на тип |
+| `INotificationTemplateRenderer` | `Render(key, tokens)` → `RenderedNotification`; значения токенов HTML-экранируются только при подстановке в `EmailHtmlBodyTemplate`, в остальные поля — как есть |
+
+Отсутствующий токен рендерится пустой строкой и логируется (обработчик событий не
+должен падать из-за расхождения шаблона и вызова); неизвестный ключ шаблона — это
+ошибка сборки, `Render` кидает `KeyNotFoundException`. Оба сервиса без состояния —
+зарегистрированы синглтонами. Тесты — `src/Tests/Notifications.Tests/Templating/`.
+
+> [!note] Публичный docs-репозиторий и changelog — открытый пункт
+> Правило 10 `AGENTS.md`: `github.com/fullstackhero/docs` и changelog для этой доработки
+> не обновлялись в этой сессии — как и у всех предыдущих backend-сессий, доступа к тому
+> репозиторию не было.
+
 ## Контракты
 
 `Modules.Notifications.Contracts`

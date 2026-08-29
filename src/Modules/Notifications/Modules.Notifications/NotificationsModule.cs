@@ -36,6 +36,11 @@ public sealed class NotificationsModule : IModule
         builder.Services.AddScoped<IDbInitializer, NotificationsDbInitializer>();
         builder.Services.AddValidatorsFromAssembly(typeof(NotificationsModule).Assembly);
 
+        // Notification copy: one tokenised template per type (the framework ships no template
+        // engine — see BuildingBlocks/Mailing). Stateless, so registered as singletons.
+        builder.Services.AddSingleton<Templating.INotificationTemplateCatalog, Templating.NotificationTemplateCatalog>();
+        builder.Services.AddSingleton<Templating.INotificationTemplateRenderer, Templating.NotificationTemplateRenderer>();
+
         // Subscribe to cross-module integration events handled by this assembly.
         builder.Services.AddIntegrationEventHandlers(typeof(NotificationsModule).Assembly);
 
