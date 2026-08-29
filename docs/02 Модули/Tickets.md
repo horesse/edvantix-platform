@@ -24,6 +24,8 @@ tags: [модуль, каркас, tickets]
 | `Number` | человекочитаемый номер |
 | `Title`, `Description` | |
 | `Status`, `Priority` | `TicketStatus`, `TicketPriority` |
+| `Category` | `TicketCategory`: `General`/`Payment`/`Schedule`/`GroupChange`/`TeachingQuality`/`Technical`. По умолчанию `General` |
+| `Audience` | `TicketAudience`: `School`/`Platform` — кто обрабатывает. По умолчанию выводится из `Category` (`TicketClassificationDefaults`: только `Technical` → `Platform`), можно задать явно при создании |
 | `ReporterUserId` | автор, обязателен |
 | `AssignedToUserId` | исполнитель, nullable |
 | `ResolutionNote` | |
@@ -88,14 +90,21 @@ GET    /api/v1/tickets/trash
 
 ## Применение в Edvantix
 
-Два потока обращений, которые модуль пока не различает:
+Два потока обращений различаются полем `Audience`:
 
-| Поток | Кто → кому | Пример |
-|---|---|---|
-| Внутренний | пользователь школы → поддержка Edvantix | «не генерируется расписание» |
-| Школьный | ученик или представитель → администрация школы | «хотим сменить группу» |
+| Поток | `Audience` | Кто → кому | Пример |
+|---|---|---|---|
+| Внутренний | `Platform` | пользователь школы → поддержка Edvantix | «не генерируется расписание» |
+| Школьный | `School` | ученик или представитель → администрация школы | «хотим сменить группу» |
 
 Второй важнее для продукта: он заменяет переписку в мессенджерах.
+
+**Категория и адресат.** `Category` определяет `Audience` по умолчанию
+(`TicketClassificationDefaults`, только `Technical` → `Platform`); при создании
+`Audience` можно переопределить явно, при `UpdateTicket` — пересчитывается из новой
+категории (если не задан явно). `SearchTicketsQuery` (и `GET /tickets`) фильтруют
+по `category` и `audience`. Дефолтный **исполнитель** по категории (конкретный
+`AssignedToUserId`) — отдельная задача: нужен пер-тенантный справочник персонала.
 
 Ограничение текущей модели: `ReporterUserId` обязателен — обращение может создать
 только пользователь с учётной записью. Для представителей это выполняется.

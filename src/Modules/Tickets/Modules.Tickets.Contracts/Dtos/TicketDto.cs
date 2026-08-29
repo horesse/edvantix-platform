@@ -13,6 +13,8 @@ public sealed record TicketDto(
     string? Description,
     TicketStatus Status,
     TicketPriority Priority,
+    TicketCategory Category,
+    TicketAudience Audience,
     Guid ReporterUserId,
     Guid? AssignedToUserId,
     string? ResolutionNote,

@@ -16,6 +16,8 @@ public static class UpdateTicketEndpoint
         string Title,
         string? Description,
         TicketPriority Priority,
+        TicketCategory Category = TicketCategory.General,
+        TicketAudience? Audience = null,
         Guid? RelatedStudentId = null,
         Guid? RelatedStudyGroupId = null,
         Guid? RelatedInvoiceId = null);
@@ -27,9 +29,10 @@ public static class UpdateTicketEndpoint
                     Results.Ok(await mediator.Send(
                         new UpdateTicketCommand(
                             ticketId, body.Title, body.Description, body.Priority,
+                            body.Category, body.Audience,
                             body.RelatedStudentId, body.RelatedStudyGroupId, body.RelatedInvoiceId), ct)))
             .WithName("UpdateTicket")
-            .WithSummary("Edit a ticket's title, description, priority, and related-context links")
+            .WithSummary("Edit a ticket's title, description, priority, classification, and related-context links")
             .RequirePermission(TicketsPermissions.Tickets.Update)
             .WithIdempotency();
     }

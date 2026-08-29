@@ -11,6 +11,8 @@ internal static class TicketMappings
         t.Description,
         t.Status,
         t.Priority,
+        t.Category,
+        t.Audience,
         t.ReporterUserId,
         t.AssignedToUserId,
         t.ResolutionNote,

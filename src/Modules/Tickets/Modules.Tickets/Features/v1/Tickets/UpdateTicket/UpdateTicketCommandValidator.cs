@@ -11,6 +11,8 @@ public sealed class UpdateTicketCommandValidator : AbstractValidator<UpdateTicke
         RuleFor(x => x.Title).NotEmpty().MaximumLength(160);
         RuleFor(x => x.Description).MaximumLength(4096);
         RuleFor(x => x.Priority).IsInEnum();
+        RuleFor(x => x.Category).IsInEnum();
+        RuleFor(x => x.Audience!.Value).IsInEnum().When(x => x.Audience.HasValue);
 
         RuleFor(x => x.RelatedStudentId!.Value).NotEqual(Guid.Empty).When(x => x.RelatedStudentId.HasValue);
         RuleFor(x => x.RelatedStudyGroupId!.Value).NotEqual(Guid.Empty).When(x => x.RelatedStudyGroupId.HasValue);

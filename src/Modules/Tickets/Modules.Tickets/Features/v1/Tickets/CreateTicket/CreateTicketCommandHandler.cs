@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Net;
 using FSH.Framework.Core.Context;
 using FSH.Framework.Core.Exceptions;
+using FSH.Modules.Tickets.Contracts.Dtos;
 using FSH.Modules.Tickets.Contracts.v1.Tickets;
 using FSH.Modules.Tickets.Data;
 using FSH.Modules.Tickets.Domain;
@@ -44,6 +45,8 @@ public sealed class CreateTicketCommandHandler(
             priority: command.Priority,
             reporterUserId: reporterId,
             assignedToUserId: command.AssignedToUserId,
+            category: command.Category,
+            audience: command.Audience ?? TicketClassificationDefaults.AudienceFor(command.Category),
             relatedStudentId: command.RelatedStudentId,
             relatedStudyGroupId: command.RelatedStudyGroupId,
             relatedInvoiceId: command.RelatedInvoiceId);

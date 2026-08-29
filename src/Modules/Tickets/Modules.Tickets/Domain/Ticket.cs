@@ -21,6 +21,12 @@ public sealed class Ticket : AggregateRoot<Guid>, ISoftDeletable
     public string? Description { get; private set; }
     public TicketStatus Status { get; private set; }
     public TicketPriority Priority { get; private set; }
+
+    /// <summary>What the ticket is about (see docs/02 Модули/Tickets.md). Drives the default <see cref="Audience"/>.</summary>
+    public TicketCategory Category { get; private set; }
+
+    /// <summary>Who handles it — the school's administration or Edvantix platform support.</summary>
+    public TicketAudience Audience { get; private set; }
     public Guid ReporterUserId { get; private set; }
     public Guid? AssignedToUserId { get; private set; }
     public string? ResolutionNote { get; private set; }
@@ -67,6 +73,8 @@ public sealed class Ticket : AggregateRoot<Guid>, ISoftDeletable
         TicketPriority priority,
         Guid reporterUserId,
         Guid? assignedToUserId,
+        TicketCategory category = TicketCategory.General,
+        TicketAudience audience = TicketAudience.School,
         Guid? relatedStudentId = null,
         Guid? relatedStudyGroupId = null,
         Guid? relatedInvoiceId = null)
@@ -88,6 +96,8 @@ public sealed class Ticket : AggregateRoot<Guid>, ISoftDeletable
             Status = initialStatus,
             ReporterUserId = reporterUserId,
             AssignedToUserId = assignedToUserId,
+            Category = category,
+            Audience = audience,
             RelatedStudentId = Normalize(relatedStudentId),
             RelatedStudyGroupId = Normalize(relatedStudyGroupId),
             RelatedInvoiceId = Normalize(relatedInvoiceId),
@@ -204,6 +214,18 @@ public sealed class Ticket : AggregateRoot<Guid>, ISoftDeletable
         RelatedStudentId = Normalize(relatedStudentId);
         RelatedStudyGroupId = Normalize(relatedStudyGroupId);
         RelatedInvoiceId = Normalize(relatedInvoiceId);
+        UpdatedAtUtc = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Re-classifies the ticket. Allowed at any status — it is categorisation metadata, not
+    /// lifecycle state. The caller decides whether the audience follows the category default or is
+    /// pinned.
+    /// </summary>
+    public void SetClassification(TicketCategory category, TicketAudience audience)
+    {
+        Category = category;
+        Audience = audience;
         UpdatedAtUtc = DateTime.UtcNow;
     }
 

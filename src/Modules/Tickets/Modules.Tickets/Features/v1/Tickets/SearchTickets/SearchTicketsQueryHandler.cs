@@ -28,6 +28,14 @@ public sealed class SearchTicketsQueryHandler(TicketsDbContext dbContext)
         {
             q = q.Where(t => t.Priority == priority);
         }
+        if (query.Category is { } category)
+        {
+            q = q.Where(t => t.Category == category);
+        }
+        if (query.Audience is { } audience)
+        {
+            q = q.Where(t => t.Audience == audience);
+        }
         if (query.AssignedToUserId is { } assignee)
         {
             q = q.Where(t => t.AssignedToUserId == assignee);

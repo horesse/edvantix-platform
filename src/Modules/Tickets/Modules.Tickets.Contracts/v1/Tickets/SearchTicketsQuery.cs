@@ -9,6 +9,8 @@ public sealed record SearchTicketsQuery : IQuery<PagedResponse<TicketDto>>
     public string? Search { get; init; }
     public TicketStatus? Status { get; init; }
     public TicketPriority? Priority { get; init; }
+    public TicketCategory? Category { get; init; }
+    public TicketAudience? Audience { get; init; }
     public Guid? AssignedToUserId { get; init; }
     public Guid? ReporterUserId { get; init; }
     public Guid? RelatedStudentId { get; init; }
