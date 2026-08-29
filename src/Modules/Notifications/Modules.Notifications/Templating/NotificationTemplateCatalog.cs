@@ -138,7 +138,7 @@ public sealed class NotificationTemplateCatalog : INotificationTemplateCatalog
 
             new(
                 NotificationTypes.ChatMention,
-                TitleTemplate: "You were mentioned in #{{channel}}",
+                TitleTemplate: "You were mentioned in {{channel}}",
                 BodyTemplate: "{{preview}}",
                 LinkTemplate: "/chat/{{channelId}}?messageId={{messageId}}"),
 

@@ -43,6 +43,24 @@ tags: [модуль, каркас, notifications]
 ошибка сборки, `Render` кидает `KeyNotFoundException`. Оба сервиса без состояния —
 зарегистрированы синглтонами. Тесты — `src/Tests/Notifications.Tests/Templating/`.
 
+## Каналы доставки (`Channels/`)
+
+Точка расширения под Telegram/SMS, которые школы попросят. Добавление канала —
+одна регистрация `INotificationChannel`, больше ничего.
+
+| Тип | Назначение |
+|---|---|
+| `NotificationChannelKind` | `[Flags]`: `InApp` \| `Email` (\| будущие). Комбинация в запросе, один бит на канале |
+| `INotificationChannel` | `Kind` + `SendAsync(NotificationDelivery, ct)` |
+| `InAppNotificationChannel` | пишет строку `Notification` + пуш `NotificationCreated` в SignalR-группу `user:{id}`. Не best-effort — сбой всплывает в исходный запрос |
+| `EmailNotificationChannel` | письмо через `BuildingBlocks/Mailing`, только если у шаблона есть тело письма и известен адрес. Best-effort — сбой транспорта логируется, не бросается |
+| `NotificationRequest` | что обработчик события отдаёт диспетчеру: адресат, ключ шаблона, токены, `Source`, `Channels`, `ExpectedTenantId` |
+| `INotificationDispatcher` | рендерит шаблон один раз, разливает по запрошенным каналам; при `ExpectedTenantId` сверяет ambient-тенант перед записью |
+
+Обработчики интеграционных событий вызывают `INotificationDispatcher.DispatchAsync`,
+а не пишут `Notification` напрямую. `MentionedInChannelIntegrationEventHandler`
+переведён на диспетчер (канал `InApp`). Тесты — `src/Tests/Notifications.Tests/Channels/`.
+
 > [!note] Публичный docs-репозиторий и changelog — открытый пункт
 > Правило 10 `AGENTS.md`: `github.com/fullstackhero/docs` и changelog для этой доработки
 > не обновлялись в этой сессии — как и у всех предыдущих backend-сессий, доступа к тому

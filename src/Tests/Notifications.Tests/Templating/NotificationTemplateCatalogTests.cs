@@ -68,7 +68,7 @@ public sealed class NotificationTemplateCatalogTests
 
         var rendered = renderer.Render(NotificationTypes.ChatMention, new Dictionary<string, string?>(StringComparer.Ordinal)
         {
-            ["channel"] = "general",
+            ["channel"] = "#general",
             ["preview"] = "hey @you",
             ["channelId"] = "c1",
             ["messageId"] = "m1",

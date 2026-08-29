@@ -41,6 +41,12 @@ public sealed class NotificationsModule : IModule
         builder.Services.AddSingleton<Templating.INotificationTemplateCatalog, Templating.NotificationTemplateCatalog>();
         builder.Services.AddSingleton<Templating.INotificationTemplateRenderer, Templating.NotificationTemplateRenderer>();
 
+        // Delivery channels + the dispatcher that renders once and fans out. Adding Telegram/SMS
+        // later = one more INotificationChannel registration, nothing else.
+        builder.Services.AddScoped<Channels.INotificationChannel, Channels.InAppNotificationChannel>();
+        builder.Services.AddScoped<Channels.INotificationChannel, Channels.EmailNotificationChannel>();
+        builder.Services.AddScoped<Channels.INotificationDispatcher, Channels.NotificationDispatcher>();
+
         // Subscribe to cross-module integration events handled by this assembly.
         builder.Services.AddIntegrationEventHandlers(typeof(NotificationsModule).Assembly);
 

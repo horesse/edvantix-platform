@@ -7,6 +7,8 @@ Per-user in-app inbox (bell icon) driven by cross-module integration events, wit
 
 **Templating:** `Templating/` — in-module `{{token}}` substitution only (no engine in `BuildingBlocks/Mailing`; don't add one there — rule 4). `NotificationTypes` = stable `Notification.Type` keys **and** template keys; `INotificationTemplateCatalog` holds one `NotificationTemplate` per type; `INotificationTemplateRenderer.Render(key, tokens)` → `RenderedNotification`. Token values are HTML-escaped only in `EmailHtmlBodyTemplate`. Missing token → empty + log; unknown template key → `KeyNotFoundException` (deploy bug). Both are singletons. A new emailed type = add a `NotificationTypes` const + a catalogue entry (tests assert the two stay in sync).
 
+**Channels:** `Channels/` — `INotificationChannel` (`Kind` bit + `SendAsync`). `InAppNotificationChannel` (inbox row + SignalR, may throw), `EmailNotificationChannel` (via Mailing, best-effort, only when template `HasEmail` + address present). `INotificationDispatcher.DispatchAsync(NotificationRequest)` renders once and fans out to the channels named in `request.Channels` (`NotificationChannelKind` `[Flags]`); asserts ambient tenant == `request.ExpectedTenantId` when set. **Integration-event handlers call the dispatcher, never `db.Notifications.Add` directly.** New transport (Telegram/SMS) = one more `INotificationChannel` registration + a `NotificationChannelKind` bit.
+
 ## Gotchas
 
 - **It's a consumer.** New notification types come from **handling another module's integration event** (`AddIntegrationEventHandlers`), not from new endpoints. The handler renders copy via `INotificationTemplateRenderer`, writes an inbox row **and** pushes `"NotificationCreated"` to SignalR group `user:{userId}` via `IHubContext<AppHub>`.
