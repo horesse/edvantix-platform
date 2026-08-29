@@ -13,6 +13,8 @@ Per-user in-app inbox (bell icon) driven by cross-module integration events, wit
 
 **Preferences:** `NotificationPreference` entity (row per `(UserId, Type)`, `InAppEnabled`/`EmailEnabled`; tenant-isolated). Missing row → `NotificationDefaults.IsOn` (in-app on for all; e-mail on only for cancel/reschedule/invoice/overdue). `INotificationPreferenceService.EffectiveChannelsAsync` is called by `NotificationDispatcher` **only when `NotificationRequest.PreferenceUserId` is set** (fanout sets it to `contact.UserId`, null for email-only; mention handler sets it). `GET`/`PUT /notifications/preferences`. `NotificationDefaults` lives in `Templating/`.
 
+**Quiet hours:** `NotificationQuietHours` entity (one row per tenant; `Enabled`, `StartLocal`/`EndLocal` `TimeOnly`; `Start > End` spans midnight). Kept in this module, NOT `TenantSettings` (avoids a cross-module Multitenancy change). `INotificationQuietHoursService.IsQuietNowAsync()` converts `TenantSettings.TimeZoneId` and checks the window; `NotificationDispatcher` strips the `Email` bit when true (in-app unaffected), for **all** recipients regardless of `PreferenceUserId`. `GET`/`PUT /notifications/quiet-hours` gated by `MultitenancyPermissions.SchoolSettings.View`/`.Manage`.
+
 ## Gotchas
 
 - **It's a consumer.** New notification types come from **handling another module's integration event** (`AddIntegrationEventHandlers`), not from new endpoints. The handler renders copy via `INotificationTemplateRenderer`, writes an inbox row **and** pushes `"NotificationCreated"` to SignalR group `user:{userId}` via `IHubContext<AppHub>`.

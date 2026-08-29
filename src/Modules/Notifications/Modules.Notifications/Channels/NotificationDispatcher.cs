@@ -1,6 +1,7 @@
 using Finbuckle.MultiTenant.Abstractions;
 using FSH.Framework.Shared.Multitenancy;
 using FSH.Modules.Notifications.Features.v1.Preferences;
+using FSH.Modules.Notifications.Features.v1.QuietHours;
 using FSH.Modules.Notifications.Templating;
 using Microsoft.Extensions.Logging;
 
@@ -17,6 +18,7 @@ public sealed class NotificationDispatcher(
     IEnumerable<INotificationChannel> channels,
     INotificationTemplateRenderer templateRenderer,
     INotificationPreferenceService preferences,
+    INotificationQuietHoursService quietHours,
     IMultiTenantContextAccessor<AppTenantInfo> tenantAccessor,
     ILogger<NotificationDispatcher> logger)
     : INotificationDispatcher
@@ -41,6 +43,13 @@ public sealed class NotificationDispatcher(
         var effectiveChannels = request.PreferenceUserId is { } prefUser
             ? await preferences.EffectiveChannelsAsync(prefUser, request.TemplateKey, request.Channels, ct).ConfigureAwait(false)
             : request.Channels;
+
+        // School-wide quiet hours hold e-mail (in-app still updates the bell).
+        if (effectiveChannels.HasFlag(NotificationChannelKind.Email)
+            && await quietHours.IsQuietNowAsync(ct).ConfigureAwait(false))
+        {
+            effectiveChannels &= ~NotificationChannelKind.Email;
+        }
 
         if (effectiveChannels == NotificationChannelKind.None)
         {

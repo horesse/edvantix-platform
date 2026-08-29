@@ -11,6 +11,7 @@ using FSH.Modules.Notifications.Features.v1.ListNotifications;
 using FSH.Modules.Notifications.Features.v1.MarkAllNotificationsRead;
 using FSH.Modules.Notifications.Features.v1.MarkNotificationRead;
 using FSH.Modules.Notifications.Features.v1.Preferences;
+using FSH.Modules.Notifications.Features.v1.QuietHours;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -51,6 +52,9 @@ public sealed class NotificationsModule : IModule
         // Per-user opt-in/opt-out; consulted by the dispatcher and exposed via /preferences.
         builder.Services.AddScoped<INotificationPreferenceService, NotificationPreferenceService>();
 
+        // School-wide quiet hours — the dispatcher holds e-mail during the window.
+        builder.Services.AddScoped<INotificationQuietHoursService, NotificationQuietHoursService>();
+
         // Recipient resolution + school-local time formatting shared by the school-domain handlers.
         builder.Services.AddScoped<IntegrationEventHandlers.SchoolNotificationFanout>();
         builder.Services.AddScoped<IntegrationEventHandlers.NotificationTimeFormatter>();
@@ -82,6 +86,8 @@ public sealed class NotificationsModule : IModule
         group.MapGetUnreadCountEndpoint();                 // GET /unread-count
         group.MapListNotificationPreferencesEndpoint();    // GET /preferences
         group.MapUpdateNotificationPreferencesEndpoint();  // PUT /preferences
+        group.MapGetNotificationQuietHoursEndpoint();      // GET /quiet-hours
+        group.MapSetNotificationQuietHoursEndpoint();      // PUT /quiet-hours
         group.MapMarkAllNotificationsReadEndpoint();       // POST /read-all
         group.MapMarkNotificationReadEndpoint();           // POST /{id:guid}/read
     }

@@ -21,6 +21,7 @@ public sealed class NotificationsDbContext : BaseDbContext
 
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<NotificationPreference> NotificationPreferences => Set<NotificationPreference>();
+    public DbSet<NotificationQuietHours> NotificationQuietHours => Set<NotificationQuietHours>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

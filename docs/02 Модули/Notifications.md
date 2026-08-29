@@ -100,6 +100,24 @@ in-app по умолчанию включён для всего, e-mail — то
 `Notifications.Tests` (`NotificationDefaultsTests`, dispatcher-маскирование) +
 `Integration.Tests/Tests/Notifications/NotificationPreferencesTests.cs`.
 
+## Тихие часы
+
+`NotificationQuietHours` (одна строка на тенант, тенант-изолирована): `Enabled`,
+`StartLocal`/`EndLocal` (`TimeOnly`, время школы). `StartLocal > EndLocal` — окно
+через полночь. Живёт **в модуле Notifications**, не в `TenantSettings` — чтобы не
+тянуть кросс-модульное изменение Multitenancy ради одной настройки.
+
+`INotificationQuietHoursService.IsQuietNowAsync()` переводит `TenantSettings.TimeZoneId`
+в локальное время и проверяет попадание в окно. `INotificationDispatcher` при
+`IsQuietNowAsync == true` снимает бит `Email` из эффективных каналов (in-app остаётся —
+колокольчик пассивный). Применяется ко всем адресатам тенанта, не завязано на
+`PreferenceUserId`.
+
+`GET`/`PUT /api/v1/notifications/quiet-hours` (права `SchoolSettings.View`/`.Manage`
+из [[Multitenancy]]). Тесты — `Notifications.Tests/Domain/NotificationQuietHoursTests.cs`
+(окно через полночь), dispatcher-тест на удержание письма,
+`Integration.Tests/Tests/Notifications/NotificationQuietHoursTests.cs`.
+
 > [!note] Что осталось и осознанные упрощения
 > - **«Группа без преподавателя»** и **«Новый материал урока»** — не сделаны: у первой
 >   нет события и нет резолва менеджеров, вторая — [[Curriculum]] (вне этапа 6).
@@ -142,6 +160,8 @@ GET    /api/v1/notifications
 GET    /api/v1/notifications/unread-count
 GET    /api/v1/notifications/preferences
 PUT    /api/v1/notifications/preferences
+GET    /api/v1/notifications/quiet-hours
+PUT    /api/v1/notifications/quiet-hours
 POST   /api/v1/notifications/{id}/read
 POST   /api/v1/notifications/read-all
 GET    /api/v1/notifications/stream          SSE
