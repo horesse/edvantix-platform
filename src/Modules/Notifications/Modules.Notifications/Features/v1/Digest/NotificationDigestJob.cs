@@ -100,7 +100,9 @@ public sealed class NotificationDigestJob(
             catch (Exception ex)
 #pragma warning restore CA1031
             {
-                logger.LogWarning(ex, "[Notifications] failed to send digest to {Email}", group.Key);
+                // No recipient address in the log — it's PII. The rows stay unsent and retry next tick.
+                logger.LogWarning(
+                    ex, "[Notifications] failed to send a digest e-mail ({Count} update(s) left for retry)", entries.Count);
                 continue;
             }
 

@@ -37,8 +37,10 @@ public sealed class EmailNotificationChannel(
         }
         catch (Exception ex)
         {
-            logger.LogWarning(
-                ex, "Failed to e-mail {Type} notification to {Email}", delivery.Type, delivery.RecipientEmail);
+            // Don't log the recipient address — it is PII, and for loginless recipients so is
+            // RecipientUserId ("email:{addr}"). Type + the exception + Serilog's tenant/correlation
+            // enrichment are enough to triage.
+            logger.LogWarning(ex, "Failed to e-mail {Type} notification", delivery.Type);
         }
     }
 }
