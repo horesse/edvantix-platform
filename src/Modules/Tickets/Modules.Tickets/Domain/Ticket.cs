@@ -24,6 +24,17 @@ public sealed class Ticket : AggregateRoot<Guid>, ISoftDeletable
     public Guid ReporterUserId { get; private set; }
     public Guid? AssignedToUserId { get; private set; }
     public string? ResolutionNote { get; private set; }
+
+    /// <summary>
+    /// Optional links to the domain object the ticket is about (see docs/02 Модули/Tickets.md →
+    /// «Применение в Edvantix»). Opaque ids — Tickets does not reference People/StudyGroups/Payments
+    /// at runtime; existence is the caller's concern. Powers "history of this student's tickets" and
+    /// makes a "refund" ticket actionable by pointing at the invoice. Editable at any status:
+    /// categorisation metadata, not lifecycle state.
+    /// </summary>
+    public Guid? RelatedStudentId { get; private set; }
+    public Guid? RelatedStudyGroupId { get; private set; }
+    public Guid? RelatedInvoiceId { get; private set; }
     public DateTime CreatedAtUtc { get; private set; }
     public DateTime? UpdatedAtUtc { get; private set; }
     public DateTime? ResolvedAtUtc { get; private set; }
@@ -55,7 +66,10 @@ public sealed class Ticket : AggregateRoot<Guid>, ISoftDeletable
         string? description,
         TicketPriority priority,
         Guid reporterUserId,
-        Guid? assignedToUserId)
+        Guid? assignedToUserId,
+        Guid? relatedStudentId = null,
+        Guid? relatedStudyGroupId = null,
+        Guid? relatedInvoiceId = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(number);
         ArgumentException.ThrowIfNullOrWhiteSpace(title);
@@ -74,6 +88,9 @@ public sealed class Ticket : AggregateRoot<Guid>, ISoftDeletable
             Status = initialStatus,
             ReporterUserId = reporterUserId,
             AssignedToUserId = assignedToUserId,
+            RelatedStudentId = Normalize(relatedStudentId),
+            RelatedStudyGroupId = Normalize(relatedStudyGroupId),
+            RelatedInvoiceId = Normalize(relatedInvoiceId),
             CreatedAtUtc = DateTime.UtcNow,
         };
 
@@ -176,6 +193,21 @@ public sealed class Ticket : AggregateRoot<Guid>, ISoftDeletable
         Priority = priority;
         UpdatedAtUtc = DateTime.UtcNow;
     }
+
+    /// <summary>
+    /// Sets/clears the optional links to the student, study group and invoice this ticket concerns.
+    /// Allowed at any status — it is categorisation metadata, not lifecycle state. <c>Guid.Empty</c>
+    /// is treated as "not set".
+    /// </summary>
+    public void SetRelatedContext(Guid? relatedStudentId, Guid? relatedStudyGroupId, Guid? relatedInvoiceId)
+    {
+        RelatedStudentId = Normalize(relatedStudentId);
+        RelatedStudyGroupId = Normalize(relatedStudyGroupId);
+        RelatedInvoiceId = Normalize(relatedInvoiceId);
+        UpdatedAtUtc = DateTime.UtcNow;
+    }
+
+    private static Guid? Normalize(Guid? id) => id is null || id.Value == Guid.Empty ? null : id;
 
     public void Reopen()
     {

@@ -36,6 +36,18 @@ public sealed class SearchTicketsQueryHandler(TicketsDbContext dbContext)
         {
             q = q.Where(t => t.ReporterUserId == reporter);
         }
+        if (query.RelatedStudentId is { } relatedStudent)
+        {
+            q = q.Where(t => t.RelatedStudentId == relatedStudent);
+        }
+        if (query.RelatedStudyGroupId is { } relatedGroup)
+        {
+            q = q.Where(t => t.RelatedStudyGroupId == relatedGroup);
+        }
+        if (query.RelatedInvoiceId is { } relatedInvoice)
+        {
+            q = q.Where(t => t.RelatedInvoiceId == relatedInvoice);
+        }
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
             string term = query.Search.Trim();

@@ -43,7 +43,10 @@ public sealed class CreateTicketCommandHandler(
             description: command.Description,
             priority: command.Priority,
             reporterUserId: reporterId,
-            assignedToUserId: command.AssignedToUserId);
+            assignedToUserId: command.AssignedToUserId,
+            relatedStudentId: command.RelatedStudentId,
+            relatedStudyGroupId: command.RelatedStudyGroupId,
+            relatedInvoiceId: command.RelatedInvoiceId);
 
         dbContext.Tickets.Add(ticket);
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

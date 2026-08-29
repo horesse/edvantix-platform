@@ -27,6 +27,7 @@ tags: [модуль, каркас, tickets]
 | `ReporterUserId` | автор, обязателен |
 | `AssignedToUserId` | исполнитель, nullable |
 | `ResolutionNote` | |
+| `RelatedStudentId`, `RelatedStudyGroupId`, `RelatedInvoiceId` | контекст обращения, nullable — непрозрачные id, модуль не ссылается на People/StudyGroups/Payments в рантайме; частичные индексы под фильтр «обращения по этому ученику/группе/счёту». Меняются на любом статусе (это метаданные, не жизненный цикл) |
 | `CreatedAtUtc`, `UpdatedAtUtc`, `ResolvedAtUtc`, `ClosedAtUtc` | |
 
 `TicketComment` — переписка, принадлежит агрегату.
@@ -98,6 +99,13 @@ GET    /api/v1/tickets/trash
 
 Ограничение текущей модели: `ReporterUserId` обязателен — обращение может создать
 только пользователь с учётной записью. Для представителей это выполняется.
+
+**Контекст обращения.** `CreateTicketCommand`/`UpdateTicketCommand` принимают
+опциональные `RelatedStudentId` / `RelatedStudyGroupId` / `RelatedInvoiceId`;
+`SearchTicketsQuery` (и `GET /tickets`) фильтруют по ним. `PUT /tickets/{id}` —
+полная замена: не переданная ссылка очищается. `Guid.Empty` → «не задано»
+(нормализуется в домене, плюс отклоняется валидатором). Обращение «верните деньги»
+теперь можно привязать к счёту; на карточке ученика — история его обращений.
 
 ## Зависимости
 

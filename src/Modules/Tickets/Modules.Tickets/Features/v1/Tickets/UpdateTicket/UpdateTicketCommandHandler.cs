@@ -19,6 +19,7 @@ public sealed class UpdateTicketCommandHandler(TicketsDbContext dbContext)
             ?? throw new NotFoundException($"Ticket {command.TicketId} not found.");
 
         ticket.UpdateDetails(command.Title, command.Description, command.Priority);
+        ticket.SetRelatedContext(command.RelatedStudentId, command.RelatedStudyGroupId, command.RelatedInvoiceId);
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return ticket.Id;
     }

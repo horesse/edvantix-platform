@@ -7,4 +7,7 @@ public sealed record CreateTicketCommand(
     string Title,
     string? Description = null,
     TicketPriority Priority = TicketPriority.Medium,
-    Guid? AssignedToUserId = null) : ICommand<Guid>;
+    Guid? AssignedToUserId = null,
+    Guid? RelatedStudentId = null,
+    Guid? RelatedStudyGroupId = null,
+    Guid? RelatedInvoiceId = null) : ICommand<Guid>;

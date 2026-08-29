@@ -81,6 +81,9 @@ public sealed class TicketDto
     public Guid ReporterUserId { get; set; }
     public Guid? AssignedToUserId { get; set; }
     public string? ResolutionNote { get; set; }
+    public Guid? RelatedStudentId { get; set; }
+    public Guid? RelatedStudyGroupId { get; set; }
+    public Guid? RelatedInvoiceId { get; set; }
     public DateTime CreatedAtUtc { get; set; }
     public DateTime? UpdatedAtUtc { get; set; }
     public DateTime? ResolvedAtUtc { get; set; }

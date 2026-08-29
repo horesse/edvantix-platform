@@ -7,4 +7,7 @@ public sealed record UpdateTicketCommand(
     Guid TicketId,
     string Title,
     string? Description = null,
-    TicketPriority Priority = TicketPriority.Medium) : ICommand<Guid>;
+    TicketPriority Priority = TicketPriority.Medium,
+    Guid? RelatedStudentId = null,
+    Guid? RelatedStudyGroupId = null,
+    Guid? RelatedInvoiceId = null) : ICommand<Guid>;
