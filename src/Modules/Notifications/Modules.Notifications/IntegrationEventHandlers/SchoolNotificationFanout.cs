@@ -59,6 +59,8 @@ public sealed class SchoolNotificationFanout(
                     RecipientEmail = contact.Email,
                     // No account → in-app impossible; fall back to e-mail only.
                     Channels = contact.UserId is null ? channels & NotificationChannelKind.Email : channels,
+                    // Preference filtering only for recipients who have an account (and thus the settings UI).
+                    PreferenceUserId = contact.UserId,
                     ExpectedTenantId = expectedTenantId,
                     Metadata = metadata,
                 },

@@ -38,6 +38,7 @@ public sealed class MentionedInChannelIntegrationEventHandler(INotificationDispa
             {
                 Source = @event.Source,
                 Channels = NotificationChannelKind.InApp,
+                PreferenceUserId = @event.MentionedUserId,
                 ExpectedTenantId = @event.TenantId,
                 Metadata = new
                 {

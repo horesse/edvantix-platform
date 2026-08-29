@@ -81,6 +81,25 @@ tags: [модуль, каркас, notifications]
 У кого нет учётки — уходит только письмо (адрес хранит People). Дедупликация
 адресатов — `SchoolNotificationFanout.Distinct` (по `UserId`, иначе e-mail).
 
+## Настройки подписок
+
+`NotificationPreference` (сущность, одна строка на `(UserId, Type)`, тенант-изолирована):
+`InAppEnabled` / `EmailEnabled`. Нет строки → `NotificationDefaults.IsOn(type, channel)`:
+in-app по умолчанию включён для всего, e-mail — только для «high-signal» четвёрки
+(отмена/перенос занятия, счёт, задолженность), остальное — opt-in (см. предупреждение
+«Уведомления — главный источник раздражения»).
+
+| | |
+|---|---|
+| `INotificationPreferenceService.EffectiveChannelsAsync(userId, type, requested)` | `requested & (разрешённые каналы)` — вызывает `INotificationDispatcher`, если у запроса задан `PreferenceUserId` |
+| `GET /api/v1/notifications/preferences` | весь каталог с эффективными значениями (дефолты + оверрайды) |
+| `PUT /api/v1/notifications/preferences` | upsert набора `{type, inApp, email}`; неизвестный `type` → 400 |
+
+`PreferenceUserId` в `NotificationRequest` ставится только для адресатов с учёткой
+(у email-only настраивать нечем — стоят дефолты каталога). Тесты —
+`Notifications.Tests` (`NotificationDefaultsTests`, dispatcher-маскирование) +
+`Integration.Tests/Tests/Notifications/NotificationPreferencesTests.cs`.
+
 > [!note] Что осталось и осознанные упрощения
 > - **«Группа без преподавателя»** и **«Новый материал урока»** — не сделаны: у первой
 >   нет события и нет резолва менеджеров, вторая — [[Curriculum]] (вне этапа 6).
@@ -90,9 +109,6 @@ tags: [модуль, каркас, notifications]
 >   `SessionRescheduledIntegrationEvent` +`StudyGroupId`; Payments-события
 >   `Issued`/`Overdue`/`PaymentConfirmed` +`Number`/`Currency` (и `StudentId`/
 >   `PayerGuardianId`, где их не было). См. справочники [[Scheduling]]/[[Payments]].
-> - **Настройки подписок** (следующий пункт бэклога) ещё не фильтруют — обработчики
->   рассылают по умолчаниям каталога; когда появится `NotificationPreference`,
->   фильтр встанет в `INotificationDispatcher`.
 
 > [!note] Публичный docs-репозиторий и changelog — открытый пункт
 > Правило 10 `AGENTS.md`: `github.com/fullstackhero/docs` и changelog для этой доработки
@@ -124,6 +140,8 @@ tags: [модуль, каркас, notifications]
 ```
 GET    /api/v1/notifications
 GET    /api/v1/notifications/unread-count
+GET    /api/v1/notifications/preferences
+PUT    /api/v1/notifications/preferences
 POST   /api/v1/notifications/{id}/read
 POST   /api/v1/notifications/read-all
 GET    /api/v1/notifications/stream          SSE

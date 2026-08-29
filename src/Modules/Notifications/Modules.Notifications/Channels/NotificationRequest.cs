@@ -24,6 +24,13 @@ public sealed record NotificationRequest(
     public NotificationChannelKind Channels { get; init; } = NotificationChannelKind.All;
 
     /// <summary>
+    /// When set, the dispatcher intersects <see cref="Channels"/> with this user's stored
+    /// notification preferences for <see cref="TemplateKey"/> (defaults apply when unset). Null for
+    /// recipients with no account — no preference UI, so the catalogue defaults stand.
+    /// </summary>
+    public string? PreferenceUserId { get; init; }
+
+    /// <summary>
     /// When set, the dispatcher asserts the ambient tenant matches before writing. Handlers that
     /// carry the source event's <c>TenantId</c> should pass it — the DbContext captures its tenant
     /// at construction, so a publisher that forgot to establish context would leak cross-tenant.

@@ -1,6 +1,7 @@
 using Finbuckle.MultiTenant.Abstractions;
 using FSH.Framework.Shared.Multitenancy;
 using FSH.Modules.Notifications.Channels;
+using FSH.Modules.Notifications.Features.v1.Preferences;
 using FSH.Modules.Notifications.Templating;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
@@ -30,8 +31,13 @@ public sealed class NotificationDispatcherTests
         context.TenantInfo.Returns(tenantInfo);
         accessor.MultiTenantContext.Returns(context);
 
+        var preferences = Substitute.For<INotificationPreferenceService>();
+        preferences.EffectiveChannelsAsync(
+                Arg.Any<string>(), Arg.Any<string>(), Arg.Any<NotificationChannelKind>(), Arg.Any<CancellationToken>())
+            .Returns(ci => Task.FromResult(ci.ArgAt<NotificationChannelKind>(2)));
+
         return new NotificationDispatcher(
-            [inApp, email], renderer, accessor, NullLogger<NotificationDispatcher>.Instance);
+            [inApp, email], renderer, preferences, accessor, NullLogger<NotificationDispatcher>.Instance);
     }
 
     [Fact]
@@ -89,6 +95,52 @@ public sealed class NotificationDispatcherTests
         });
 
         inApp.Deliveries.Count.ShouldBe(1);
+    }
+
+    private static (NotificationDispatcher Dispatcher, RecordingChannel InApp, RecordingChannel Email) BuildWithPreference(
+        NotificationChannelKind effective)
+    {
+        var inApp = new RecordingChannel(NotificationChannelKind.InApp);
+        var email = new RecordingChannel(NotificationChannelKind.Email);
+        var renderer = Substitute.For<INotificationTemplateRenderer>();
+        renderer.Render(Arg.Any<string>(), Arg.Any<IReadOnlyDictionary<string, string?>>())
+            .Returns(new RenderedNotification("T", "B", null, "S", "<p>B</p>"));
+        var accessor = Substitute.For<IMultiTenantContextAccessor<AppTenantInfo>>();
+        var context = Substitute.For<IMultiTenantContext<AppTenantInfo>>();
+        context.TenantInfo.Returns((AppTenantInfo?)null);
+        accessor.MultiTenantContext.Returns(context);
+        var preferences = Substitute.For<INotificationPreferenceService>();
+        preferences.EffectiveChannelsAsync(
+                Arg.Any<string>(), Arg.Any<string>(), Arg.Any<NotificationChannelKind>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(effective));
+        return (new NotificationDispatcher([inApp, email], renderer, preferences, accessor,
+            NullLogger<NotificationDispatcher>.Instance), inApp, email);
+    }
+
+    [Fact]
+    public async Task Dispatch_Masks_Channels_By_User_Preference()
+    {
+        var (dispatcher, inApp, email) = BuildWithPreference(NotificationChannelKind.InApp);
+
+        await dispatcher.DispatchAsync(new NotificationRequest("u1", "t", NoTokens)
+        {
+            Channels = NotificationChannelKind.All,
+            PreferenceUserId = "u1",
+        });
+
+        inApp.Deliveries.Count.ShouldBe(1);
+        email.Deliveries.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task Dispatch_Skips_Entirely_When_Preferences_Disable_Everything()
+    {
+        var (dispatcher, inApp, email) = BuildWithPreference(NotificationChannelKind.None);
+
+        await dispatcher.DispatchAsync(new NotificationRequest("u1", "t", NoTokens) { PreferenceUserId = "u1" });
+
+        inApp.Deliveries.ShouldBeEmpty();
+        email.Deliveries.ShouldBeEmpty();
     }
 
     [Fact]

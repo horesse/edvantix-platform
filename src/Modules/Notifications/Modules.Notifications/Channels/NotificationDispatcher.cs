@@ -1,5 +1,6 @@
 using Finbuckle.MultiTenant.Abstractions;
 using FSH.Framework.Shared.Multitenancy;
+using FSH.Modules.Notifications.Features.v1.Preferences;
 using FSH.Modules.Notifications.Templating;
 using Microsoft.Extensions.Logging;
 
@@ -15,6 +16,7 @@ public interface INotificationDispatcher
 public sealed class NotificationDispatcher(
     IEnumerable<INotificationChannel> channels,
     INotificationTemplateRenderer templateRenderer,
+    INotificationPreferenceService preferences,
     IMultiTenantContextAccessor<AppTenantInfo> tenantAccessor,
     ILogger<NotificationDispatcher> logger)
     : INotificationDispatcher
@@ -36,6 +38,15 @@ public sealed class NotificationDispatcher(
             }
         }
 
+        var effectiveChannels = request.PreferenceUserId is { } prefUser
+            ? await preferences.EffectiveChannelsAsync(prefUser, request.TemplateKey, request.Channels, ct).ConfigureAwait(false)
+            : request.Channels;
+
+        if (effectiveChannels == NotificationChannelKind.None)
+        {
+            return;
+        }
+
         var content = templateRenderer.Render(request.TemplateKey, request.Tokens);
         var delivery = new NotificationDelivery(
             RecipientUserId: request.RecipientUserId,
@@ -47,7 +58,7 @@ public sealed class NotificationDispatcher(
 
         foreach (var channel in channels)
         {
-            if (!request.Channels.HasFlag(channel.Kind))
+            if (!effectiveChannels.HasFlag(channel.Kind))
             {
                 continue;
             }

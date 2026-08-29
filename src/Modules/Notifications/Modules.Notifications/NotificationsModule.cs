@@ -10,6 +10,7 @@ using FSH.Modules.Notifications.Features.v1.GetUnreadCount;
 using FSH.Modules.Notifications.Features.v1.ListNotifications;
 using FSH.Modules.Notifications.Features.v1.MarkAllNotificationsRead;
 using FSH.Modules.Notifications.Features.v1.MarkNotificationRead;
+using FSH.Modules.Notifications.Features.v1.Preferences;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -47,6 +48,9 @@ public sealed class NotificationsModule : IModule
         builder.Services.AddScoped<Channels.INotificationChannel, Channels.EmailNotificationChannel>();
         builder.Services.AddScoped<Channels.INotificationDispatcher, Channels.NotificationDispatcher>();
 
+        // Per-user opt-in/opt-out; consulted by the dispatcher and exposed via /preferences.
+        builder.Services.AddScoped<INotificationPreferenceService, NotificationPreferenceService>();
+
         // Recipient resolution + school-local time formatting shared by the school-domain handlers.
         builder.Services.AddScoped<IntegrationEventHandlers.SchoolNotificationFanout>();
         builder.Services.AddScoped<IntegrationEventHandlers.NotificationTimeFormatter>();
@@ -76,6 +80,8 @@ public sealed class NotificationsModule : IModule
         // Literal routes first; /{id:guid}/read is the only param-route and lives last.
         group.MapListNotificationsEndpoint();              // GET /
         group.MapGetUnreadCountEndpoint();                 // GET /unread-count
+        group.MapListNotificationPreferencesEndpoint();    // GET /preferences
+        group.MapUpdateNotificationPreferencesEndpoint();  // PUT /preferences
         group.MapMarkAllNotificationsReadEndpoint();       // POST /read-all
         group.MapMarkNotificationReadEndpoint();           // POST /{id:guid}/read
     }
