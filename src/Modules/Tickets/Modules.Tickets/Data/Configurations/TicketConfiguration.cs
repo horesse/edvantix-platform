@@ -23,11 +23,21 @@ public sealed class TicketConfiguration : IEntityTypeConfiguration<Ticket>
 
         builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(32);
         builder.Property(x => x.Priority).HasConversion<string>().HasMaxLength(16);
+        builder.Property(x => x.Category).HasConversion<string>().HasMaxLength(32);
+        builder.Property(x => x.Audience).HasConversion<string>().HasMaxLength(16);
 
         builder.HasIndex(x => x.Status);
+        builder.HasIndex(x => x.Category);
+        builder.HasIndex(x => x.Audience);
         builder.HasIndex(x => x.AssignedToUserId);
         builder.HasIndex(x => x.ReporterUserId);
         builder.HasIndex(x => x.IsDeleted);
+
+        // Context links — partial indexes so "tickets for this student / group / invoice"
+        // (e.g. the student card's ticket history) stays cheap without bloating the mostly-null column.
+        builder.HasIndex(x => x.RelatedStudentId).HasFilter("\"RelatedStudentId\" IS NOT NULL");
+        builder.HasIndex(x => x.RelatedStudyGroupId).HasFilter("\"RelatedStudyGroupId\" IS NOT NULL");
+        builder.HasIndex(x => x.RelatedInvoiceId).HasFilter("\"RelatedInvoiceId\" IS NOT NULL");
         builder.Property(x => x.DeletedBy).HasMaxLength(64);
 
         builder.HasMany(x => x.Comments)

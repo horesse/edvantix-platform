@@ -84,6 +84,7 @@ public sealed class RescheduleSessionCommandHandler(
                 Source: "Scheduling",
                 SessionId: oldSession.Id,
                 NewSessionId: newSession.Id,
+                StudyGroupId: oldSession.StudyGroupId,
                 OldStartUtc: oldSession.StartUtc,
                 NewStartUtc: newSession.StartUtc),
             cancellationToken).ConfigureAwait(false);

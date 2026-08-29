@@ -38,6 +38,14 @@ public sealed class SendMessageCommandHandler(
 
         channel.RequireMember(currentUserId);
 
+        if (channel.IsLocked)
+        {
+            throw new CustomException(
+                "This channel is read-only — its study group has finished.",
+                (IEnumerable<string>?)null,
+                HttpStatusCode.Conflict);
+        }
+
         Message? parent = null;
         if (cmd.ParentMessageId is { } parentId)
         {

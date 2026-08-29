@@ -12,16 +12,27 @@ namespace FSH.Modules.Tickets.Features.v1.Tickets.UpdateTicket;
 
 public static class UpdateTicketEndpoint
 {
-    public sealed record UpdateTicketRequest(string Title, string? Description, TicketPriority Priority);
+    public sealed record UpdateTicketRequest(
+        string Title,
+        string? Description,
+        TicketPriority Priority,
+        TicketCategory Category = TicketCategory.General,
+        TicketAudience? Audience = null,
+        Guid? RelatedStudentId = null,
+        Guid? RelatedStudyGroupId = null,
+        Guid? RelatedInvoiceId = null);
 
     internal static RouteHandlerBuilder MapUpdateTicketEndpoint(this IEndpointRouteBuilder endpoints)
     {
         return endpoints.MapPut("/tickets/{ticketId:guid}",
                 async (Guid ticketId, UpdateTicketRequest body, IMediator mediator, CancellationToken ct) =>
                     Results.Ok(await mediator.Send(
-                        new UpdateTicketCommand(ticketId, body.Title, body.Description, body.Priority), ct)))
+                        new UpdateTicketCommand(
+                            ticketId, body.Title, body.Description, body.Priority,
+                            body.Category, body.Audience,
+                            body.RelatedStudentId, body.RelatedStudyGroupId, body.RelatedInvoiceId), ct)))
             .WithName("UpdateTicket")
-            .WithSummary("Edit a ticket's title, description, and priority")
+            .WithSummary("Edit a ticket's title, description, priority, classification, and related-context links")
             .RequirePermission(TicketsPermissions.Tickets.Update)
             .WithIdempotency();
     }

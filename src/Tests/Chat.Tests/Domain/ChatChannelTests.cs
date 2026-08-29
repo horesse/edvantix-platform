@@ -178,4 +178,53 @@ public class ChatChannelTests
     }
 
     #endregion
+
+    #region Study-group channels
+
+    [Fact]
+    public void CreateForStudyGroup_Should_Be_Private_No_Slug_And_Seed_Given_Members()
+    {
+        var groupId = Guid.NewGuid();
+
+        var c = ChatChannel.CreateForStudyGroup(groupId, "Algebra A", "teacher-1", ["teacher-1", "student-9"]);
+
+        c.Type.ShouldBe(ChannelType.Channel);
+        c.IsPrivate.ShouldBeTrue();
+        c.Slug.ShouldBeNull();
+        c.SourceStudyGroupId.ShouldBe(groupId);
+        c.IsLocked.ShouldBeFalse();
+        c.Members.Single(m => m.UserId == "teacher-1").Role.ShouldBe(ChannelMemberRole.Admin);
+        c.Members.Single(m => m.UserId == "student-9").Role.ShouldBe(ChannelMemberRole.Member);
+    }
+
+    [Fact]
+    public void CreateForStudyGroup_Should_Allow_No_Members_When_Nobody_Has_An_Account()
+    {
+        var c = ChatChannel.CreateForStudyGroup(Guid.NewGuid(), "Algebra A", "system:studygroup-sync", []);
+
+        c.Members.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void Lock_And_Unlock_Are_Idempotent()
+    {
+        var c = ChatChannel.CreateForStudyGroup(Guid.NewGuid(), "g", "sys", []);
+
+        c.Lock();
+        c.Lock();
+        c.IsLocked.ShouldBeTrue();
+
+        c.Unlock();
+        c.Unlock();
+        c.IsLocked.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void CreateForStudyGroup_Should_Reject_Empty_Group_Id()
+    {
+        Should.Throw<ArgumentException>(() =>
+            ChatChannel.CreateForStudyGroup(Guid.Empty, "g", "sys", []));
+    }
+
+    #endregion
 }

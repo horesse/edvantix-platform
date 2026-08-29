@@ -21,9 +21,26 @@ public sealed class Ticket : AggregateRoot<Guid>, ISoftDeletable
     public string? Description { get; private set; }
     public TicketStatus Status { get; private set; }
     public TicketPriority Priority { get; private set; }
+
+    /// <summary>What the ticket is about (see docs/02 Модули/Tickets.md). Drives the default <see cref="Audience"/>.</summary>
+    public TicketCategory Category { get; private set; }
+
+    /// <summary>Who handles it — the school's administration or Edvantix platform support.</summary>
+    public TicketAudience Audience { get; private set; }
     public Guid ReporterUserId { get; private set; }
     public Guid? AssignedToUserId { get; private set; }
     public string? ResolutionNote { get; private set; }
+
+    /// <summary>
+    /// Optional links to the domain object the ticket is about (see docs/02 Модули/Tickets.md →
+    /// «Применение в Edvantix»). Opaque ids — Tickets does not reference People/StudyGroups/Payments
+    /// at runtime; existence is the caller's concern. Powers "history of this student's tickets" and
+    /// makes a "refund" ticket actionable by pointing at the invoice. Editable at any status:
+    /// categorisation metadata, not lifecycle state.
+    /// </summary>
+    public Guid? RelatedStudentId { get; private set; }
+    public Guid? RelatedStudyGroupId { get; private set; }
+    public Guid? RelatedInvoiceId { get; private set; }
     public DateTime CreatedAtUtc { get; private set; }
     public DateTime? UpdatedAtUtc { get; private set; }
     public DateTime? ResolvedAtUtc { get; private set; }
@@ -55,7 +72,12 @@ public sealed class Ticket : AggregateRoot<Guid>, ISoftDeletable
         string? description,
         TicketPriority priority,
         Guid reporterUserId,
-        Guid? assignedToUserId)
+        Guid? assignedToUserId,
+        TicketCategory category = TicketCategory.General,
+        TicketAudience audience = TicketAudience.School,
+        Guid? relatedStudentId = null,
+        Guid? relatedStudyGroupId = null,
+        Guid? relatedInvoiceId = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(number);
         ArgumentException.ThrowIfNullOrWhiteSpace(title);
@@ -74,6 +96,11 @@ public sealed class Ticket : AggregateRoot<Guid>, ISoftDeletable
             Status = initialStatus,
             ReporterUserId = reporterUserId,
             AssignedToUserId = assignedToUserId,
+            Category = category,
+            Audience = audience,
+            RelatedStudentId = Normalize(relatedStudentId),
+            RelatedStudyGroupId = Normalize(relatedStudyGroupId),
+            RelatedInvoiceId = Normalize(relatedInvoiceId),
             CreatedAtUtc = DateTime.UtcNow,
         };
 
@@ -176,6 +203,33 @@ public sealed class Ticket : AggregateRoot<Guid>, ISoftDeletable
         Priority = priority;
         UpdatedAtUtc = DateTime.UtcNow;
     }
+
+    /// <summary>
+    /// Sets/clears the optional links to the student, study group and invoice this ticket concerns.
+    /// Allowed at any status — it is categorisation metadata, not lifecycle state. <c>Guid.Empty</c>
+    /// is treated as "not set".
+    /// </summary>
+    public void SetRelatedContext(Guid? relatedStudentId, Guid? relatedStudyGroupId, Guid? relatedInvoiceId)
+    {
+        RelatedStudentId = Normalize(relatedStudentId);
+        RelatedStudyGroupId = Normalize(relatedStudyGroupId);
+        RelatedInvoiceId = Normalize(relatedInvoiceId);
+        UpdatedAtUtc = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Re-classifies the ticket. Allowed at any status — it is categorisation metadata, not
+    /// lifecycle state. The caller decides whether the audience follows the category default or is
+    /// pinned.
+    /// </summary>
+    public void SetClassification(TicketCategory category, TicketAudience audience)
+    {
+        Category = category;
+        Audience = audience;
+        UpdatedAtUtc = DateTime.UtcNow;
+    }
+
+    private static Guid? Normalize(Guid? id) => id is null || id.Value == Guid.Empty ? null : id;
 
     public void Reopen()
     {

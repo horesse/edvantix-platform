@@ -253,10 +253,14 @@ erDiagram
 
 | Событие | Содержимое |
 |---|---|
-| `StudentInvoiceIssuedIntegrationEvent` | `InvoiceId`, `StudentId`, `PayerGuardianId?`, `Total`, `DueDate` |
-| `StudentPaymentConfirmedIntegrationEvent` | `InvoiceId`, `Amount`, `PaidOn`, `Method` |
+| `StudentInvoiceIssuedIntegrationEvent` | `InvoiceId`, `StudentId`, `PayerGuardianId?`, `Total`, `DueDate`, `Number`, `Currency` |
+| `StudentPaymentConfirmedIntegrationEvent` | `InvoiceId`, `StudentId`, `PayerGuardianId?`, `Amount`, `PaidOn`, `Method`, `Number`, `Currency` |
 | `StudentInvoiceCancelledIntegrationEvent` | `InvoiceId`, `Reason` |
-| `StudentInvoiceOverdueIntegrationEvent` | `InvoiceId`, `StudentId`, `Debt`, `DaysOverdue` |
+| `StudentInvoiceOverdueIntegrationEvent` | `InvoiceId`, `StudentId`, `PayerGuardianId?`, `Debt`, `DaysOverdue`, `Number`, `Currency` |
+
+`Number` / `Currency` (и `StudentId` / `PayerGuardianId` в `PaymentConfirmed`) добавлены
+аддитивно для подписчиков [[Notifications]] — все поля уже есть на `StudentInvoice`
+у издателя, поведение издателей не изменилось.
 
 ### Подписки
 

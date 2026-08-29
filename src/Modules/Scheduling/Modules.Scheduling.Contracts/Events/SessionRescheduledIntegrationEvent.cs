@@ -10,6 +10,7 @@ public sealed record SessionRescheduledIntegrationEvent(
     string Source,
     Guid SessionId,
     Guid NewSessionId,
+    Guid StudyGroupId,
     DateTimeOffset OldStartUtc,
     DateTimeOffset NewStartUtc)
     : IIntegrationEvent;

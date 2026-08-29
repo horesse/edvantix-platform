@@ -1,5 +1,6 @@
 using Asp.Versioning;
 using FluentValidation;
+using FSH.Framework.Eventing;
 using FSH.Framework.Persistence;
 using FSH.Framework.Shared.Constants;
 using FSH.Framework.Web.Modules;
@@ -10,6 +11,7 @@ using FSH.Modules.Chat.Features.v1.Channels.AddChannelMembers;
 using FSH.Modules.Chat.Features.v1.Channels.ArchiveChannel;
 using FSH.Modules.Chat.Features.v1.Channels.CreateChannel;
 using FSH.Modules.Chat.Features.v1.Channels.DiscoverChannels;
+using FSH.Modules.Chat.Features.v1.Channels.DmPolicy;
 using FSH.Modules.Chat.Features.v1.Channels.FindOrCreateDm;
 using FSH.Modules.Chat.Features.v1.Channels.GetChannelById;
 using FSH.Modules.Chat.Features.v1.Channels.ListMyChannels;
@@ -55,6 +57,11 @@ public sealed class ChatModule : IModule
         builder.Services.AddScoped<IDbInitializer, ChatDbInitializer>();
         builder.Services.AddValidatorsFromAssembly(typeof(ChatModule).Assembly);
 
+        // Study-group channel sync: provision a private channel on StudyGroupCreated, keep its
+        // membership in step with enrolments, lock it when the group finishes. See
+        // IntegrationEventHandlers/ and docs/02 Модули/Chat.md → «Применение в Edvantix».
+        builder.Services.AddIntegrationEventHandlers(typeof(ChatModule).Assembly);
+
         // Realtime adapters consumed by AppHub (BuildingBlocks/Web). These let the shared hub
         // verify channel membership and pre-join channel groups without depending on Chat.
         builder.Services.AddScoped<IChannelMembershipChecker, ChannelMembershipChecker>();
@@ -63,6 +70,10 @@ public sealed class ChatModule : IModule
         // @username resolution for SendMessage. Goes through Identity contracts so the user
         // directory stays the single source of truth.
         builder.Services.AddScoped<IMentionResolver, MentionResolver>();
+
+        // Who-may-DM-whom + the per-school toggle behind it. See docs/02 Модули/Chat.md.
+        builder.Services.AddScoped<Features.v1.Channels.DmPolicy.IChatDmSettingsService, Features.v1.Channels.DmPolicy.ChatDmSettingsService>();
+        builder.Services.AddScoped<Features.v1.Channels.DmPolicy.IChatDmPolicy, Features.v1.Channels.DmPolicy.ChatDmPolicy>();
 
         // File attachments: members attach+read, only the uploader deletes. Registered as
         // IFileAccessPolicy so Files endpoints route through it for OwnerType=ChatChannel.
@@ -92,6 +103,8 @@ public sealed class ChatModule : IModule
         group.MapDiscoverChannelsEndpoint();         // GET /channels/discover
 
         // Channel lifecycle
+        group.MapGetChatDmSettingsEndpoint();        // GET /dm-settings — literal, before /{id}
+        group.MapSetChatDmSettingsEndpoint();        // PUT /dm-settings
         group.MapCreateChannelEndpoint();
         group.MapFindOrCreateDmEndpoint();           // POST /dms — literal route comes before /{id}
         group.MapRestoreChannelEndpoint();           // literal /restore must precede catch-alls

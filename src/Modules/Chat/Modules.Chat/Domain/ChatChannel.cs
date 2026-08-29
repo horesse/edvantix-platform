@@ -24,6 +24,19 @@ public sealed class ChatChannel : AggregateRoot<Guid>, ISoftDeletable
     /// </summary>
     public string? DirectKey { get; private set; }
 
+    /// <summary>
+    /// Set when this channel backs a study group (provisioned from <c>StudyGroupCreatedIntegrationEvent</c>).
+    /// Null for user-created channels and DMs. Lets the study-group sync handlers find "the channel
+    /// for group X" without a StudyGroups → Chat runtime reference.
+    /// </summary>
+    public Guid? SourceStudyGroupId { get; private set; }
+
+    /// <summary>
+    /// A locked channel is read-only: history stays visible, new messages are rejected. Set when the
+    /// backing study group finishes. Distinct from <see cref="IsDeleted"/> (archived / hidden).
+    /// </summary>
+    public bool IsLocked { get; private set; }
+
     public string CreatedByUserId { get; private set; } = default!;
     public DateTime CreatedAtUtc { get; private set; }
     public DateTime? UpdatedAtUtc { get; private set; }
@@ -81,6 +94,49 @@ public sealed class ChatChannel : AggregateRoot<Guid>, ISoftDeletable
             CreatedAtUtc = DateTime.UtcNow,
         };
         c._members.Add(ChannelMember.Create(c.Id, creatorUserId, ChannelMemberRole.Admin));
+        c.AddDomainEvent(DomainEvent.Create((id, ts) =>
+            new ChannelCreatedDomainEvent(c.Id, c.Type, c.Name, creatorUserId, id, ts)));
+        return c;
+    }
+
+    /// <summary>
+    /// A named private channel that backs a study group. <paramref name="creatorUserId"/> is only a
+    /// stamp — pass a real user id (the teacher) when there is one, otherwise a system sentinel;
+    /// <paramref name="memberUserIds"/> are the actual accounts to seed as members (may be empty
+    /// when nobody has a login yet — students are added later on enrolment).
+    /// </summary>
+    public static ChatChannel CreateForStudyGroup(
+        Guid studyGroupId, string name, string creatorUserId, IEnumerable<string> memberUserIds)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        ArgumentException.ThrowIfNullOrWhiteSpace(creatorUserId);
+        if (studyGroupId == Guid.Empty)
+        {
+            throw new ArgumentException("StudyGroupId is required.", nameof(studyGroupId));
+        }
+
+        var c = new ChatChannel
+        {
+            Id = Guid.CreateVersion7(),
+            Type = ChannelType.Channel,
+            Name = name.Trim(),
+            // No slug: study-group channels are private and located by SourceStudyGroupId, and
+            // group names are not unique (only Code is) — a slug would collide on the unique index.
+            Slug = null,
+            IsPrivate = true,
+            SourceStudyGroupId = studyGroupId,
+            CreatedByUserId = creatorUserId,
+            CreatedAtUtc = DateTime.UtcNow,
+        };
+
+        foreach (var uid in memberUserIds.Where(u => !string.IsNullOrWhiteSpace(u)).Distinct(StringComparer.Ordinal))
+        {
+            var role = string.Equals(uid, creatorUserId, StringComparison.Ordinal)
+                ? ChannelMemberRole.Admin
+                : ChannelMemberRole.Member;
+            c._members.Add(ChannelMember.Create(c.Id, uid, role));
+        }
+
         c.AddDomainEvent(DomainEvent.Create((id, ts) =>
             new ChannelCreatedDomainEvent(c.Id, c.Type, c.Name, creatorUserId, id, ts)));
         return c;
@@ -215,6 +271,26 @@ public sealed class ChatChannel : AggregateRoot<Guid>, ISoftDeletable
         LastMessageAtUtc = utcNow;
         UpdatedAtUtc = utcNow;
     }
+
+    /// <summary>Makes the channel read-only (backing study group finished). Idempotent.</summary>
+    public void Lock()
+    {
+        if (IsLocked) return;
+        IsLocked = true;
+        UpdatedAtUtc = DateTime.UtcNow;
+    }
+
+    /// <summary>Lifts the read-only lock. Idempotent.</summary>
+    public void Unlock()
+    {
+        if (!IsLocked) return;
+        IsLocked = false;
+        UpdatedAtUtc = DateTime.UtcNow;
+    }
+
+    /// <summary>True when <paramref name="userId"/> is currently a member.</summary>
+    public bool HasMember(string userId) =>
+        _members.Any(m => string.Equals(m.UserId, userId, StringComparison.Ordinal));
 
     private static string Slugify(string value)
     {

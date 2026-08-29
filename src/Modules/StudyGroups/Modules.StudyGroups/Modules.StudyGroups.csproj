@@ -15,6 +15,7 @@
 		<ProjectReference Include="..\..\Identity\Modules.Identity.Contracts\Modules.Identity.Contracts.csproj" />
 		<ProjectReference Include="..\..\People\Modules.People.Contracts\Modules.People.Contracts.csproj" />
 		<ProjectReference Include="..\..\Curriculum\Modules.Curriculum.Contracts\Modules.Curriculum.Contracts.csproj" />
+		<ProjectReference Include="..\..\Chat\Modules.Chat.Contracts\Modules.Chat.Contracts.csproj" />
 	</ItemGroup>
 
 </Project>

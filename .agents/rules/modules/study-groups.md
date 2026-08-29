@@ -43,10 +43,11 @@
   модули, связь только через `.Contracts` (`architecture.md`, правило 1). Проверка синхронная и
   только на `Create`: уже созданная `Forming`-группа, чей курс архивируется позже, не блокируется
   автоматически — это ловит подписка на `CourseArchivedIntegrationEvent` (см. ниже), не хендлер.
-- **`ChatChannelId` — не подключено.** Поле и сеттер существуют (`#pragma warning disable S1144` —
-  EF Core пишет его через рефлексию), DTO его прокидывают, но ничего в этом модуле его не
-  устанавливает: это задел под будущий обработчик `StudyGroupCreatedIntegrationEvent` в модуле Chat
-  (`docs/04 Задачи/Задачи · Доработки каркаса.md` → Chat), который здесь ещё не существует.
+- **`ChatChannelId` заполняется по событию из Chat.** `StudyGroup.SetChatChannel(channelId)`
+  (идемпотентно) вызывается из `StudyGroupChannelLinkedIntegrationEventHandler`
+  (`IntegrationEventHandlers/`) в ответ на `StudyGroupChannelLinkedIntegrationEvent`, который
+  Chat публикует после провижининга канала группы. Модуль ссылается на `Chat.Contracts` (только
+  событие). Прямой ссылки Chat → StudyGroups в рантайме нет — связь закрыта событием.
 - **Подписки на People/Curriculum — операционные флаги, не автокоррекция.**
   `StudentArchivedIntegrationEvent` → закрывает активные/приостановленные зачисления студента.
   `TeacherDeactivatedIntegrationEvent` → помечает группу через `AddSystemFlag`, только если на

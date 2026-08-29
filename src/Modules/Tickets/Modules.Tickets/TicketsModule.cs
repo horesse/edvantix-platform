@@ -39,6 +39,11 @@ public sealed class TicketsModule : IModule
         builder.Services.AddHeroDbContext<TicketsDbContext>();
         builder.Services.AddScoped<IDbInitializer, TicketsDbInitializer>();
 
+        // Attachments: files with OwnerType=Ticket route through this policy (reporter/assignee
+        // attach+read, uploader deletes). Registered as IFileAccessPolicy so the generic Files
+        // endpoints pick it up. See docs/02 Модули/Tickets.md → «Вложения».
+        builder.Services.AddScoped<FSH.Modules.Files.Contracts.IFileAccessPolicy, Authorization.TicketFileAccessPolicy>();
+
         builder.Services.AddHealthChecks()
             .AddDbContextCheck<TicketsDbContext>(
                 name: "db:tickets",

@@ -39,7 +39,8 @@ public sealed class ConfirmPaymentCommandHandler(
         await outboxStore.AddAsync(
             new StudentPaymentConfirmedIntegrationEvent(
                 Guid.NewGuid(), now.UtcDateTime, tenantId, Guid.NewGuid().ToString(), "Payments",
-                invoice.Id, payment.Amount, payment.PaidOn, payment.Method),
+                invoice.Id, invoice.StudentId, invoice.PayerGuardianId,
+                payment.Amount, payment.PaidOn, payment.Method, invoice.Number, invoice.Currency),
             cancellationToken).ConfigureAwait(false);
 
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

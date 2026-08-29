@@ -28,6 +28,14 @@ public sealed class SearchTicketsQueryHandler(TicketsDbContext dbContext)
         {
             q = q.Where(t => t.Priority == priority);
         }
+        if (query.Category is { } category)
+        {
+            q = q.Where(t => t.Category == category);
+        }
+        if (query.Audience is { } audience)
+        {
+            q = q.Where(t => t.Audience == audience);
+        }
         if (query.AssignedToUserId is { } assignee)
         {
             q = q.Where(t => t.AssignedToUserId == assignee);
@@ -35,6 +43,18 @@ public sealed class SearchTicketsQueryHandler(TicketsDbContext dbContext)
         if (query.ReporterUserId is { } reporter)
         {
             q = q.Where(t => t.ReporterUserId == reporter);
+        }
+        if (query.RelatedStudentId is { } relatedStudent)
+        {
+            q = q.Where(t => t.RelatedStudentId == relatedStudent);
+        }
+        if (query.RelatedStudyGroupId is { } relatedGroup)
+        {
+            q = q.Where(t => t.RelatedStudyGroupId == relatedGroup);
+        }
+        if (query.RelatedInvoiceId is { } relatedInvoice)
+        {
+            q = q.Where(t => t.RelatedInvoiceId == relatedInvoice);
         }
         if (!string.IsNullOrWhiteSpace(query.Search))
         {

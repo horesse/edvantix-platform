@@ -18,7 +18,7 @@ namespace Edvantix.Migrations.PostgreSQL.Tickets
 #pragma warning disable 612, 618
             modelBuilder
                 .HasDefaultSchema("tickets")
-                .HasAnnotation("ProductVersion", "10.0.8")
+                .HasAnnotation("ProductVersion", "10.0.10")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -31,6 +31,16 @@ namespace Edvantix.Migrations.PostgreSQL.Tickets
 
                     b.Property<Guid?>("AssignedToUserId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("Audience")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
 
                     b.Property<DateTime?>("ClosedAtUtc")
                         .HasColumnType("timestamp with time zone");
@@ -61,6 +71,15 @@ namespace Edvantix.Migrations.PostgreSQL.Tickets
                         .IsRequired()
                         .HasMaxLength(16)
                         .HasColumnType("character varying(16)");
+
+                    b.Property<Guid?>("RelatedInvoiceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("RelatedStudentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("RelatedStudyGroupId")
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("ReporterUserId")
                         .HasColumnType("uuid");
@@ -93,7 +112,20 @@ namespace Edvantix.Migrations.PostgreSQL.Tickets
 
                     b.HasIndex("AssignedToUserId");
 
+                    b.HasIndex("Audience");
+
+                    b.HasIndex("Category");
+
                     b.HasIndex("IsDeleted");
+
+                    b.HasIndex("RelatedInvoiceId")
+                        .HasFilter("\"RelatedInvoiceId\" IS NOT NULL");
+
+                    b.HasIndex("RelatedStudentId")
+                        .HasFilter("\"RelatedStudentId\" IS NOT NULL");
+
+                    b.HasIndex("RelatedStudyGroupId")
+                        .HasFilter("\"RelatedStudyGroupId\" IS NOT NULL");
 
                     b.HasIndex("ReporterUserId");
 
@@ -112,7 +144,6 @@ namespace Edvantix.Migrations.PostgreSQL.Tickets
             modelBuilder.Entity("FSH.Modules.Tickets.Domain.TicketComment", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("AuthorUserId")

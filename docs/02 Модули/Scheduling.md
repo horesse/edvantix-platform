@@ -211,10 +211,13 @@ flowchart TB
 |---|---|
 | `SessionScheduledIntegrationEvent` | `SessionId`, `StudyGroupId`, `StartUtc` |
 | `SessionCancelledIntegrationEvent` | `SessionId`, `StudyGroupId`, `Reason` |
-| `SessionRescheduledIntegrationEvent` | `SessionId`, `NewSessionId`, `OldStartUtc`, `NewStartUtc` |
+| `SessionRescheduledIntegrationEvent` | `SessionId`, `NewSessionId`, `StudyGroupId`, `OldStartUtc`, `NewStartUtc` |
 | `SessionHeldIntegrationEvent` | `SessionId`, `StudyGroupId`, `LessonId?`, `HeldAtUtc` |
 | `AttendanceMarkedIntegrationEvent` | `SessionId`, `StudentId`, `Status` |
 | `SessionReminderDueIntegrationEvent` | `SessionId`, `StudyGroupId`, `StartUtc` — публикуется `SessionReminderJob`, не событие жизненного цикла занятия, см. «Задания Hangfire» ниже |
+
+`StudyGroupId` в `SessionRescheduledIntegrationEvent` добавлен аддитивно для подписчика
+[[Notifications]] — `oldSession.StudyGroupId` уже был у издателя.
 
 ### Сервисы для других модулей
 

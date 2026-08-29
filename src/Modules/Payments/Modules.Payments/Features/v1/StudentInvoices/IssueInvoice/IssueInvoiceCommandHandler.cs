@@ -35,7 +35,8 @@ public sealed class IssueInvoiceCommandHandler(
         await outboxStore.AddAsync(
             new StudentInvoiceIssuedIntegrationEvent(
                 Guid.NewGuid(), now.UtcDateTime, tenantId, Guid.NewGuid().ToString(), "Payments",
-                invoice.Id, invoice.StudentId, invoice.PayerGuardianId, invoice.Total, invoice.DueDate),
+                invoice.Id, invoice.StudentId, invoice.PayerGuardianId, invoice.Total, invoice.DueDate,
+                invoice.Number, invoice.Currency),
             cancellationToken).ConfigureAwait(false);
 
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

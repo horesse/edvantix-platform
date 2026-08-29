@@ -18,7 +18,7 @@ namespace Edvantix.Migrations.PostgreSQL.Chat
 #pragma warning disable 612, 618
             modelBuilder
                 .HasDefaultSchema("chat")
-                .HasAnnotation("ProductVersion", "10.0.8")
+                .HasAnnotation("ProductVersion", "10.0.10")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -95,6 +95,9 @@ namespace Edvantix.Migrations.PostgreSQL.Chat
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsLocked")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsPrivate")
                         .HasColumnType("boolean");
 
@@ -108,6 +111,9 @@ namespace Edvantix.Migrations.PostgreSQL.Chat
                     b.Property<string>("Slug")
                         .HasMaxLength(220)
                         .HasColumnType("character varying(220)");
+
+                    b.Property<Guid?>("SourceStudyGroupId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("TenantId")
                         .IsRequired()
@@ -123,6 +129,9 @@ namespace Edvantix.Migrations.PostgreSQL.Chat
 
                     b.HasIndex("IsDeleted");
 
+                    b.HasIndex("SourceStudyGroupId")
+                        .HasFilter("\"SourceStudyGroupId\" IS NOT NULL");
+
                     b.HasIndex("DirectKey", "TenantId")
                         .IsUnique()
                         .HasDatabaseName("IX_Channels_DirectKey")
@@ -134,6 +143,28 @@ namespace Edvantix.Migrations.PostgreSQL.Chat
                         .HasFilter("\"Slug\" IS NOT NULL AND \"IsDeleted\" = FALSE");
 
                     b.ToTable("Channels", "chat");
+
+                    b.HasAnnotation("Finbuckle:MultiTenant", true);
+                });
+
+            modelBuilder.Entity("FSH.Modules.Chat.Domain.ChatDmSettings", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("AllowStudentToStudentDm")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("TenantId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("DmSettings", "chat");
 
                     b.HasAnnotation("Finbuckle:MultiTenant", true);
                 });

@@ -24,9 +24,12 @@ tags: [модуль, каркас, tickets]
 | `Number` | человекочитаемый номер |
 | `Title`, `Description` | |
 | `Status`, `Priority` | `TicketStatus`, `TicketPriority` |
+| `Category` | `TicketCategory`: `General`/`Payment`/`Schedule`/`GroupChange`/`TeachingQuality`/`Technical`. По умолчанию `General` |
+| `Audience` | `TicketAudience`: `School`/`Platform` — кто обрабатывает. По умолчанию выводится из `Category` (`TicketClassificationDefaults`: только `Technical` → `Platform`), можно задать явно при создании |
 | `ReporterUserId` | автор, обязателен |
 | `AssignedToUserId` | исполнитель, nullable |
 | `ResolutionNote` | |
+| `RelatedStudentId`, `RelatedStudyGroupId`, `RelatedInvoiceId` | контекст обращения, nullable — непрозрачные id, модуль не ссылается на People/StudyGroups/Payments в рантайме; частичные индексы под фильтр «обращения по этому ученику/группе/счёту». Меняются на любом статусе (это метаданные, не жизненный цикл) |
 | `CreatedAtUtc`, `UpdatedAtUtc`, `ResolvedAtUtc`, `ClosedAtUtc` | |
 
 `TicketComment` — переписка, принадлежит агрегату.
@@ -87,21 +90,51 @@ GET    /api/v1/tickets/trash
 
 ## Применение в Edvantix
 
-Два потока обращений, которые модуль пока не различает:
+Два потока обращений различаются полем `Audience`:
 
-| Поток | Кто → кому | Пример |
-|---|---|---|
-| Внутренний | пользователь школы → поддержка Edvantix | «не генерируется расписание» |
-| Школьный | ученик или представитель → администрация школы | «хотим сменить группу» |
+| Поток | `Audience` | Кто → кому | Пример |
+|---|---|---|---|
+| Внутренний | `Platform` | пользователь школы → поддержка Edvantix | «не генерируется расписание» |
+| Школьный | `School` | ученик или представитель → администрация школы | «хотим сменить группу» |
 
 Второй важнее для продукта: он заменяет переписку в мессенджерах.
+
+**Категория и адресат.** `Category` определяет `Audience` по умолчанию
+(`TicketClassificationDefaults`, только `Technical` → `Platform`); при создании
+`Audience` можно переопределить явно, при `UpdateTicket` — пересчитывается из новой
+категории (если не задан явно). `SearchTicketsQuery` (и `GET /tickets`) фильтруют
+по `category` и `audience`. Дефолтный **исполнитель** по категории (конкретный
+`AssignedToUserId`) — отдельная задача: нужен пер-тенантный справочник персонала.
 
 Ограничение текущей модели: `ReporterUserId` обязателен — обращение может создать
 только пользователь с учётной записью. Для представителей это выполняется.
 
+**Контекст обращения.** `CreateTicketCommand`/`UpdateTicketCommand` принимают
+опциональные `RelatedStudentId` / `RelatedStudyGroupId` / `RelatedInvoiceId`;
+`SearchTicketsQuery` (и `GET /tickets`) фильтруют по ним. `PUT /tickets/{id}` —
+полная замена: не переданная ссылка очищается. `Guid.Empty` → «не задано»
+(нормализуется в домене, плюс отклоняется валидатором). Обращение «верните деньги»
+теперь можно привязать к счёту; на карточке ученика — история его обращений.
+
+## Вложения
+
+Файлы прикрепляются через общие эндпоинты [[Files]] с `ownerType=Ticket`,
+`ownerId={ticketId}` — в контрактах команд Tickets ничего для вложений нет
+(как и у [[Chat]] по факту: вложение — это отдельный `FileAsset`, а не поле команды).
+Единственный гейт — `TicketFileAccessPolicy` (`Modules.Tickets/Authorization/`):
+
+| Операция | Кто |
+|---|---|
+| Attach / Read | автор (`ReporterUserId`) или исполнитель (`AssignedToUserId`) обращения |
+| Delete / смена видимости | только загрузивший |
+
+Более широкий доступ (менеджер, не назначенный на тикет) — через назначение
+на обращение (`AssignTicket`); аналог membership-правила [[Chat]]. Проверки прав
+`Tickets.View` в политику не заводили, чтобы не тянуть в модуль `Identity.Contracts`.
+
 ## Зависимости
 
-**Ссылается на:** `Identity.Contracts`, `Multitenancy.Contracts`.
+**Ссылается на:** `Identity.Contracts`, `Multitenancy.Contracts`, `Files.Contracts`.
 
 **Подписаны на его события:** [[Notifications]].
 
