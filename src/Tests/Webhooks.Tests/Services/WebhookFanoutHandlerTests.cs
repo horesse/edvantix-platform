@@ -42,7 +42,16 @@ public sealed class WebhookFanoutHandlerTests
         await handler.HandleAsync(new FakeIntegrationEvent(TenantId));
 
         await _dispatcher.Received(1).EnqueueAsync(
-            TenantId, subId, EventType, "{\"serialized\":true}", Arg.Any<CancellationToken>());
+            TenantId, subId, EventType, Arg.Any<string>(), Arg.Any<CancellationToken>());
+
+        // Payload is the public envelope, not a raw dump of the event.
+        var captured = (string)_dispatcher.ReceivedCalls()
+            .Single(c => c.GetMethodInfo().Name == nameof(IWebhookDispatcher.EnqueueAsync))
+            .GetArguments()[3]!;
+        using var doc = System.Text.Json.JsonDocument.Parse(captured);
+        doc.RootElement.GetProperty("type").GetString().ShouldBe(EventType);
+        doc.RootElement.GetProperty("tenantId").GetString().ShouldBe(TenantId);
+        doc.RootElement.GetProperty("data").GetProperty("serialized").GetBoolean().ShouldBeTrue();
     }
 
     [Fact]
