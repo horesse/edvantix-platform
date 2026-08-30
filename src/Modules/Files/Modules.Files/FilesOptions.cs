@@ -25,4 +25,14 @@ public sealed class FileCategoryOptions
 {
     public List<string> AllowedExtensions { get; set; } = [];
     public long MaxBytes { get; set; }
+
+    /// <summary>
+    /// When non-empty, binds this category to a fixed set of owner types. The binding is symmetric:
+    /// an upload for one of these owner types is <b>only</b> accepted through a category that names
+    /// it, and this category rejects uploads for any other owner type. Leave empty for a general
+    /// category (Image/Document/Archive) that any owner type may use. Lets an operator hand a
+    /// feature its own extension whitelist and size cap — e.g. lesson materials get a curated list
+    /// without video containers — that a caller cannot sidestep by picking a looser category.
+    /// </summary>
+    public List<string> OwnerTypes { get; set; } = [];
 }
