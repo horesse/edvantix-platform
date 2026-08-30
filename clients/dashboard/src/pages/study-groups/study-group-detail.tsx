@@ -1000,6 +1000,9 @@ function EnrollDialog({
           : describe(err);
       setEnrollError(msg);
       toast.error("Не удалось зачислить", { description: msg });
+      // The server may enroll part of the batch before hitting capacity — refresh
+      // the roster behind the still-open dialog so it reflects any partial change.
+      onDone();
     },
   });
 
