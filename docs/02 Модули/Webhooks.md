@@ -48,8 +48,13 @@ tags: [модуль, каркас, webhooks]
 
 ## Права
 
-`WebhooksPermissions`, ресурс `Webhooks`. Кросс-тенантное администрирование —
-`SystemPermissions.Platform.Webhooks` (`IsRoot: true`).
+`WebhooksPermissions`, ресурс `Webhooks`: `View`/`Create`/`Delete`/`Test` — всё
+**тенант-скоуп**. Все пять эндпоинтов требуют именно эти права; подписки изолированы по
+тенанту (`WebhookDbContext`), школа управляет только своими. Школьные роли `SchoolAdmin`
+и `Manager` получают полный набор штатно (ресурс не root и не Identity-managed).
+
+`SystemPermissions.Platform.Webhooks` (`IsRoot: true`) объявлено в `BuildingBlocks/Shared`,
+но модулем **не используется** — кросс-тенантного администрирования вебхуков нет.
 
 ## HTTP API
 

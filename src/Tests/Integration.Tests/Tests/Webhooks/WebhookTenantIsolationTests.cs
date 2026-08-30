@@ -115,6 +115,54 @@ public sealed class WebhookTenantIsolationTests
         crossTrigger.StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
 
+    [Fact]
+    public async Task School_Tenant_Principal_Can_Run_The_Full_Subscription_Lifecycle()
+    {
+        // Backlog "тенантные подписки школы работают": a non-root tenant principal drives the whole
+        // lifecycle through the tenant-scoped Permissions.Webhooks.* claims — the root-only
+        // Platform.Webhooks permission is not on this path.
+        using var rootClient = await _auth.CreateRootAdminClientAsync();
+        var uniqueId = Guid.NewGuid().ToString("N")[..8];
+        var tenantId = $"webhook-school-{uniqueId}";
+        var adminEmail = $"webhook-schooladmin-{uniqueId}@tenant.com";
+
+        await CreateTenantAsync(rootClient, tenantId, adminEmail);
+        await WaitForProvisioningAsync(rootClient, tenantId);
+        using var schoolClient = await CreateTenantAdminClientWithRetryAsync(
+            adminEmail, TestConstants.DefaultPassword, tenantId);
+
+        var catalog = await schoolClient.GetAsync($"{TestConstants.WebhooksBasePath}/event-types");
+        catalog.StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await catalog.Content.ReadAsStringAsync()).ShouldContain("StudentEnrolledIntegrationEvent");
+
+        var create = await schoolClient.PostAsJsonAsync(
+            $"{TestConstants.WebhooksBasePath}/subscriptions", new
+            {
+                url = $"https://example.com/school-hook-{uniqueId}",
+                events = new[] { "StudentEnrolledIntegrationEvent", "StudentInvoiceIssuedIntegrationEvent" },
+                secret = "school-secret"
+            });
+        create.StatusCode.ShouldBe(HttpStatusCode.Created);
+        var subId = await create.Content.ReadFromJsonAsync<Guid>();
+
+        var list = await schoolClient.GetAsync(
+            $"{TestConstants.WebhooksBasePath}/subscriptions?pageNumber=1&pageSize=50");
+        list.StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await list.Content.ReadAsStringAsync()).ShouldContain(subId.ToString());
+
+        var deliveries = await schoolClient.GetAsync(
+            $"{TestConstants.WebhooksBasePath}/subscriptions/{subId}/deliveries?pageNumber=1&pageSize=10");
+        deliveries.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        var test = await schoolClient.PostAsync(
+            $"{TestConstants.WebhooksBasePath}/subscriptions/{subId}/test", content: null);
+        test.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        var delete = await schoolClient.DeleteAsync(
+            $"{TestConstants.WebhooksBasePath}/subscriptions/{subId}");
+        delete.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+    }
+
     private async Task<HttpClient> CreateTenantAdminClientWithRetryAsync(
         string email, string password, string tenant, int maxRetries = 30)
     {
