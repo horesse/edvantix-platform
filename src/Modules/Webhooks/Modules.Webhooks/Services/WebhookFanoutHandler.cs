@@ -79,7 +79,10 @@ public sealed class WebhookFanoutHandler<TEvent> : IIntegrationEventHandler<TEve
                 return;
             }
 
-            var payload = _serializer.Serialize(@event);
+            // Ship the stable public envelope, not a raw dump of the internal event record.
+            var payload = WebhookEnvelopeBuilder.Build(
+                @event.Id, eventType, @event.TenantId!, @event.OccurredOnUtc, _serializer.Serialize(@event));
+
             foreach (var subscription in matching)
             {
                 try

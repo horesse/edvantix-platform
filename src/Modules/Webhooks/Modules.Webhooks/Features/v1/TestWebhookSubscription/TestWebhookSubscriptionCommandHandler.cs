@@ -1,17 +1,20 @@
+using System.Text.Json.Nodes;
+using Finbuckle.MultiTenant.Abstractions;
 using FSH.Framework.Core.Exceptions;
+using FSH.Framework.Shared.Multitenancy;
 using FSH.Modules.Webhooks.Contracts.v1.TestWebhookSubscription;
 using FSH.Modules.Webhooks.Data;
 using FSH.Modules.Webhooks.Services;
 using Mediator;
 using Microsoft.EntityFrameworkCore;
-using System.Text.Json;
 
 namespace FSH.Modules.Webhooks.Features.v1.TestWebhookSubscription;
 
 public sealed class TestWebhookSubscriptionCommandHandler(
     WebhookDbContext dbContext,
     IWebhookDeliveryService deliveryService,
-    IWebhookSecretProtector secretProtector) : ICommandHandler<TestWebhookSubscriptionCommand, bool>
+    IWebhookSecretProtector secretProtector,
+    IMultiTenantContextAccessor<AppTenantInfo> tenantAccessor) : ICommandHandler<TestWebhookSubscriptionCommand, bool>
 {
     public async ValueTask<bool> Handle(TestWebhookSubscriptionCommand command, CancellationToken cancellationToken)
     {
@@ -23,12 +26,11 @@ public sealed class TestWebhookSubscriptionCommandHandler(
             .ConfigureAwait(false)
             ?? throw new NotFoundException($"Webhook subscription {command.Id} not found.");
 
-        var testPayload = JsonSerializer.Serialize(new
-        {
-            eventType = "webhook.test",
-            timestamp = TimeProvider.System.GetUtcNow().UtcDateTime,
-            message = "This is a test webhook delivery."
-        });
+        var tenantId = tenantAccessor.MultiTenantContext.TenantInfo?.Id ?? string.Empty;
+        var data = new JsonObject { ["message"] = "This is a test webhook delivery." };
+        var testPayload = WebhookEnvelopeBuilder.Build(
+            Guid.CreateVersion7(), "webhook.test", tenantId,
+            TimeProvider.System.GetUtcNow().UtcDateTime, data);
 
         await deliveryService.DeliverAsync(
             subscription.Id,

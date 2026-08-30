@@ -87,6 +87,22 @@ public sealed class GetAuditsQueryHandler : IQueryHandler<GetAuditsQuery, PagedR
             audits = audits.Where(a => a.Source == query.Source);
         }
 
+        if (!string.IsNullOrWhiteSpace(query.EntityName))
+        {
+            // Same jsonb-as-text ILIKE style as the exception/security filters: (jsonb)::text
+            // renders "key": "value" with a space after the colon, so the pattern includes it.
+            string entityName = query.EntityName;
+            audits = audits.Where(a => a.PayloadJson != null &&
+                EF.Functions.ILike(AsText(a.PayloadJson), $"%\"entityName\": \"{entityName}\"%"));
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.EntityKey))
+        {
+            string entityKey = query.EntityKey;
+            audits = audits.Where(a => a.PayloadJson != null &&
+                EF.Functions.ILike(AsText(a.PayloadJson), $"%\"key\": \"{entityKey}\"%"));
+        }
+
         if (!string.IsNullOrWhiteSpace(query.CorrelationId))
         {
             audits = audits.Where(a => a.CorrelationId == query.CorrelationId);

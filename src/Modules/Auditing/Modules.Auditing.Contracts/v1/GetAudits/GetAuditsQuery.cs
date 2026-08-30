@@ -33,6 +33,16 @@ public sealed class GetAuditsQuery : IPagedQuery, IQuery<PagedResponse<AuditSumm
 
     public string? Source { get; set; }
 
+    /// <summary>Entity-change history filter: the audited entity's CLR type name
+    /// (<c>EntityChangeEventPayload.EntityName</c>), e.g. <c>Student</c>. Non-entity-change
+    /// events carry no <c>entityName</c> and are excluded when this is set.</summary>
+    public string? EntityName { get; set; }
+
+    /// <summary>Entity-change history filter: the unified key
+    /// (<c>EntityChangeEventPayload.Key</c>), e.g. <c>Id:3f2504e0-...</c> or a composite
+    /// <c>TenantId:1|UserId:42</c>. Requires <see cref="EntityName"/>.</summary>
+    public string? EntityKey { get; set; }
+
     public string? CorrelationId { get; set; }
 
     public string? TraceId { get; set; }

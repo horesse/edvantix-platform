@@ -6,6 +6,7 @@ using FSH.Modules.Identity.Authorization;
 using FSH.Modules.Identity.Contracts.Authorization;
 using FSH.Modules.Identity.Data;
 using FSH.Modules.Identity.Domain;
+using FSH.Modules.Webhooks.Contracts.Authorization;
 using Integration.Tests.Infrastructure;
 using Microsoft.AspNetCore.Identity;
 
@@ -68,6 +69,26 @@ public sealed class SchoolRolesSeedingTests
         managerClaims.ShouldContain(IdentityPermissions.Users.View);
         managerClaims.ShouldNotContain(IdentityPermissions.Users.Create);
         managerClaims.ShouldNotContain(IdentityPermissions.Users.ManageRoles);
+    }
+
+    [Fact]
+    public async Task SeedAsync_Should_GiveSchool_ItsOwn_TenantScoped_WebhookClaims()
+    {
+        // "тенантные подписки школы работают" — the school gets the tenant-scoped Permissions.Webhooks.*
+        // claims (not the root-only Platform.Webhooks). SchoolAdmin gets the full set; Manager, since
+        // Webhooks is not an Identity-managed resource, gets it too.
+        var tenant = await CreateSchoolTenantAsync();
+
+        var schoolAdminClaims = await GetClaimsAsync(tenant, SchoolRoleConstants.SchoolAdmin);
+        var managerClaims = await GetClaimsAsync(tenant, SchoolRoleConstants.Manager);
+
+        foreach (var claims in new[] { schoolAdminClaims, managerClaims })
+        {
+            claims.ShouldContain(WebhooksPermissions.Subscriptions.View);
+            claims.ShouldContain(WebhooksPermissions.Subscriptions.Create);
+            claims.ShouldContain(WebhooksPermissions.Subscriptions.Delete);
+            claims.ShouldContain(WebhooksPermissions.Subscriptions.Test);
+        }
     }
 
     #endregion

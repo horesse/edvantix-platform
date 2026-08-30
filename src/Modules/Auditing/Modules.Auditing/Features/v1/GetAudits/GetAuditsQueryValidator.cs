@@ -22,5 +22,12 @@ public sealed class GetAuditsQueryValidator : AbstractValidator<GetAuditsQuery>
                 || !q.ToUtc.HasValue
                 || (q.ToUtc.Value - q.FromUtc.Value) <= GetAuditsQueryHandler.MaxWindow)
             .WithMessage($"Audit query window cannot exceed {GetAuditsQueryHandler.MaxWindow.TotalDays:0} days.");
+
+        // EntityKey alone is ambiguous ("Id:..." collides across entity types); it only
+        // narrows a history query when paired with the entity type name.
+        RuleFor(q => q.EntityName)
+            .NotEmpty()
+            .When(q => !string.IsNullOrWhiteSpace(q.EntityKey))
+            .WithMessage("EntityName is required when EntityKey is supplied.");
     }
 }

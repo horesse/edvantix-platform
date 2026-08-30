@@ -95,6 +95,7 @@ flowchart LR
 
 ```
 GET    /api/v1/audits
+GET    /api/v1/audits/by-entity/{entityName}/{entityId}
 GET    /api/v1/audits/{id}
 GET    /api/v1/audits/correlation/{correlationId}
 GET    /api/v1/audits/trace/{traceId}
@@ -103,9 +104,23 @@ GET    /api/v1/audits/security
 GET    /api/v1/audits/exceptions
 ```
 
+### История одной сущности
+
+`GET /api/v1/audits/by-entity/{entityName}/{entityId}` — «история этого ученика/счёта/
+занятия» для карточки сущности. Тонкая оболочка над `GetAuditsQuery`: подставляет
+`EntityName` и собирает унифицированный `EntityKey = "Id:{entityId}"`, постранично и с
+окном дат как у `GET /audits`. Для составных ключей (`TenantId:1|UserId:42`) —
+`GET /audits?entityName=…&entityKey=…` напрямую. Фильтр идёт по `jsonb`-полям
+`EntityChangeEventPayload.EntityName`/`.Key` (`AsText`+`ILIKE`, как security/exception),
+схема `AuditRecords` не меняется.
+
 ## Что аудируется в Edvantix
 
-Автоматически — изменения всех сущностей всех модулей. Критичные для школы:
+Автоматически — изменения всех сущностей всех модулей. Не-CRUD действия
+интерцептор не видит, поэтому пишутся вручную через `IAuditClient.WriteActivityAsync`:
+выгрузка списка должников (`GetDebtorsReport`, [[Payments]]) и просмотр внутренних
+заметок ученика (`GetStudentNotes`, [[People]]) — `Activity`-запись без чувствительного
+тела. Критичные для школы:
 
 | Действие | Почему важно |
 |---|---|

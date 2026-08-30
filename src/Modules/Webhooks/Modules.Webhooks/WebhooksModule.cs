@@ -8,6 +8,7 @@ using FSH.Modules.Webhooks.Data;
 using FSH.Modules.Webhooks.Features.v1.CreateWebhookSubscription;
 using FSH.Modules.Webhooks.Features.v1.DeleteWebhookSubscription;
 using FSH.Modules.Webhooks.Features.v1.GetWebhookDeliveries;
+using FSH.Modules.Webhooks.Features.v1.GetWebhookEventCatalog;
 using FSH.Modules.Webhooks.Features.v1.GetWebhookSubscriptions;
 using FSH.Modules.Webhooks.Features.v1.TestWebhookSubscription;
 using FSH.Framework.Eventing.Abstractions;
@@ -77,6 +78,7 @@ public sealed class WebhooksModule : IModule
         group.MapCreateWebhookSubscriptionEndpoint();
         group.MapDeleteWebhookSubscriptionEndpoint();
         group.MapGetWebhookSubscriptionsEndpoint();
+        group.MapGetWebhookEventCatalogEndpoint();
         group.MapGetWebhookDeliveriesEndpoint();
         group.MapTestWebhookSubscriptionEndpoint();
     }
