@@ -38,6 +38,17 @@ public sealed class AuditRetentionJob
             return;
         }
 
+        // A non-positive window would translate to a future cutoff and purge the whole table —
+        // refuse to run rather than trust a misconfigured value.
+        var minWindow = Math.Min(
+            Math.Min(_opts.ActivityRetentionDays, _opts.EntityChangeRetentionDays),
+            Math.Min(_opts.SecurityRetentionDays, _opts.ExceptionRetentionDays));
+        if (minWindow < 1)
+        {
+            _logger.LogWarning("[Auditing] retention job skipped — a retention window is < 1 day ({MinWindow}).", minWindow);
+            return;
+        }
+
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         long total = 0;
         total += await SweepAsync(AuditEventType.Activity, now.AddDays(-_opts.ActivityRetentionDays), ct).ConfigureAwait(false);

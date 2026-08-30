@@ -41,6 +41,24 @@ public sealed class RequestUploadUrlCommandHandler(
             throw new CustomException($"Unknown category '{cmd.Category}'.", (IEnumerable<string>?)null, HttpStatusCode.BadRequest);
         }
 
+        // Owner-type ↔ category binding: a feature can be pinned to its own curated category so a
+        // caller can't attach, say, a lesson-material file through the looser "Document" category.
+        var binding = FileCategoryPolicy.Check(options.Value.Categories, cmd.Category, cmd.OwnerType, out var requiredCategories);
+        if (binding == FileCategoryPolicy.Outcome.CategoryNotForOwnerType)
+        {
+            throw new CustomException(
+                $"Category '{cmd.Category}' is not available for owner type '{cmd.OwnerType}'.",
+                (IEnumerable<string>?)null,
+                HttpStatusCode.BadRequest);
+        }
+        if (binding == FileCategoryPolicy.Outcome.OwnerTypeRequiresBoundCategory)
+        {
+            throw new CustomException(
+                $"Owner type '{cmd.OwnerType}' must upload through category '{string.Join("' or '", requiredCategories)}'.",
+                (IEnumerable<string>?)null,
+                HttpStatusCode.BadRequest);
+        }
+
         var extension = Path.GetExtension(cmd.FileName);
         if (string.IsNullOrWhiteSpace(extension) ||
             !category.AllowedExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase))

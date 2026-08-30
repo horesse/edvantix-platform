@@ -56,6 +56,46 @@ public sealed class UploadValidationTests
     }
 
     [Fact]
+    public async Task UploadUrl_Should_Return400_When_BoundCategory_Used_For_Foreign_OwnerType()
+    {
+        using var client = await _auth.CreateRootAdminClientAsync();
+
+        // "LessonMaterial" category is bound to OwnerType=LessonMaterial; a MyFiles upload can't use it.
+        using var response = await PostUploadUrlAsync(
+            client, fileName: "notes.pdf", contentType: "application/pdf", sizeBytes: 256,
+            category: "LessonMaterial", ownerType: "MyFiles");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task UploadUrl_Should_Return400_When_LessonMaterial_Upload_Sidesteps_Its_Bound_Category()
+    {
+        using var client = await _auth.CreateRootAdminClientAsync();
+
+        // A lesson-material file must go through the curated "LessonMaterial" category, not "Document".
+        using var response = await PostUploadUrlAsync(
+            client, fileName: "notes.pdf", contentType: "application/pdf", sizeBytes: 256,
+            category: "Document", ownerType: "LessonMaterial");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task UploadUrl_Should_Return400_When_Video_Extension_Not_Allowed_For_LessonMaterial()
+    {
+        using var client = await _auth.CreateRootAdminClientAsync();
+
+        // Video containers are deliberately absent from the LessonMaterial whitelist — those are
+        // added as MaterialKind.Video external links, not direct uploads.
+        using var response = await PostUploadUrlAsync(
+            client, fileName: "lecture.mp4", contentType: "video/mp4", sizeBytes: 256,
+            category: "LessonMaterial", ownerType: "LessonMaterial");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
     public async Task UploadUrl_Should_Return403_When_OwnerType_Has_No_Registered_Policy()
     {
         using var client = await _auth.CreateRootAdminClientAsync();

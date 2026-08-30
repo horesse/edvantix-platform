@@ -7,6 +7,7 @@ using FSH.Modules.Auditing.Features.v1.GetAudits;
 using FSH.Modules.Auditing.Features.v1.GetAuditsByCorrelation;
 using FSH.Modules.Auditing.Features.v1.GetAuditsByTrace;
 using FSH.Modules.Auditing.Features.v1.GetAuditSummary;
+using FSH.Modules.Auditing.Features.v1.GetAuditLabels;
 using FSH.Modules.Auditing.Features.v1.GetEntityAudits;
 using FSH.Modules.Auditing.Features.v1.GetExceptionAudits;
 using FSH.Modules.Auditing.Features.v1.GetSecurityAudits;
@@ -86,6 +87,7 @@ public class AuditingModule : IModule
             .WithApiVersionSet(apiVersionSet);
 
         group.MapGetAuditsEndpoint();
+        group.MapGetAuditLabelsEndpoint();
         group.MapGetEntityAuditsEndpoint();
         group.MapGetAuditByIdEndpoint();
         group.MapGetAuditsByCorrelationEndpoint();

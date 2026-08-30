@@ -3,7 +3,7 @@
 	<PropertyGroup>
 		<RootNamespace>FSH.Modules.Curriculum</RootNamespace>
 		<AssemblyName>FSH.Modules.Curriculum</AssemblyName>
-		<NoWarn>$(NoWarn);CA1031;CA1812;CA1859;S3267</NoWarn>
+		<NoWarn>$(NoWarn);CA1002;CA1031;CA1812;CA1859;CA2227;S3267</NoWarn>
 	</PropertyGroup>
 
 	<ItemGroup>

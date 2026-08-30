@@ -120,6 +120,28 @@ public sealed class BillingEndpointTests
     }
 
     [Fact]
+    public async Task Plan_Description_Should_RoundTrip_Through_Create_And_Update()
+    {
+        using var client = await _auth.CreateRootAdminClientAsync();
+        var key = UniqueKey("desc");
+
+        using var createResponse = await client.PostAsJsonAsync($"{BillingBasePath}/plans",
+            new { key, name = "Школа", currency = "USD", monthlyBasePrice = 29m, description = "до 100 учеников" });
+        createResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var planId = await createResponse.DeserializeAsync<Guid>();
+
+        var afterCreate = (await GetPlansAsync(client)).Single(p => p.Id == planId);
+        afterCreate.Description.ShouldBe("до 100 учеников");
+
+        using var updateResponse = await client.PutAsJsonAsync($"{BillingBasePath}/plans/{planId}",
+            new { planId, name = "Школа", monthlyBasePrice = 29m, description = "до 300 учеников" });
+        updateResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        var afterUpdate = (await GetPlansAsync(client)).Single(p => p.Id == planId);
+        afterUpdate.Description.ShouldBe("до 300 учеников");
+    }
+
+    [Fact]
     public async Task UpdatePlan_Should_Return404_When_PlanDoesNotExist()
     {
         using var client = await _auth.CreateRootAdminClientAsync();

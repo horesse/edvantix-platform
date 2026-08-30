@@ -84,7 +84,16 @@ flowchart LR
 ### Настройки
 
 `AuditHttpOptions` — что писать из HTTP-контекста.
-`AuditRetentionOptions` — срок хранения записей.
+`AuditRetentionOptions` — срок хранения записей. Ежедневный Hangfire-джоб
+(`AuditRetentionJob`, `auditing-retention`, регистрируется всегда — но `Enabled=false`
+по умолчанию) чистит `AuditRecords` порциями `ExecuteDeleteAsync` по окну на каждый тип
+события. **Политика по умолчанию** (`appsettings.json`, `Auditing:Retention`): включён,
+`EntityChange` 180 дней (изменения занятий/посещаемости растут быстрее всего — семестр
+плюс окно на спор), `Activity` 30, `Security` 730 (комплаенс), `Exception` 180,
+`Cron` `30 3 * * *`. В `Development` джоб выключен (`appsettings.Development.json`).
+Джоб отказывается работать, если любое окно `< 1` дня (иначе отсечка уходит в будущее и
+таблица очищается целиком). Привязка окон к тарифу [[Billing]] — сознательно отложена
+(требует новой оси `QuotaResource` / продуктового решения, как и прочие Quota-пункты).
 
 ## Права
 
@@ -95,6 +104,7 @@ flowchart LR
 
 ```
 GET    /api/v1/audits
+GET    /api/v1/audits/entity-labels
 GET    /api/v1/audits/by-entity/{entityName}/{entityId}
 GET    /api/v1/audits/{id}
 GET    /api/v1/audits/correlation/{correlationId}
@@ -113,6 +123,16 @@ GET    /api/v1/audits/exceptions
 `GET /audits?entityName=…&entityKey=…` напрямую. Фильтр идёт по `jsonb`-полям
 `EntityChangeEventPayload.EntityName`/`.Key` (`AsText`+`ILIKE`, как security/exception),
 схема `AuditRecords` не меняется.
+
+### Читаемые названия
+
+Аудит пишет `entityType.ClrType.Name` и сырые имена свойств — в UI это выглядело как
+`StudentInvoice` / `PayerGuardianId`. `GET /api/v1/audits/entity-labels` отдаёт
+`{ entities, fields }` — словари «сырое имя → человекочитаемая подпись» из статического
+`AuditLabelCatalog` (`Modules.Auditing.Contracts/Catalog/`). Единый источник для фронта
+вместо хардкода; несловарное имя показывается как есть (`EntityLabel`/`FieldLabel`
+возвращают исходную строку). Поле-локализация намеренно маленькая — только
+общие/непрозрачные поля.
 
 ## Что аудируется в Edvantix
 
