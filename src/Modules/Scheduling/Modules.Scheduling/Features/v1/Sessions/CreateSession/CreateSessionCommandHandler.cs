@@ -2,7 +2,9 @@ using System.Net;
 using Finbuckle.MultiTenant.Abstractions;
 using FSH.Framework.Core.Exceptions;
 using FSH.Framework.Eventing.Outbox;
+using FSH.Framework.Quota;
 using FSH.Framework.Shared.Multitenancy;
+using FSH.Framework.Shared.Quota;
 using FSH.Modules.Scheduling.Contracts.Events;
 using FSH.Modules.Scheduling.Contracts.v1.Sessions;
 using FSH.Modules.Scheduling.Data;
@@ -21,7 +23,8 @@ public sealed class CreateSessionCommandHandler(
     IStudyGroupQueryService studyGroupQueryService,
     [FromKeyedServices(typeof(SchedulingDbContext))] IOutboxStore outboxStore,
     IMultiTenantContextAccessor<AppTenantInfo> multiTenantContextAccessor,
-    ISessionRealtimeNotifier realtimeNotifier)
+    ISessionRealtimeNotifier realtimeNotifier,
+    IQuotaService quotas)
     : ICommandHandler<CreateSessionCommand, Guid>
 {
     public async ValueTask<Guid> Handle(CreateSessionCommand command, CancellationToken cancellationToken)
@@ -31,6 +34,15 @@ public sealed class CreateSessionCommandHandler(
         _ = await studyGroupQueryService.GetBriefAsync(command.StudyGroupId, cancellationToken)
             .ConfigureAwait(false)
             ?? throw new NotFoundException($"StudyGroup {command.StudyGroupId} not found.");
+
+        var tenantId = multiTenantContextAccessor.MultiTenantContext.TenantInfo?.Id;
+        if (!string.IsNullOrWhiteSpace(tenantId))
+        {
+            // Soft plan-limit block (402) on sessions scheduled this UTC month. Bulk template
+            // generation (GenerateSessions) is intentionally not gated here.
+            await quotas.EnsureHeadroomAsync(tenantId, QuotaResource.MonthlySessions, 1, cancellationToken)
+                .ConfigureAwait(false);
+        }
 
         if (!command.Force)
         {
@@ -65,7 +77,6 @@ public sealed class CreateSessionCommandHandler(
 
         dbContext.Sessions.Add(session);
 
-        var tenantId = multiTenantContextAccessor.MultiTenantContext.TenantInfo?.Id;
         await outboxStore.AddAsync(
             new SessionScheduledIntegrationEvent(
                 Id: Guid.NewGuid(),

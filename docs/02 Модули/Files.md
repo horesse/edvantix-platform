@@ -130,6 +130,15 @@ GET    /api/v1/files/trash
 ([[Curriculum]] → «Материалы урока»), а не прямой загрузкой гигабайтов в MinIO. Потолок —
 25 МиБ.
 
+### Лимит объёма по тарифному плану
+
+Сверх потолка категории действует квота хранилища школы — `QuotaResource.StorageBytes`,
+лимит из `QuotaOptions.Plans[<план>]` (2 ГиБ на `free`, 50 ГиБ на `pro`/`pro-annual`).
+`RequestUploadUrlCommandHandler` делает пред-проверку `IQuotaService.CheckAsync` (при
+превышении — **HTTP 507**, URL не выдаётся), `FinalizeUploadCommandHandler` списывает
+фактический размер, `PurgeDeletedFilesJob` возвращает при жёсткой очистке. Включается
+`QuotaOptions.Enabled` (в Development выключено).
+
 ## Зависимости
 
 **Ссылается на:** `Identity.Contracts`, `Multitenancy.Contracts`,

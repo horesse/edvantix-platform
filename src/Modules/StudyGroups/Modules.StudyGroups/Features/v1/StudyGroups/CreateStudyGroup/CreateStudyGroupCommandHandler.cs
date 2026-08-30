@@ -3,7 +3,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Finbuckle.MultiTenant.Abstractions;
 using FSH.Framework.Core.Exceptions;
 using FSH.Framework.Eventing.Outbox;
+using FSH.Framework.Quota;
 using FSH.Framework.Shared.Multitenancy;
+using FSH.Framework.Shared.Quota;
 using FSH.Modules.Curriculum.Contracts;
 using FSH.Modules.StudyGroups.Contracts.Events;
 using FSH.Modules.StudyGroups.Contracts.v1.StudyGroups;
@@ -18,12 +20,22 @@ public sealed class CreateStudyGroupCommandHandler(
     StudyGroupsDbContext dbContext,
     ICourseQueryService courseQueryService,
     [FromKeyedServices(typeof(StudyGroupsDbContext))] IOutboxStore outboxStore,
-    IMultiTenantContextAccessor<AppTenantInfo> multiTenantContextAccessor)
+    IMultiTenantContextAccessor<AppTenantInfo> multiTenantContextAccessor,
+    IQuotaService quotas)
     : ICommandHandler<CreateStudyGroupCommand, Guid>
 {
     public async ValueTask<Guid> Handle(CreateStudyGroupCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
+
+        var tenantId = multiTenantContextAccessor.MultiTenantContext.TenantInfo?.Id;
+        if (!string.IsNullOrWhiteSpace(tenantId))
+        {
+            // Soft plan-limit block (402) on the forming/active StudyGroups ceiling. Restoring a
+            // soft-deleted group is not gated.
+            await quotas.EnsureHeadroomAsync(tenantId, QuotaResource.StudyGroups, 1, cancellationToken)
+                .ConfigureAwait(false);
+        }
 
         // "Курс должен быть Published" (docs/02 Модули/StudyGroups.md → Инварианты) — checked via
         // Curriculum's cross-module service, not a local FK (different modules, Contracts-only link).
@@ -63,7 +75,6 @@ public sealed class CreateStudyGroupCommandHandler(
 
         dbContext.StudyGroups.Add(group);
 
-        var tenantId = multiTenantContextAccessor.MultiTenantContext.TenantInfo?.Id;
         await outboxStore.AddAsync(
             new StudyGroupCreatedIntegrationEvent(
                 Guid.NewGuid(), TimeProvider.System.GetUtcNow().UtcDateTime, tenantId,
