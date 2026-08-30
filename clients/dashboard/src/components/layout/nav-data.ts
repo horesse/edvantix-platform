@@ -104,6 +104,20 @@ export const sections: NavSection[] = [
     ],
   },
   {
+    id: "study-groups",
+    caption: "Учебные группы",
+    icon: UsersRound,
+    items: [
+      // Gate mirrors GET /study-groups → StudyGroups.View (the list endpoint's permission).
+      {
+        to: "/study-groups",
+        label: "Группы",
+        icon: UsersRound,
+        perm: "Permissions.StudyGroups.StudyGroups.View",
+      },
+    ],
+  },
+  {
     id: "catalog",
     caption: "Catalog",
     icon: Package,

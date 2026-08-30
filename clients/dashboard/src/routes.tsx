@@ -136,6 +136,18 @@ const CourseBuilderPage = lazyNamed(
   () => import("@/pages/curriculum/course-detail"),
   "CourseBuilderPage",
 );
+const StudyGroupsPage = lazyNamed(
+  () => import("@/pages/study-groups/study-groups-list"),
+  "StudyGroupsPage",
+);
+const MyStudyGroupsPage = lazyNamed(
+  () => import("@/pages/study-groups/my-study-groups"),
+  "MyStudyGroupsPage",
+);
+const StudyGroupBuilderPage = lazyNamed(
+  () => import("@/pages/study-groups/study-group-detail"),
+  "StudyGroupBuilderPage",
+);
 const MyFilesPage = lazyNamed(() => import("@/pages/files/my-files"), "MyFilesPage");
 const ChatPage = lazyNamed(() => import("@/pages/chat/chat-page"), "ChatPage");
 
@@ -247,6 +259,12 @@ export const router = createBrowserRouter([
           { path: "courses", element: withSuspense(<CoursesPage />) },
           { path: "courses/trash", element: withSuspense(<CoursesTrashPage />) },
           { path: "courses/:courseId", element: withSuspense(<CourseBuilderPage />) },
+          { path: "study-groups", element: withSuspense(<StudyGroupsPage />) },
+          { path: "study-groups/my", element: withSuspense(<MyStudyGroupsPage />) },
+          {
+            path: "study-groups/:studyGroupId",
+            element: withSuspense(<StudyGroupBuilderPage />),
+          },
           { path: "identity", element: <Navigate to="/identity/users" replace /> },
           { path: "identity/users", element: withSuspense(<UsersPage />) },
           { path: "identity/users/:userId", element: withSuspense(<UserDetailPage />) },

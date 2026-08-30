@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Archive,
   ArchiveRestore,
   CalendarDays,
+  ChevronRight,
   GraduationCap,
   Link2,
   Link2Off,
@@ -16,6 +17,7 @@ import {
   Star,
   Trash2,
   Users,
+  UsersRound,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -40,6 +42,11 @@ import {
   type UpdateStudentInput,
 } from "@/api/people";
 import { searchUsers, type UserDto } from "@/api/identity";
+import {
+  getStudentEnrollments,
+  searchStudyGroups,
+  type EnrollmentStatus,
+} from "@/api/study-groups";
 import { useAuth } from "@/auth/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -82,7 +89,20 @@ const STATUS_LABEL: Record<StudentStatus, string> = {
   Archived: "Архив",
 };
 
-type Tab = "profile" | "guardians" | "notes";
+const ENROLLMENT_STATUS_LABEL: Record<EnrollmentStatus, string> = {
+  Active: "Активен",
+  Paused: "Пауза",
+  Left: "Ушёл",
+  Completed: "Завершил",
+};
+const ENROLLMENT_STATUS_TONE: Record<EnrollmentStatus, EntityStatusTone> = {
+  Active: "success",
+  Paused: "warning",
+  Left: "default",
+  Completed: "info",
+};
+
+type Tab = "profile" | "guardians" | "notes" | "groups";
 
 export function StudentDetailPage() {
   const { studentId = "" } = useParams();
@@ -92,6 +112,7 @@ export function StudentDetailPage() {
   const canUpdate = perms.includes("Permissions.People.Students.Update");
   const canDelete = perms.includes("Permissions.People.Students.Delete");
   const canViewNotes = perms.includes("Permissions.People.Students.ViewNotes");
+  const canViewGroups = perms.includes("Permissions.StudyGroups.Enrollments.View");
 
   const [tab, setTab] = useState<Tab>("profile");
   const [editOpen, setEditOpen] = useState(false);
@@ -238,6 +259,11 @@ export function StudentDetailPage() {
         <TabPill active={tab === "guardians"} onClick={() => setTab("guardians")} icon={Users}>
           Представители
         </TabPill>
+        {canViewGroups && (
+          <TabPill active={tab === "groups"} onClick={() => setTab("groups")} icon={UsersRound}>
+            Группы
+          </TabPill>
+        )}
         {canViewNotes && (
           <TabPill active={tab === "notes"} onClick={() => setTab("notes")} icon={NotebookPen}>
             Заметки
@@ -294,6 +320,8 @@ export function StudentDetailPage() {
       {tab === "guardians" && (
         <GuardiansTab studentId={student.id} canUpdate={canUpdate} onChanged={invalidate} />
       )}
+
+      {tab === "groups" && canViewGroups && <GroupsTab studentId={student.id} />}
 
       {tab === "notes" && canViewNotes && (
         <NotesTab studentId={student.id} onChanged={invalidate} />
@@ -584,6 +612,90 @@ function AddGuardianDialog({
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// ───────────────────────────────────────────────────────────────────────
+//  Groups tab — the student's full enrollment history (all groups,
+//  including finished/left), via GET /students/{id}/enrollments.
+// ───────────────────────────────────────────────────────────────────────
+
+function GroupsTab({ studentId }: { studentId: string }) {
+  const query = useQuery({
+    queryKey: ["student-enrollments", studentId],
+    queryFn: () => getStudentEnrollments(studentId),
+  });
+
+  const groupsQuery = useQuery({
+    queryKey: ["study-groups", { pageSize: 100, for: "student-groups" }],
+    queryFn: () => searchStudyGroups({ pageSize: 100 }),
+    staleTime: 60_000,
+  });
+  const groupById = useMemo(() => {
+    const m = new Map<string, { code: string; name: string }>();
+    for (const g of groupsQuery.data?.items ?? []) m.set(g.id, { code: g.code, name: g.name });
+    return m;
+  }, [groupsQuery.data]);
+
+  const items = useMemo(() => {
+    const list = [...(query.data ?? [])];
+    list.sort((a, b) => b.enrolledOn.localeCompare(a.enrolledOn));
+    return list;
+  }, [query.data]);
+
+  return (
+    <EntityDetailSection
+      title="Учебные группы"
+      icon={UsersRound}
+      description="Все группы ученика, включая завершённые и покинутые."
+    >
+      {query.isLoading ? (
+        <p className="text-[13px] text-[var(--color-muted-foreground)]">Загрузка…</p>
+      ) : query.isError ? (
+        <p className="text-[13px] text-[var(--color-destructive)]">{describe(query.error)}</p>
+      ) : items.length === 0 ? (
+        <p className="text-[13px] text-[var(--color-muted-foreground)]">
+          Ученик пока не состоял ни в одной группе.
+        </p>
+      ) : (
+        <ul className="divide-y divide-[oklch(from_var(--color-border)_l_c_h_/_0.5)]">
+          {items.map((e) => {
+            const g = groupById.get(e.studyGroupId);
+            return (
+              <li key={e.id} className="py-3 first:pt-0 last:pb-0">
+                <Link
+                  to={`/study-groups/${e.studyGroupId}`}
+                  className="flex items-center justify-between gap-3"
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <EntityInitialsAvatar name={g?.name ?? "Группа"} size={36} />
+                    <div className="min-w-0">
+                      <p className="truncate text-[13px] font-medium text-[var(--color-foreground)]">
+                        {g?.name ?? "Группа"}
+                        {g?.code ? (
+                          <span className="ml-2 font-mono text-[11px] text-[var(--color-muted-foreground)]">
+                            {g.code}
+                          </span>
+                        ) : null}
+                      </p>
+                      <p className="truncate text-[11.5px] text-[var(--color-muted-foreground)]">
+                        <EntityStatusBadge tone={ENROLLMENT_STATUS_TONE[e.status]}>
+                          {ENROLLMENT_STATUS_LABEL[e.status]}
+                        </EntityStatusBadge>{" "}
+                        · с {formatDate(e.enrolledOn)}
+                        {e.leftOn ? ` · до ${formatDate(e.leftOn)}` : ""}
+                        {e.leaveReason ? ` · ${e.leaveReason}` : ""}
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight className="size-4 shrink-0 text-[var(--color-border)]" />
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </EntityDetailSection>
   );
 }
 
