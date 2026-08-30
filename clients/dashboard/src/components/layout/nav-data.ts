@@ -3,6 +3,8 @@ import {
   CreditCard,
   FolderOpen,
   FolderTree,
+  GraduationCap,
+  HeartHandshake,
   HeartPulse,
   LayoutDashboard,
   MessageCircle,
@@ -75,6 +77,18 @@ export const sections: NavSection[] = [
       { to: "/activity", label: "Live activity", icon: Activity },
       { to: "/subscription", label: "Subscription", icon: CreditCard, perm: "Permissions.Billing.View" },
       { to: "/invoices", label: "Invoices", icon: Receipt, perm: "Permissions.Billing.View" },
+    ],
+  },
+  {
+    id: "people",
+    caption: "Люди",
+    icon: GraduationCap,
+    items: [
+      // Each gate mirrors the permission the page's primary list endpoint enforces
+      // server-side (GET /students, /teachers, /guardians → *.View).
+      { to: "/students", label: "Ученики", icon: GraduationCap, perm: "Permissions.People.Students.View" },
+      { to: "/teachers", label: "Преподаватели", icon: Users, perm: "Permissions.People.Teachers.View" },
+      { to: "/guardians", label: "Представители", icon: HeartHandshake, perm: "Permissions.People.Guardians.View" },
     ],
   },
   {

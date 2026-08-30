@@ -1,0 +1,911 @@
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  Archive,
+  ArchiveRestore,
+  CalendarDays,
+  GraduationCap,
+  Link2,
+  Link2Off,
+  Mail,
+  NotebookPen,
+  Pencil,
+  Phone,
+  Plus,
+  Star,
+  Trash2,
+  Users,
+  X,
+} from "lucide-react";
+import { toast } from "sonner";
+import {
+  addStudentGuardian,
+  addStudentNote,
+  archiveStudent,
+  deleteStudent,
+  deleteStudentNote,
+  getStudentById,
+  getStudentGuardians,
+  getStudentNotes,
+  linkStudentUser,
+  removeStudentGuardian,
+  restoreStudent,
+  searchGuardians,
+  setPrimaryPayer,
+  unlinkStudentUser,
+  updateStudent,
+  type StudentDetailDto,
+  type StudentStatus,
+  type UpdateStudentInput,
+} from "@/api/people";
+import { useAuth } from "@/auth/use-auth";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogBody,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Combobox,
+  EntityDetailAvatar,
+  EntityDetailBack,
+  EntityDetailHero,
+  EntityDetailMeta,
+  EntityDetailSection,
+  EntityDetailStat,
+  EntityInitialsAvatar,
+  EntityStatusBadge,
+  Field,
+  type EntityStatusTone,
+} from "@/components/list";
+import { cn } from "@/lib/cn";
+import { describe, formatDate, formatDateTimeMono } from "@/lib/list-helpers";
+
+const STATUS_TONE: Record<StudentStatus, EntityStatusTone> = {
+  Lead: "info",
+  Active: "success",
+  Paused: "warning",
+  Archived: "default",
+};
+const STATUS_LABEL: Record<StudentStatus, string> = {
+  Lead: "Лид",
+  Active: "Активен",
+  Paused: "Пауза",
+  Archived: "Архив",
+};
+
+type Tab = "profile" | "guardians" | "notes";
+
+export function StudentDetailPage() {
+  const { studentId = "" } = useParams();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const perms = useAuth().user?.permissions ?? [];
+  const canUpdate = perms.includes("Permissions.People.Students.Update");
+  const canDelete = perms.includes("Permissions.People.Students.Delete");
+  const canViewNotes = perms.includes("Permissions.People.Students.ViewNotes");
+
+  const [tab, setTab] = useState<Tab>("profile");
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [linkOpen, setLinkOpen] = useState(false);
+
+  const query = useQuery({
+    queryKey: ["student", studentId],
+    queryFn: () => getStudentById(studentId),
+    enabled: Boolean(studentId),
+  });
+
+  const student = query.data;
+
+  const invalidate = () => {
+    void queryClient.invalidateQueries({ queryKey: ["student", studentId] });
+    void queryClient.invalidateQueries({ queryKey: ["students"] });
+  };
+
+  const archiveMut = useMutation({
+    mutationFn: (id: string) => archiveStudent(id),
+    onSuccess: () => {
+      toast.success("Ученик архивирован");
+      invalidate();
+    },
+    onError: (e) => toast.error("Не удалось архивировать", { description: describe(e) }),
+  });
+
+  const restoreMut = useMutation({
+    mutationFn: (id: string) => restoreStudent(id),
+    onSuccess: () => {
+      toast.success("Ученик восстановлен");
+      invalidate();
+    },
+    onError: (e) => toast.error("Не удалось восстановить", { description: describe(e) }),
+  });
+
+  const unlinkMut = useMutation({
+    mutationFn: (id: string) => unlinkStudentUser(id),
+    onSuccess: () => {
+      toast.success("Учётная запись отвязана");
+      invalidate();
+    },
+    onError: (e) => toast.error("Не удалось отвязать", { description: describe(e) }),
+  });
+
+  if (query.isLoading) {
+    return (
+      <div>
+        <EntityDetailBack to="/students" label="К списку учеников" />
+        <div className="h-40 animate-pulse rounded-xl bg-[var(--color-muted)]" />
+      </div>
+    );
+  }
+
+  if (query.isError || !student) {
+    return (
+      <div>
+        <EntityDetailBack to="/students" label="К списку учеников" />
+        <div
+          role="alert"
+          className="rounded-lg border border-[oklch(from_var(--color-destructive)_l_c_h_/_0.30)] bg-[oklch(from_var(--color-destructive)_l_c_h_/_0.06)] px-3 py-2 text-sm text-[var(--color-destructive)]"
+        >
+          {query.error ? describe(query.error) : "Ученик не найден"}
+        </div>
+      </div>
+    );
+  }
+
+  const isArchived = student.status === "Archived";
+
+  return (
+    <div>
+      <EntityDetailBack to="/students" label="К списку учеников" />
+
+      <EntityDetailHero
+        avatar={<EntityDetailAvatar name={student.displayName} icon={GraduationCap} />}
+        title={student.displayName}
+        badges={
+          <EntityStatusBadge tone={STATUS_TONE[student.status]}>
+            {STATUS_LABEL[student.status]}
+          </EntityStatusBadge>
+        }
+        subtitle={`Зачислен ${formatDate(student.enrolledAtUtc)} · источник: ${student.source || "—"}`}
+        actions={
+          canUpdate ? (
+            <>
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setEditOpen(true)}>
+                <Pencil className="size-3.5" />
+                Изменить
+              </Button>
+              {isArchived ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  disabled={restoreMut.isPending}
+                  onClick={() => restoreMut.mutate(student.id)}
+                >
+                  <ArchiveRestore className="size-3.5" />
+                  Восстановить
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  disabled={archiveMut.isPending}
+                  onClick={() => archiveMut.mutate(student.id)}
+                >
+                  <Archive className="size-3.5" />
+                  В архив
+                </Button>
+              )}
+              {canDelete && (
+                <Button variant="ghost" size="sm" className="gap-1.5 text-[var(--color-destructive)]" onClick={() => setDeleteOpen(true)}>
+                  <Trash2 className="size-3.5" />
+                </Button>
+              )}
+            </>
+          ) : undefined
+        }
+        stats={
+          <>
+            <EntityDetailStat icon={Users} value={student.guardianCount} label="представителей" />
+            <EntityDetailStat icon={NotebookPen} value={student.noteCount} label="заметок" />
+          </>
+        }
+        meta={
+          <>
+            <EntityDetailMeta icon={Phone}>{student.phone || "—"}</EntityDetailMeta>
+            <EntityDetailMeta icon={Mail}>{student.email || "—"}</EntityDetailMeta>
+            <EntityDetailMeta icon={CalendarDays}>
+              Рождён {formatDate(student.birthDate)}
+            </EntityDetailMeta>
+          </>
+        }
+      />
+
+      <nav aria-label="Разделы ученика" className="mb-5 flex flex-wrap items-center gap-2">
+        <TabPill active={tab === "profile"} onClick={() => setTab("profile")} icon={GraduationCap}>
+          Профиль
+        </TabPill>
+        <TabPill active={tab === "guardians"} onClick={() => setTab("guardians")} icon={Users}>
+          Представители
+        </TabPill>
+        {canViewNotes && (
+          <TabPill active={tab === "notes"} onClick={() => setTab("notes")} icon={NotebookPen}>
+            Заметки
+          </TabPill>
+        )}
+      </nav>
+
+      {tab === "profile" && (
+        <div className="space-y-4">
+          <EntityDetailSection title="Учётная запись" icon={Link2}>
+            {student.userId ? (
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0 text-[13px]">
+                  <p className="text-[var(--color-foreground)]">Привязана учётная запись</p>
+                  <code className="text-[12px] text-[var(--color-muted-foreground)]">{student.userId}</code>
+                </div>
+                {canUpdate && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    disabled={unlinkMut.isPending}
+                    onClick={() => unlinkMut.mutate(student.id)}
+                  >
+                    <Link2Off className="size-3.5" />
+                    Отвязать
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-[13px] text-[var(--color-muted-foreground)]">
+                  Ученик не привязан к учётной записи — вход в систему невозможен.
+                </p>
+                {canUpdate && (
+                  <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setLinkOpen(true)}>
+                    <Link2 className="size-3.5" />
+                    Привязать
+                  </Button>
+                )}
+              </div>
+            )}
+          </EntityDetailSection>
+
+          <EntityDetailSection title="Дальнейшие разделы" icon={CalendarDays}>
+            <p className="text-[13px] text-[var(--color-muted-foreground)]">
+              Группы, посещаемость и счета появятся здесь после подключения модулей
+              StudyGroups, Scheduling и Payments.
+            </p>
+          </EntityDetailSection>
+        </div>
+      )}
+
+      {tab === "guardians" && (
+        <GuardiansTab studentId={student.id} canUpdate={canUpdate} onChanged={invalidate} />
+      )}
+
+      {tab === "notes" && canViewNotes && (
+        <NotesTab studentId={student.id} onChanged={invalidate} />
+      )}
+
+      <EditStudentDialog open={editOpen} onClose={() => setEditOpen(false)} student={student} onSaved={invalidate} />
+      <LinkUserDialog
+        open={linkOpen}
+        onClose={() => setLinkOpen(false)}
+        onSubmit={(userId) => linkStudentUser(student.id, userId)}
+        onSaved={invalidate}
+      />
+      <ConfirmDeleteDialog
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        name={student.displayName}
+        onConfirm={async () => {
+          await deleteStudent(student.id);
+          toast.success("Ученик удалён");
+          void queryClient.invalidateQueries({ queryKey: ["students"] });
+          navigate("/students");
+        }}
+      />
+    </div>
+  );
+}
+
+function TabPill({
+  active,
+  onClick,
+  icon: Icon,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ComponentType<{ className?: string }>;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={cn(
+        "inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full border px-3 text-[12px] font-medium transition-colors duration-[var(--duration-fast)]",
+        active
+          ? "border-transparent bg-[var(--color-primary)] text-[var(--color-primary-foreground)]"
+          : "border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]",
+      )}
+    >
+      <Icon className="size-3.5" aria-hidden />
+      {children}
+    </button>
+  );
+}
+
+// ───────────────────────────────────────────────────────────────────────
+//  Guardians tab
+// ───────────────────────────────────────────────────────────────────────
+
+function GuardiansTab({
+  studentId,
+  canUpdate,
+  onChanged,
+}: {
+  studentId: string;
+  canUpdate: boolean;
+  onChanged: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const [addOpen, setAddOpen] = useState(false);
+
+  const query = useQuery({
+    queryKey: ["student", studentId, "guardians"],
+    queryFn: () => getStudentGuardians(studentId),
+  });
+
+  const invalidate = () => {
+    void queryClient.invalidateQueries({ queryKey: ["student", studentId, "guardians"] });
+    onChanged();
+  };
+
+  const removeMut = useMutation({
+    mutationFn: (guardianId: string) => removeStudentGuardian(studentId, guardianId),
+    onSuccess: () => {
+      toast.success("Представитель отвязан");
+      invalidate();
+    },
+    onError: (e) => toast.error("Не удалось отвязать", { description: describe(e) }),
+  });
+
+  const primaryMut = useMutation({
+    mutationFn: (guardianId: string) => setPrimaryPayer(studentId, guardianId),
+    onSuccess: () => {
+      toast.success("Плательщик назначен");
+      invalidate();
+    },
+    onError: (e) => toast.error("Не удалось назначить плательщика", { description: describe(e) }),
+  });
+
+  const items = query.data ?? [];
+
+  return (
+    <EntityDetailSection
+      title="Представители"
+      icon={Users}
+      action={
+        canUpdate ? (
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setAddOpen(true)}>
+            <Plus className="size-3.5" />
+            Привязать
+          </Button>
+        ) : undefined
+      }
+    >
+      {query.isLoading ? (
+        <p className="text-[13px] text-[var(--color-muted-foreground)]">Загрузка…</p>
+      ) : query.isError ? (
+        <p className="text-[13px] text-[var(--color-destructive)]">{describe(query.error)}</p>
+      ) : items.length === 0 ? (
+        <p className="text-[13px] text-[var(--color-muted-foreground)]">
+          У ученика пока нет представителей.
+        </p>
+      ) : (
+        <ul className="divide-y divide-[oklch(from_var(--color-border)_l_c_h_/_0.5)]">
+          {items.map((link) => (
+            <li key={link.id} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
+              <div className="flex min-w-0 items-center gap-3">
+                <EntityInitialsAvatar name={link.guardian.displayName} size={36} />
+                <div className="min-w-0">
+                  <p className="truncate text-[13px] font-medium text-[var(--color-foreground)]">
+                    {link.guardian.displayName}
+                    {link.isPrimaryPayer && (
+                      <EntityStatusBadge tone="success" className="ml-2">
+                        Плательщик
+                      </EntityStatusBadge>
+                    )}
+                  </p>
+                  <p className="truncate text-[11.5px] text-[var(--color-muted-foreground)]">
+                    {link.relation || "—"} · {link.guardian.phone || link.guardian.email || "нет контактов"}
+                  </p>
+                </div>
+              </div>
+              {canUpdate && (
+                <div className="flex shrink-0 items-center gap-1">
+                  {!link.isPrimaryPayer && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="gap-1.5"
+                      disabled={primaryMut.isPending}
+                      onClick={() => primaryMut.mutate(link.guardianId)}
+                      title="Сделать плательщиком"
+                    >
+                      <Star className="size-3.5" />
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-[var(--color-destructive)]"
+                    disabled={removeMut.isPending}
+                    onClick={() => removeMut.mutate(link.guardianId)}
+                    title="Отвязать"
+                  >
+                    <X className="size-3.5" />
+                  </Button>
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <AddGuardianDialog
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        studentId={studentId}
+        existingGuardianIds={items.map((l) => l.guardianId)}
+        onSaved={invalidate}
+      />
+    </EntityDetailSection>
+  );
+}
+
+function AddGuardianDialog({
+  open,
+  onClose,
+  studentId,
+  existingGuardianIds,
+  onSaved,
+}: {
+  open: boolean;
+  onClose: () => void;
+  studentId: string;
+  existingGuardianIds: string[];
+  onSaved: () => void;
+}) {
+  const [guardianId, setGuardianId] = useState<string | null>(null);
+  const [relation, setRelation] = useState("");
+  const [isPrimaryPayer, setIsPrimaryPayer] = useState(false);
+
+  useEffect(() => {
+    if (!open) {
+      setGuardianId(null);
+      setRelation("");
+      setIsPrimaryPayer(false);
+    }
+  }, [open]);
+
+  const guardiansQuery = useQuery({
+    queryKey: ["guardians", { pageSize: 100 }],
+    queryFn: () => searchGuardians({ pageSize: 100 }),
+    enabled: open,
+  });
+
+  const options = useMemo(
+    () =>
+      (guardiansQuery.data?.items ?? [])
+        .filter((g) => !existingGuardianIds.includes(g.id))
+        .map((g) => ({ value: g.id, label: `${g.displayName} · ${g.phone || g.email}` })),
+    [guardiansQuery.data, existingGuardianIds],
+  );
+
+  const mutation = useMutation({
+    mutationFn: (vars: { guardianId: string; relation: string; isPrimaryPayer: boolean }) =>
+      addStudentGuardian({ studentId, ...vars }),
+    onSuccess: () => {
+      toast.success("Представитель привязан");
+      onSaved();
+      onClose();
+    },
+    onError: (e) => toast.error("Не удалось привязать", { description: describe(e) }),
+  });
+
+  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!guardianId) return;
+    mutation.mutate({ guardianId, relation: relation.trim(), isPrimaryPayer });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => (!o ? onClose() : undefined)}>
+      <DialogContent className="!max-w-md">
+        <form onSubmit={onSubmit}>
+          <DialogHeader>
+            <DialogTitle>Привязать представителя</DialogTitle>
+            <DialogDescription>
+              Выберите представителя из справочника и укажите степень родства.
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogBody className="space-y-4">
+            <Field id="ag-guardian" label="Представитель" required>
+              <Combobox
+                label="Представитель"
+                value={guardianId}
+                onChange={setGuardianId}
+                options={options}
+                placeholder={guardiansQuery.isLoading ? "Загрузка…" : "Выберите представителя"}
+                searchable
+                clearable
+              />
+            </Field>
+            <Field id="ag-relation" label="Степень родства" required hint="Например: мать, отец, опекун">
+              <Input id="ag-relation" value={relation} onChange={(e) => setRelation(e.target.value)} required />
+            </Field>
+            <label className="flex items-center gap-2 text-[13px] text-[var(--color-foreground)]">
+              <input
+                type="checkbox"
+                checked={isPrimaryPayer}
+                onChange={(e) => setIsPrimaryPayer(e.target.checked)}
+              />
+              Назначить плательщиком по умолчанию
+            </label>
+          </DialogBody>
+
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline" disabled={mutation.isPending}>
+                Отмена
+              </Button>
+            </DialogClose>
+            <Button type="submit" disabled={mutation.isPending || !guardianId}>
+              {mutation.isPending ? "Сохранение…" : "Привязать"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ───────────────────────────────────────────────────────────────────────
+//  Notes tab
+// ───────────────────────────────────────────────────────────────────────
+
+function NotesTab({ studentId, onChanged }: { studentId: string; onChanged: () => void }) {
+  const queryClient = useQueryClient();
+  const [text, setText] = useState("");
+
+  const query = useQuery({
+    queryKey: ["student", studentId, "notes"],
+    queryFn: () => getStudentNotes(studentId),
+  });
+
+  const invalidate = () => {
+    void queryClient.invalidateQueries({ queryKey: ["student", studentId, "notes"] });
+    onChanged();
+  };
+
+  const addMut = useMutation({
+    mutationFn: (noteText: string) => addStudentNote(studentId, noteText),
+    onSuccess: () => {
+      setText("");
+      invalidate();
+    },
+    onError: (e) => toast.error("Не удалось добавить заметку", { description: describe(e) }),
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: (noteId: string) => deleteStudentNote(studentId, noteId),
+    onSuccess: () => invalidate(),
+    onError: (e) => toast.error("Не удалось удалить заметку", { description: describe(e) }),
+  });
+
+  const items = query.data ?? [];
+
+  return (
+    <EntityDetailSection title="Внутренние заметки" icon={NotebookPen} description="Видны только пользователям с правом «Просмотр заметок».">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          const trimmed = text.trim();
+          if (trimmed) addMut.mutate(trimmed);
+        }}
+        className="mb-4 space-y-2"
+      >
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          rows={3}
+          placeholder="Новая заметка…"
+          className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-[13px] text-[var(--color-foreground)] outline-none placeholder:text-[var(--color-muted-foreground)] focus:border-[oklch(from_var(--color-ring)_l_c_h_/_0.30)] focus:ring-2 focus:ring-[oklch(from_var(--color-ring)_l_c_h_/_0.10)]"
+        />
+        <div className="flex justify-end">
+          <Button type="submit" size="sm" disabled={addMut.isPending || !text.trim()} className="gap-1.5">
+            <Plus className="size-3.5" />
+            {addMut.isPending ? "Добавление…" : "Добавить"}
+          </Button>
+        </div>
+      </form>
+
+      {query.isLoading ? (
+        <p className="text-[13px] text-[var(--color-muted-foreground)]">Загрузка…</p>
+      ) : query.isError ? (
+        <p className="text-[13px] text-[var(--color-destructive)]">{describe(query.error)}</p>
+      ) : items.length === 0 ? (
+        <p className="text-[13px] text-[var(--color-muted-foreground)]">Заметок пока нет.</p>
+      ) : (
+        <ul className="space-y-3">
+          {items.map((note) => (
+            <li key={note.id} className="rounded-lg border border-[oklch(from_var(--color-border)_l_c_h_/_0.6)] px-3 py-2.5">
+              <div className="flex items-start justify-between gap-3">
+                <p className="whitespace-pre-wrap text-[13px] text-[var(--color-foreground)]">{note.text}</p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="shrink-0 text-[var(--color-destructive)]"
+                  disabled={deleteMut.isPending}
+                  onClick={() => deleteMut.mutate(note.id)}
+                  title="Удалить"
+                >
+                  <X className="size-3.5" />
+                </Button>
+              </div>
+              <p className="mt-1 text-[11px] text-[var(--color-muted-foreground)]">
+                {formatDateTimeMono(note.createdAtUtc)}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </EntityDetailSection>
+  );
+}
+
+// ───────────────────────────────────────────────────────────────────────
+//  Edit / link / delete dialogs
+// ───────────────────────────────────────────────────────────────────────
+
+function EditStudentDialog({
+  open,
+  onClose,
+  student,
+  onSaved,
+}: {
+  open: boolean;
+  onClose: () => void;
+  student: StudentDetailDto;
+  onSaved: () => void;
+}) {
+  const [lastName, setLastName] = useState(student.lastName);
+  const [firstName, setFirstName] = useState(student.firstName);
+  const [middleName, setMiddleName] = useState(student.middleName ?? "");
+  const [birthDate, setBirthDate] = useState(student.birthDate);
+  const [phone, setPhone] = useState(student.phone);
+  const [email, setEmail] = useState(student.email);
+  const [managerUserId, setManagerUserId] = useState(student.managerUserId);
+  const [source, setSource] = useState(student.source ?? "");
+
+  useEffect(() => {
+    if (open) {
+      setLastName(student.lastName);
+      setFirstName(student.firstName);
+      setMiddleName(student.middleName ?? "");
+      setBirthDate(student.birthDate);
+      setPhone(student.phone);
+      setEmail(student.email);
+      setManagerUserId(student.managerUserId);
+      setSource(student.source ?? "");
+    }
+  }, [open, student]);
+
+  const mutation = useMutation({
+    mutationFn: (input: UpdateStudentInput) => updateStudent(input),
+    onSuccess: () => {
+      toast.success("Изменения сохранены");
+      onSaved();
+      onClose();
+    },
+    onError: (e) => toast.error("Не удалось сохранить", { description: describe(e) }),
+  });
+
+  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    mutation.mutate({
+      studentId: student.id,
+      lastName: lastName.trim(),
+      firstName: firstName.trim(),
+      middleName: middleName.trim() || null,
+      birthDate,
+      phone: phone.trim(),
+      email: email.trim(),
+      managerUserId: managerUserId.trim(),
+      source: source.trim() || null,
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => (!o ? onClose() : undefined)}>
+      <DialogContent className="!max-w-lg">
+        <form onSubmit={onSubmit}>
+          <DialogHeader>
+            <DialogTitle>Изменить ученика</DialogTitle>
+            <DialogDescription>Обновите профиль. Статус меняется отдельными действиями.</DialogDescription>
+          </DialogHeader>
+
+          <DialogBody className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field id="es-last" label="Фамилия" required>
+                <Input id="es-last" value={lastName} onChange={(e) => setLastName(e.target.value)} required />
+              </Field>
+              <Field id="es-first" label="Имя" required>
+                <Input id="es-first" value={firstName} onChange={(e) => setFirstName(e.target.value)} required />
+              </Field>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field id="es-middle" label="Отчество">
+                <Input id="es-middle" value={middleName} onChange={(e) => setMiddleName(e.target.value)} />
+              </Field>
+              <Field id="es-birth" label="Дата рождения" required>
+                <Input id="es-birth" type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} required />
+              </Field>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field id="es-phone" label="Телефон" required>
+                <Input id="es-phone" value={phone} onChange={(e) => setPhone(e.target.value)} required />
+              </Field>
+              <Field id="es-email" label="E-mail" required>
+                <Input id="es-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              </Field>
+            </div>
+            <Field id="es-manager" label="ID ответственного менеджера" required hint="User ID из модуля Identity.">
+              <Input id="es-manager" value={managerUserId} onChange={(e) => setManagerUserId(e.target.value)} required />
+            </Field>
+            <Field id="es-source" label="Источник">
+              <Input id="es-source" value={source} onChange={(e) => setSource(e.target.value)} />
+            </Field>
+          </DialogBody>
+
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline" disabled={mutation.isPending}>
+                Отмена
+              </Button>
+            </DialogClose>
+            <Button type="submit" disabled={mutation.isPending}>
+              {mutation.isPending ? "Сохранение…" : "Сохранить"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export function LinkUserDialog({
+  open,
+  onClose,
+  onSubmit,
+  onSaved,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onSubmit: (userId: string) => Promise<unknown>;
+  onSaved: () => void;
+}) {
+  const [userId, setUserId] = useState("");
+
+  useEffect(() => {
+    if (!open) setUserId("");
+  }, [open]);
+
+  const mutation = useMutation({
+    mutationFn: (id: string) => onSubmit(id),
+    onSuccess: () => {
+      toast.success("Учётная запись привязана");
+      onSaved();
+      onClose();
+    },
+    onError: (e) => toast.error("Не удалось привязать", { description: describe(e) }),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => (!o ? onClose() : undefined)}>
+      <DialogContent className="!max-w-md">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const trimmed = userId.trim();
+            if (trimmed) mutation.mutate(trimmed);
+          }}
+        >
+          <DialogHeader>
+            <DialogTitle>Привязать учётную запись</DialogTitle>
+            <DialogDescription>
+              Укажите User ID существующей учётной записи из модуля Identity.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogBody>
+            <Field id="link-user-id" label="User ID" required>
+              <Input id="link-user-id" value={userId} onChange={(e) => setUserId(e.target.value)} required autoFocus />
+            </Field>
+          </DialogBody>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline" disabled={mutation.isPending}>
+                Отмена
+              </Button>
+            </DialogClose>
+            <Button type="submit" disabled={mutation.isPending || !userId.trim()}>
+              {mutation.isPending ? "Привязка…" : "Привязать"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export function ConfirmDeleteDialog({
+  open,
+  onClose,
+  name,
+  onConfirm,
+}: {
+  open: boolean;
+  onClose: () => void;
+  name: string;
+  onConfirm: () => Promise<void>;
+}) {
+  const mutation = useMutation({
+    mutationFn: () => onConfirm(),
+    onSuccess: () => onClose(),
+    onError: (e) => toast.error("Не удалось удалить", { description: describe(e) }),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => (!o ? onClose() : undefined)}>
+      <DialogContent className="!max-w-md">
+        <DialogHeader>
+          <DialogTitle>Удалить «{name}»?</DialogTitle>
+          <DialogDescription>
+            Запись переместится в корзину. Это действие можно отменить восстановлением из корзины.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button type="button" variant="outline" disabled={mutation.isPending}>
+              Отмена
+            </Button>
+          </DialogClose>
+          <Button
+            type="button"
+            variant="destructive"
+            disabled={mutation.isPending}
+            onClick={() => mutation.mutate()}
+          >
+            {mutation.isPending ? "Удаление…" : "Удалить"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

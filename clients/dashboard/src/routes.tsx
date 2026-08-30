@@ -107,6 +107,25 @@ const GroupDetailPage = lazyNamed(
   () => import("@/pages/identity/group-detail"),
   "GroupDetailPage",
 );
+const StudentsPage = lazyNamed(() => import("@/pages/people/students"), "StudentsPage");
+const StudentDetailPage = lazyNamed(
+  () => import("@/pages/people/student-detail"),
+  "StudentDetailPage",
+);
+const StudentImportPage = lazyNamed(
+  () => import("@/pages/people/student-import"),
+  "StudentImportPage",
+);
+const TeachersPage = lazyNamed(() => import("@/pages/people/teachers"), "TeachersPage");
+const TeacherDetailPage = lazyNamed(
+  () => import("@/pages/people/teacher-detail"),
+  "TeacherDetailPage",
+);
+const GuardiansPage = lazyNamed(() => import("@/pages/people/guardians"), "GuardiansPage");
+const GuardianDetailPage = lazyNamed(
+  () => import("@/pages/people/guardian-detail"),
+  "GuardianDetailPage",
+);
 const MyFilesPage = lazyNamed(() => import("@/pages/files/my-files"), "MyFilesPage");
 const ChatPage = lazyNamed(() => import("@/pages/chat/chat-page"), "ChatPage");
 
@@ -207,6 +226,13 @@ export const router = createBrowserRouter([
           { path: "chat/:channelId", element: withSuspense(<ChatPage />) },
           { path: "tickets", element: withSuspense(<TicketsPage />) },
           { path: "tickets/:ticketId", element: withSuspense(<TicketDetailPage />) },
+          { path: "students", element: withSuspense(<StudentsPage />) },
+          { path: "students/import", element: withSuspense(<StudentImportPage />) },
+          { path: "students/:studentId", element: withSuspense(<StudentDetailPage />) },
+          { path: "teachers", element: withSuspense(<TeachersPage />) },
+          { path: "teachers/:teacherId", element: withSuspense(<TeacherDetailPage />) },
+          { path: "guardians", element: withSuspense(<GuardiansPage />) },
+          { path: "guardians/:guardianId", element: withSuspense(<GuardianDetailPage />) },
           { path: "identity", element: <Navigate to="/identity/users" replace /> },
           { path: "identity/users", element: withSuspense(<UsersPage />) },
           { path: "identity/users/:userId", element: withSuspense(<UserDetailPage />) },
