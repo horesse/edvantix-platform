@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using FSH.Framework.Eventing;
 using FSH.Framework.Persistence;
+using FSH.Framework.Quota;
 using FSH.Framework.Shared.Constants;
 using FSH.Framework.Web.Modules;
 using FSH.Modules.StudyGroups.Contracts;
@@ -50,6 +51,10 @@ public sealed class StudyGroupsModule : IModule
         builder.Services.AddHeroDbContext<StudyGroupsDbContext>();
         builder.Services.AddScoped<IDbInitializer, StudyGroupsDbInitializer>();
         builder.Services.AddScoped<IStudyGroupQueryService, StudyGroupQueryService>();
+
+        // Quota gauge: live per-tenant count of forming/active groups for the StudyGroups plan
+        // limit (UsageSnapshots + soft creation block). Mirrors Identity's UserCount gauge.
+        builder.Services.AddScoped<IQuotaGaugeProvider, StudyGroupCountQuotaGaugeProvider>();
 
         // Outbox/Inbox for StudyGroupsDbContext — publishes StudyGroupCreated/Activated/Finished,
         // StudentEnrolled/Unenrolled. AddEventingCore() is NOT called here: IdentityModule already

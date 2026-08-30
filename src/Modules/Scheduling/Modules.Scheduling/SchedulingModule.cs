@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using FSH.Framework.Eventing;
 using FSH.Framework.Persistence;
+using FSH.Framework.Quota;
 using FSH.Framework.Shared.Constants;
 using FSH.Framework.Web.Modules;
 using FSH.Modules.Scheduling.Contracts;
@@ -65,6 +66,10 @@ public sealed class SchedulingModule : IModule
         builder.Services.AddScoped<IAttendanceQueryService, AttendanceQueryService>();
         builder.Services.AddScoped<ISessionPlanQueryService, SessionPlanQueryService>();
         builder.Services.AddScoped<ISessionRealtimeNotifier, SessionRealtimeNotifier>();
+
+        // Quota gauge: sessions scheduled in the current UTC month for the MonthlySessions plan
+        // limit (UsageSnapshots + soft creation block). Mirrors Identity's UserCount gauge.
+        builder.Services.AddScoped<IQuotaGaugeProvider, MonthlySessionCountQuotaGaugeProvider>();
 
         // Outbox/Inbox for SchedulingDbContext — publishes SessionScheduled/Cancelled/Rescheduled/
         // Held, AttendanceMarked (added in step 10 of the implementation plan). AddEventingCore() is

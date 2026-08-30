@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using FSH.Framework.Eventing;
 using FSH.Framework.Persistence;
+using FSH.Framework.Quota;
 using FSH.Framework.Shared.Constants;
 using FSH.Framework.Web.Modules;
 using FSH.Modules.People.Contracts.Authorization;
@@ -66,6 +67,11 @@ public sealed class PeopleModule : IModule
         builder.Services.AddScoped<IDbInitializer, PeopleDbInitializer>();
         builder.Services.AddScoped<FSH.Modules.People.Contracts.IPeopleScopeResolver, PeopleScopeResolver>();
         builder.Services.AddScoped<FSH.Modules.People.Contracts.IPeopleLookupService, PeopleLookupService>();
+
+        // Quota gauges: live per-tenant counts for the ActiveStudents / ActiveTeachers plan limits
+        // (fed into UsageSnapshots and the soft creation block). Mirrors Identity's UserCount gauge.
+        builder.Services.AddScoped<IQuotaGaugeProvider, ActiveStudentCountQuotaGaugeProvider>();
+        builder.Services.AddScoped<IQuotaGaugeProvider, ActiveTeacherCountQuotaGaugeProvider>();
 
         // Outbox/Inbox stores for PeopleDbContext — People publishes StudentCreated/StudentStatusChanged/
         // StudentArchived/TeacherDeactivated/GuardianLinkedToStudent. AddEventingCore() is NOT called here:
