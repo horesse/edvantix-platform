@@ -18,6 +18,7 @@
 		<ProjectReference Include="..\..\..\BuildingBlocks\Web\Web.csproj" />
 		<ProjectReference Include="..\Modules.Payments.Contracts\Modules.Payments.Contracts.csproj" />
 		<ProjectReference Include="..\..\Identity\Modules.Identity.Contracts\Modules.Identity.Contracts.csproj" />
+		<ProjectReference Include="..\..\Auditing\Modules.Auditing.Contracts\Modules.Auditing.Contracts.csproj" />
 		<ProjectReference Include="..\..\Multitenancy\Modules.Multitenancy.Contracts\Modules.Multitenancy.Contracts.csproj" />
 		<ProjectReference Include="..\..\People\Modules.People.Contracts\Modules.People.Contracts.csproj" />
 		<ProjectReference Include="..\..\Curriculum\Modules.Curriculum.Contracts\Modules.Curriculum.Contracts.csproj" />

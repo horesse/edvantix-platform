@@ -13,6 +13,7 @@
 		<ProjectReference Include="..\..\..\BuildingBlocks\Web\Web.csproj" />
 		<ProjectReference Include="..\Modules.People.Contracts\Modules.People.Contracts.csproj" />
 		<ProjectReference Include="..\..\Identity\Modules.Identity.Contracts\Modules.Identity.Contracts.csproj" />
+		<ProjectReference Include="..\..\Auditing\Modules.Auditing.Contracts\Modules.Auditing.Contracts.csproj" />
 		<ProjectReference Include="..\..\Files\Modules.Files.Contracts\Modules.Files.Contracts.csproj" />
 	</ItemGroup>
 
