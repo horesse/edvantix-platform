@@ -176,6 +176,30 @@ const NonWorkingDaysSettingsPage = lazyNamed(
   () => import("@/pages/scheduling/non-working-days-settings"),
   "NonWorkingDaysSettingsPage",
 );
+const TariffsPage = lazyNamed(
+  () => import("@/pages/payments/tariffs"),
+  "TariffsPage",
+);
+const InvoicesListPage = lazyNamed(
+  () => import("@/pages/payments/invoices-list"),
+  "InvoicesListPage",
+);
+const StudentInvoiceDetailPage = lazyNamed(
+  () => import("@/pages/payments/invoice-detail"),
+  "InvoiceDetailPage",
+);
+const DebtorsPage = lazyNamed(
+  () => import("@/pages/payments/debtors"),
+  "DebtorsPage",
+);
+const RevenuePage = lazyNamed(
+  () => import("@/pages/payments/revenue"),
+  "RevenuePage",
+);
+const MyInvoicesPage = lazyNamed(
+  () => import("@/pages/payments/my-invoices"),
+  "MyInvoicesPage",
+);
 const MyFilesPage = lazyNamed(() => import("@/pages/files/my-files"), "MyFilesPage");
 const ChatPage = lazyNamed(() => import("@/pages/chat/chat-page"), "ChatPage");
 
@@ -301,6 +325,18 @@ export const router = createBrowserRouter([
           { path: "sessions/my", element: withSuspense(<MySchedulePage />) },
           { path: "sessions/:sessionId", element: withSuspense(<SessionDetailPage />) },
           { path: "attendance", element: withSuspense(<AttendanceGridPage />) },
+          { path: "payments/tariffs", element: withSuspense(<TariffsPage />) },
+          { path: "payments/invoices", element: withSuspense(<InvoicesListPage />) },
+          {
+            path: "payments/invoices/:invoiceId",
+            element: withSuspense(<StudentInvoiceDetailPage />),
+          },
+          { path: "payments/debtors", element: withSuspense(<DebtorsPage />) },
+          { path: "payments/revenue", element: withSuspense(<RevenuePage />) },
+          {
+            path: "student-invoices/my",
+            element: withSuspense(<MyInvoicesPage />),
+          },
           { path: "settings/rooms", element: withSuspense(<RoomsSettingsPage />) },
           {
             path: "settings/non-working-days",

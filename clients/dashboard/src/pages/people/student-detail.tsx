@@ -19,6 +19,7 @@ import {
   Trash2,
   Users,
   UsersRound,
+  Wallet,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -50,9 +51,19 @@ import {
 } from "@/api/study-groups";
 import { getStudentAttendance } from "@/api/scheduling";
 import {
+  getStudentBalance,
+  outstanding,
+  searchStudentInvoices,
+} from "@/api/payments";
+import {
   ATTENDANCE_STATUS_LABEL,
   ATTENDANCE_STATUS_TONE,
 } from "@/pages/scheduling/scheduling-ui";
+import {
+  formatMoney,
+  INVOICE_STATUS_LABEL,
+  INVOICE_STATUS_TONE,
+} from "@/pages/payments/payments-ui";
 import { useAuth } from "@/auth/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -108,7 +119,13 @@ const ENROLLMENT_STATUS_TONE: Record<EnrollmentStatus, EntityStatusTone> = {
   Completed: "info",
 };
 
-type Tab = "profile" | "guardians" | "notes" | "groups" | "attendance";
+type Tab =
+  | "profile"
+  | "guardians"
+  | "notes"
+  | "groups"
+  | "attendance"
+  | "billing";
 
 export function StudentDetailPage() {
   const { studentId = "" } = useParams();
@@ -120,6 +137,7 @@ export function StudentDetailPage() {
   const canViewNotes = perms.includes("Permissions.People.Students.ViewNotes");
   const canViewGroups = perms.includes("Permissions.StudyGroups.Enrollments.View");
   const canViewAttendance = perms.includes("Permissions.Scheduling.Attendance.View");
+  const canViewBilling = perms.includes("Permissions.Payments.StudentInvoices.View");
 
   const [tab, setTab] = useState<Tab>("profile");
   const [editOpen, setEditOpen] = useState(false);
@@ -280,6 +298,15 @@ export function StudentDetailPage() {
             Посещаемость
           </TabPill>
         )}
+        {canViewBilling && (
+          <TabPill
+            active={tab === "billing"}
+            onClick={() => setTab("billing")}
+            icon={Wallet}
+          >
+            Счета/Баланс
+          </TabPill>
+        )}
         {canViewNotes && (
           <TabPill active={tab === "notes"} onClick={() => setTab("notes")} icon={NotebookPen}>
             Заметки
@@ -341,6 +368,10 @@ export function StudentDetailPage() {
 
       {tab === "attendance" && canViewAttendance && (
         <AttendanceTab studentId={student.id} />
+      )}
+
+      {tab === "billing" && canViewBilling && (
+        <BillingTab studentId={student.id} />
       )}
 
       {tab === "notes" && canViewNotes && (
@@ -822,6 +853,149 @@ function AttendanceTab({ studentId }: { studentId: string }) {
         </ul>
       )}
     </EntityDetailSection>
+  );
+}
+
+// ───────────────────────────────────────────────────────────────────────
+//  Billing tab — the student's balance (charged/paid/debt/advance) plus
+//  overdue invoices, and the full invoice history. Balance only returns
+//  overdue invoices, so the full list is a separate GET
+//  /student-invoices?studentId=.  (Payments, StudentInvoices.View)
+// ───────────────────────────────────────────────────────────────────────
+
+function BillingTab({ studentId }: { studentId: string }) {
+  const balanceQuery = useQuery({
+    queryKey: ["student-balance", studentId],
+    queryFn: () => getStudentBalance(studentId),
+  });
+  const invoicesQuery = useQuery({
+    queryKey: ["student-invoices", { studentId, pageSize: 100 }],
+    queryFn: () => searchStudentInvoices({ studentId, pageSize: 100 }),
+  });
+
+  const balance = balanceQuery.data;
+  const invoices = useMemo(
+    () =>
+      [...(invoicesQuery.data?.items ?? [])].sort((a, b) =>
+        b.periodFrom.localeCompare(a.periodFrom),
+      ),
+    [invoicesQuery.data],
+  );
+  const currency =
+    invoices[0]?.currency ?? balance?.overdueInvoices[0]?.currency ?? "RUB";
+
+  return (
+    <div className="space-y-4">
+      <EntityDetailSection title="Баланс" icon={Wallet}>
+        {balanceQuery.isLoading ? (
+          <p className="text-[13px] text-[var(--color-muted-foreground)]">Загрузка…</p>
+        ) : balanceQuery.isError ? (
+          <p className="text-[13px] text-[var(--color-destructive)]">
+            {describe(balanceQuery.error)}
+          </p>
+        ) : balance ? (
+          <>
+            <div className="flex flex-wrap gap-2">
+              <EntityDetailStat
+                value={formatMoney(balance.charged, currency)}
+                label="начислено"
+              />
+              <EntityDetailStat
+                value={formatMoney(balance.paid, currency)}
+                label="оплачено"
+                tone="success"
+              />
+              <EntityDetailStat
+                value={formatMoney(balance.debt, currency)}
+                label="долг"
+                tone={balance.debt > 0 ? "danger" : "default"}
+              />
+              {balance.advance > 0 && (
+                <EntityDetailStat
+                  value={formatMoney(balance.advance, currency)}
+                  label="аванс"
+                  tone="primary"
+                />
+              )}
+            </div>
+            {balance.overdueInvoices.length > 0 && (
+              <div className="mt-4">
+                <p className="mb-1.5 text-[12px] font-medium text-[var(--color-foreground)]">
+                  Просроченные счета
+                </p>
+                <ul className="divide-y divide-[oklch(from_var(--color-border)_l_c_h_/_0.5)]">
+                  {balance.overdueInvoices.map((inv) => (
+                    <li key={inv.id} className="py-2 first:pt-0 last:pb-0">
+                      <Link
+                        to={`/payments/invoices/${inv.id}`}
+                        className="flex items-center justify-between gap-3 text-[13px]"
+                      >
+                        <span className="font-mono text-[var(--color-primary)]">
+                          {inv.number}
+                        </span>
+                        <span className="text-[var(--color-muted-foreground)]">
+                          до {formatDate(inv.dueDate)} ·{" "}
+                          <span className="tabular-nums text-[var(--color-destructive)]">
+                            {formatMoney(outstanding(inv), inv.currency)}
+                          </span>
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </>
+        ) : null}
+      </EntityDetailSection>
+
+      <EntityDetailSection
+        title="Все счета"
+        icon={ChevronRight}
+        description="История счетов ученика, включая черновики и отменённые."
+      >
+        {invoicesQuery.isLoading ? (
+          <p className="text-[13px] text-[var(--color-muted-foreground)]">Загрузка…</p>
+        ) : invoicesQuery.isError ? (
+          <p className="text-[13px] text-[var(--color-destructive)]">
+            {describe(invoicesQuery.error)}
+          </p>
+        ) : invoices.length === 0 ? (
+          <p className="text-[13px] text-[var(--color-muted-foreground)]">
+            У ученика пока нет счетов.
+          </p>
+        ) : (
+          <ul className="divide-y divide-[oklch(from_var(--color-border)_l_c_h_/_0.5)]">
+            {invoices.map((inv) => (
+              <li key={inv.id} className="py-2.5 first:pt-0 last:pb-0">
+                <Link
+                  to={`/payments/invoices/${inv.id}`}
+                  className="flex items-center justify-between gap-3"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-mono text-[13px] text-[var(--color-foreground)]">
+                      {inv.number}
+                    </p>
+                    <p className="truncate text-[11.5px] text-[var(--color-muted-foreground)]">
+                      {formatDate(inv.periodFrom)} — {formatDate(inv.periodTo)} ·{" "}
+                      {formatMoney(inv.total, inv.currency)}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <EntityStatusBadge tone={INVOICE_STATUS_TONE[inv.status]}>
+                      {INVOICE_STATUS_LABEL[inv.status]}
+                    </EntityStatusBadge>
+                    {inv.isOverdue && (
+                      <EntityStatusBadge tone="danger">просрочен</EntityStatusBadge>
+                    )}
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </EntityDetailSection>
+    </div>
   );
 }
 
