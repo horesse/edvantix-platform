@@ -3,7 +3,9 @@
 Tenant-scoped outbound webhook subscriptions with HMAC-signed delivery and retries. Module `Order = 400`.
 
 **Entities / DbContext:** `WebhookSubscription` (`Url`, `EventsCsv`, `SecretHash`, `IsActive`), `WebhookDelivery` (per-attempt log). `WebhookDbContext` (tenant-filtered). Contracts expose **DTOs only** — `IWebhookDispatcher`/`IWebhookDeliveryService` are internal.
-**Areas:** Create/Delete/Get subscriptions, GetDeliveries, Test. Full list: `Features/v1/` or `/scalar`.
+**Areas:** Create/Delete/Get subscriptions, GetDeliveries, Test, GetEventCatalog. Full list: `Features/v1/` or `/scalar`.
+
+**Event catalog:** `WebhookEventCatalog.All` (Contracts, `Catalog/`) is the discovery list for `GET /event-types` — 24 events, `Name` = the integration-event contract's simple type name (`typeof(TEvent).Name`), i.e. exactly the fan-out selector. It is **not an allow-list**: `CreateWebhookSubscriptionCommandValidator` only rejects blank event tokens, so a subscription can still name an uncatalogued (future) event; `*` matches all.
 
 ## Gotchas
 
