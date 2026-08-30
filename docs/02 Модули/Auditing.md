@@ -95,6 +95,7 @@ flowchart LR
 
 ```
 GET    /api/v1/audits
+GET    /api/v1/audits/entity-labels
 GET    /api/v1/audits/by-entity/{entityName}/{entityId}
 GET    /api/v1/audits/{id}
 GET    /api/v1/audits/correlation/{correlationId}
@@ -113,6 +114,16 @@ GET    /api/v1/audits/exceptions
 `GET /audits?entityName=…&entityKey=…` напрямую. Фильтр идёт по `jsonb`-полям
 `EntityChangeEventPayload.EntityName`/`.Key` (`AsText`+`ILIKE`, как security/exception),
 схема `AuditRecords` не меняется.
+
+### Читаемые названия
+
+Аудит пишет `entityType.ClrType.Name` и сырые имена свойств — в UI это выглядело как
+`StudentInvoice` / `PayerGuardianId`. `GET /api/v1/audits/entity-labels` отдаёт
+`{ entities, fields }` — словари «сырое имя → человекочитаемая подпись» из статического
+`AuditLabelCatalog` (`Modules.Auditing.Contracts/Catalog/`). Единый источник для фронта
+вместо хардкода; несловарное имя показывается как есть (`EntityLabel`/`FieldLabel`
+возвращают исходную строку). Поле-локализация намеренно маленькая — только
+общие/непрозрачные поля.
 
 ## Что аудируется в Edvantix
 
