@@ -10,6 +10,7 @@ import {
   type StudentDto,
   type StudentStatus,
 } from "@/api/people";
+import { searchUsers, type UserDto } from "@/api/identity";
 import { useAuth } from "@/auth/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +25,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  Combobox,
   EntityEmpty,
   EntityFilterPill,
   EntityInitialsAvatar,
@@ -60,6 +62,11 @@ const STATUS_LABEL: Record<StudentStatus, string> = {
 
 type StatusFilter = StudentStatus | "all";
 
+function userLabel(u: UserDto): string {
+  const name = [u.firstName, u.lastName].filter(Boolean).join(" ");
+  return name || u.userName || u.email || u.id || "—";
+}
+
 const DESKTOP_COLS =
   "grid-cols-[1fr_120px_24px] lg:grid-cols-[1.6fr_150px_160px_24px]";
 
@@ -71,6 +78,7 @@ export function StudentsPage() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [pageNumber, setPageNumber] = useState(1);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [managerFilter, setManagerFilter] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
 
   useEffect(() => {
@@ -81,7 +89,7 @@ export function StudentsPage() {
     return () => clearTimeout(t);
   }, [search]);
 
-  useEffect(() => setPageNumber(1), [statusFilter]);
+  useEffect(() => setPageNumber(1), [statusFilter, managerFilter]);
 
   const queryParams = useMemo(
     () => ({
@@ -89,8 +97,9 @@ export function StudentsPage() {
       pageSize: PAGE_SIZE,
       search: debouncedSearch || undefined,
       status: statusFilter === "all" ? null : statusFilter,
+      managerUserId: managerFilter,
     }),
-    [pageNumber, debouncedSearch, statusFilter],
+    [pageNumber, debouncedSearch, statusFilter, managerFilter],
   );
 
   const query = useQuery({
@@ -99,13 +108,29 @@ export function StudentsPage() {
     placeholderData: keepPreviousData,
   });
 
+  // Manager filter options — tenant users (View Users is IsBasic, so any member can list).
+  const usersQuery = useQuery({
+    queryKey: ["identity", "users", { pageSize: 100, sort: "userName asc" }],
+    queryFn: () => searchUsers({ pageSize: 100, sort: "userName asc" }),
+    staleTime: 60_000,
+  });
+  const managerOptions = useMemo(
+    () =>
+      (usersQuery.data?.items ?? [])
+        .filter((u): u is UserDto & { id: string } => Boolean(u.id))
+        .map((u) => ({ value: u.id, label: userLabel(u) })),
+    [usersQuery.data],
+  );
+
   const data = query.data;
   const items = data?.items ?? [];
-  const searchActive = debouncedSearch.length > 0 || statusFilter !== "all";
+  const searchActive =
+    debouncedSearch.length > 0 || statusFilter !== "all" || managerFilter !== null;
 
   const clearFilters = () => {
     setSearch("");
     setStatusFilter("all");
+    setManagerFilter(null);
   };
 
   return (
@@ -158,6 +183,15 @@ export function StudentsPage() {
             { value: "Paused", label: "Пауза" },
             { value: "Archived", label: "Архив" },
           ]}
+        />
+        <Combobox
+          label="Менеджер"
+          value={managerFilter}
+          onChange={setManagerFilter}
+          options={managerOptions}
+          variant="filter"
+          searchable
+          clearable
         />
       </div>
 

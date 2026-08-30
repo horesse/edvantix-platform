@@ -39,6 +39,7 @@ import {
   type StudentStatus,
   type UpdateStudentInput,
 } from "@/api/people";
+import { searchUsers, type UserDto } from "@/api/identity";
 import { useAuth } from "@/auth/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -717,6 +718,26 @@ function EditStudentDialog({
     }
   }, [open, student]);
 
+  const usersQuery = useQuery({
+    queryKey: ["identity", "users", { pageSize: 100, sort: "userName asc" }],
+    queryFn: () => searchUsers({ pageSize: 100, sort: "userName asc" }),
+    enabled: open,
+    staleTime: 60_000,
+  });
+  const managerOptions = useMemo(() => {
+    const opts = (usersQuery.data?.items ?? [])
+      .filter((u): u is UserDto & { id: string } => Boolean(u.id))
+      .map((u) => ({
+        value: u.id,
+        label: [u.firstName, u.lastName].filter(Boolean).join(" ") || u.userName || u.email || u.id,
+      }));
+    // Keep the current manager selectable even if outside the first 100 users.
+    if (managerUserId && !opts.some((o) => o.value === managerUserId)) {
+      opts.unshift({ value: managerUserId, label: managerUserId });
+    }
+    return opts;
+  }, [usersQuery.data, managerUserId]);
+
   const mutation = useMutation({
     mutationFn: (input: UpdateStudentInput) => updateStudent(input),
     onSuccess: () => {
@@ -776,8 +797,15 @@ function EditStudentDialog({
                 <Input id="es-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
               </Field>
             </div>
-            <Field id="es-manager" label="ID ответственного менеджера" required hint="User ID из модуля Identity.">
-              <Input id="es-manager" value={managerUserId} onChange={(e) => setManagerUserId(e.target.value)} required />
+            <Field id="es-manager" label="Ответственный менеджер" required>
+              <Combobox
+                label="Ответственный менеджер"
+                value={managerUserId || null}
+                onChange={(v) => setManagerUserId(v ?? "")}
+                options={managerOptions}
+                placeholder={usersQuery.isLoading ? "Загрузка…" : "Выберите менеджера"}
+                searchable
+              />
             </Field>
             <Field id="es-source" label="Источник">
               <Input id="es-source" value={source} onChange={(e) => setSource(e.target.value)} />
