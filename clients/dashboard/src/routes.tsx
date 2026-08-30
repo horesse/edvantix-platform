@@ -126,6 +126,16 @@ const GuardianDetailPage = lazyNamed(
   () => import("@/pages/people/guardian-detail"),
   "GuardianDetailPage",
 );
+const SubjectsPage = lazyNamed(() => import("@/pages/curriculum/subjects"), "SubjectsPage");
+const CoursesPage = lazyNamed(() => import("@/pages/curriculum/courses"), "CoursesPage");
+const CoursesTrashPage = lazyNamed(
+  () => import("@/pages/curriculum/courses-trash"),
+  "CoursesTrashPage",
+);
+const CourseBuilderPage = lazyNamed(
+  () => import("@/pages/curriculum/course-detail"),
+  "CourseBuilderPage",
+);
 const MyFilesPage = lazyNamed(() => import("@/pages/files/my-files"), "MyFilesPage");
 const ChatPage = lazyNamed(() => import("@/pages/chat/chat-page"), "ChatPage");
 
@@ -233,6 +243,10 @@ export const router = createBrowserRouter([
           { path: "teachers/:teacherId", element: withSuspense(<TeacherDetailPage />) },
           { path: "guardians", element: withSuspense(<GuardiansPage />) },
           { path: "guardians/:guardianId", element: withSuspense(<GuardianDetailPage />) },
+          { path: "subjects", element: withSuspense(<SubjectsPage />) },
+          { path: "courses", element: withSuspense(<CoursesPage />) },
+          { path: "courses/trash", element: withSuspense(<CoursesTrashPage />) },
+          { path: "courses/:courseId", element: withSuspense(<CourseBuilderPage />) },
           { path: "identity", element: <Navigate to="/identity/users" replace /> },
           { path: "identity/users", element: withSuspense(<UsersPage />) },
           { path: "identity/users/:userId", element: withSuspense(<UserDetailPage />) },

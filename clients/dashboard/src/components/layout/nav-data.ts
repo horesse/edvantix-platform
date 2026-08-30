@@ -1,5 +1,6 @@
 import {
   Activity,
+  BookOpen,
   CreditCard,
   FolderOpen,
   FolderTree,
@@ -89,6 +90,17 @@ export const sections: NavSection[] = [
       { to: "/students", label: "Ученики", icon: GraduationCap, perm: "Permissions.People.Students.View" },
       { to: "/teachers", label: "Преподаватели", icon: Users, perm: "Permissions.People.Teachers.View" },
       { to: "/guardians", label: "Представители", icon: HeartHandshake, perm: "Permissions.People.Guardians.View" },
+    ],
+  },
+  {
+    id: "curriculum",
+    caption: "Программа",
+    icon: BookOpen,
+    items: [
+      // Each gate mirrors the permission the page's primary list endpoint enforces
+      // server-side (GET /subjects/tree → Subjects.View, GET /courses → Courses.View).
+      { to: "/subjects", label: "Направления", icon: FolderTree, perm: "Permissions.Curriculum.Subjects.View" },
+      { to: "/courses", label: "Курсы", icon: BookOpen, perm: "Permissions.Curriculum.Courses.View" },
     ],
   },
   {

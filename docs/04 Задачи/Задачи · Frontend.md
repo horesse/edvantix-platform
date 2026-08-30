@@ -19,7 +19,7 @@ tags: [задачи, frontend]
 ## dashboard · новые API-модули
 
 - [x] `src/api/people.ts` — students/teachers/guardians + scope, все эндпоинты People
-- [ ] `src/api/curriculum.ts`
+- [x] `src/api/curriculum.ts`
 - [ ] `src/api/study-groups.ts`
 - [ ] `src/api/scheduling.ts`
 - [ ] `src/api/payments.ts`
@@ -70,22 +70,22 @@ tags: [задачи, frontend]
 > `/curriculum` — как у People. Разделы курса (`CourseModule`) не имеют отдельного ресурса
 > прав, их CRUD гейтится `Courses.Update` — учитывать в проверках `perm`/`anyPerm` на UI.
 
-- [ ] `src/api/curriculum.ts` — обёртка над `apiFetch`: типы `SubjectDto`/`SubjectNodeDto`/
+- [x] `src/api/curriculum.ts` — обёртка над `apiFetch`: типы `SubjectDto`/`SubjectNodeDto`/
       `CourseDto`/`CourseDetailDto`/`CourseModuleDto`/`LessonDto`/`LessonMaterialDto`/
       `PagedResponse<T>` вручную по контрактам (см. [[Curriculum]] → «Контракты»); enum'ы
       `CourseLevel`/`CourseStatus`/`MaterialKind` — string union, сериализуются как строки;
       ключи TanStack Query на `subjects`/`courses`/`lessons`
-- [ ] `/subjects` — дерево направлений (`GET /subjects/tree` → `SubjectNodeDto[]`, право
+- [x] `/subjects` — дерево направлений (`GET /subjects/tree` → `SubjectNodeDto[]`, право
       `Subjects.View`), инлайн создание/переименование/удаление узла (`POST`/`PUT`/`DELETE
       /subjects/{id}`, право `Subjects.Create`/`Update`/`Delete`), перетаскивание для
       `PUT /subjects/order` (`ReorderSubjectsCommand` — принимает `parentId` и упорядоченный
       список id **только для одного уровня**, т.е. drag-n-drop работает в пределах родителя)
-- [ ] `/courses` — список (`GET /courses`, право `Courses.View`), фильтры по направлению
+- [x] `/courses` — список (`GET /courses`, право `Courses.View`), фильтры по направлению
       (`subjectId`), статусу (`Draft`/`Published`/`Archived`) и уровню (`CourseLevel`),
       пагинация и сортировка (`sortBy=title|createdAtUtc|durationHours`); отдельная вкладка/
       маршрут `/courses/trash` (`GET /courses/trash`, право `Courses.ViewTrash`) с кнопкой
       восстановления (`POST /courses/{id}/restore`, право `Courses.Restore`)
-- [ ] `/courses/:id` — **конструктор курса**: карточка курса (редактирование `title`/
+- [x] `/courses/:id` — **конструктор курса**: карточка курса (редактирование `title`/
       `description`/`level`/`durationHours`/`subjectId`/`coverFileId` через `PUT /courses/{id}`,
       право `Courses.Update`) + дерево разделов и уроков ниже. `GET /courses/{id}` возвращает
       `CourseDetailDto` с готовым деревом `modules[].lessons[]` — отдельного запроса на дерево
@@ -94,18 +94,18 @@ tags: [задачи, frontend]
       причину, не глотать ошибку), «Архивировать» (`POST .../archive`, тоже `Courses.Publish`),
       «Дублировать» (`POST .../duplicate` → редирект на новый `id`, право `Courses.Create`),
       «Удалить» (`DELETE /courses/{id}` → в корзину, право `Courses.Delete`)
-  - [ ] Дерево разделов: создание раздела (`POST /courses/{id}/modules`, право
+  - [x] Дерево разделов: создание раздела (`POST /courses/{id}/modules`, право
         `Courses.Update`), инлайн-правка названия/описания (`PUT /modules/{id}`), удаление
         (`DELETE /modules/{id}` — предупредить, что каскадно удалит уроки и материалы раздела),
         перетаскивание (`PUT /courses/{id}/modules/reorder`)
-  - [ ] Уроки внутри раздела: создание (`POST /modules/{id}/lessons`, право
+  - [x] Уроки внутри раздела: создание (`POST /modules/{id}/lessons`, право
         `Lessons.Create`), инлайн-правка title/objectives/content/durationMinutes
         (`PUT /lessons/{id}`, `Lessons.Update`), удаление (`DELETE /lessons/{id}`,
         `Lessons.Delete` — каскадно удаляет материалы урока), перетаскивание
         (`PUT /modules/{id}/lessons/reorder`); автосохранение по правилу 9 AGENTS.md —
         передавать `lessonId`/поля через `mutate(arg)`, не через состояние формы, которое
         замыкают колбэки
-  - [ ] Материалы урока (панель на карточке урока): список (`GET /lessons/{id}/materials`,
+  - [x] Материалы урока (панель на карточке урока): список (`GET /lessons/{id}/materials`,
         право `LessonMaterials.View`), добавление (`POST /lessons/{id}/materials`, право
         `LessonMaterials.Manage`) — форма переключает «файл» (через presigned-загрузку
         [[Files]], передаётся `fileId`) или «ссылка» (`url`), **ровно одно из двух** —
