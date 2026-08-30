@@ -191,8 +191,13 @@ export function SessionDetailPage() {
       ) : session ? (
         <>
           <EntityDetailHero
-            avatar={<EntityDetailAvatar name={session.resolvedTopic} icon={CalendarClock} />}
-            title={session.resolvedTopic}
+            avatar={
+              <EntityDetailAvatar
+                name={session.resolvedTopic || "Занятие"}
+                icon={CalendarClock}
+              />
+            }
+            title={session.resolvedTopic || "Занятие"}
             badges={
               <EntityStatusBadge tone={SESSION_STATUS_TONE[session.status]}>
                 {SESSION_STATUS_LABEL[session.status]}
