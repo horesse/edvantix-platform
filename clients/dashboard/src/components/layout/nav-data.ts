@@ -22,8 +22,11 @@ import {
   Tags,
   Ticket,
   Trash2,
+  TrendingUp,
+  TriangleAlert,
   Users,
   UsersRound,
+  Wallet,
   Wifi,
 } from "lucide-react";
 import { ALL_TRASH_PERMISSIONS } from "@/lib/trash-permissions";
@@ -160,6 +163,42 @@ export const sections: NavSection[] = [
         label: "Нерабочие дни",
         icon: CalendarX2,
         perm: "Permissions.Scheduling.ScheduleTemplates.View",
+      },
+    ],
+  },
+  {
+    id: "payments",
+    caption: "Оплаты",
+    icon: Wallet,
+    items: [
+      // Each gate mirrors the permission the page's primary list endpoint
+      // enforces server-side (GET /student-invoices → StudentInvoices.View,
+      // GET /tariffs → Tariffs.View, GET /reports/* → StudentInvoices.Export).
+      // These are invoices for STUDENTS — distinct from /invoices (Billing
+      // subscription invoices) under "Operations".
+      {
+        to: "/payments/invoices",
+        label: "Счета учеников",
+        icon: Receipt,
+        perm: "Permissions.Payments.StudentInvoices.View",
+      },
+      {
+        to: "/payments/tariffs",
+        label: "Тарифы",
+        icon: Wallet,
+        perm: "Permissions.Payments.Tariffs.View",
+      },
+      {
+        to: "/payments/debtors",
+        label: "Должники",
+        icon: TriangleAlert,
+        perm: "Permissions.Payments.StudentInvoices.Export",
+      },
+      {
+        to: "/payments/revenue",
+        label: "Поступления",
+        icon: TrendingUp,
+        perm: "Permissions.Payments.StudentInvoices.Export",
       },
     ],
   },

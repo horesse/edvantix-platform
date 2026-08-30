@@ -22,7 +22,7 @@ tags: [задачи, frontend]
 - [x] `src/api/curriculum.ts`
 - [x] `src/api/study-groups.ts`
 - [x] `src/api/scheduling.ts`
-- [ ] `src/api/payments.ts`
+- [x] `src/api/payments.ts`
 
 Тонкие обёртки над `apiFetch` с типами DTO и ключами TanStack Query.
 Кодогенерации в проекте нет — типы пишутся руками по контрактам модуля.
@@ -275,33 +275,33 @@ tags: [задачи, frontend]
 > `PerPackage`** нигде не считается — не закладывать в UI баланса «осталось N занятий», такого
 > поля в `StudentBalanceDto` нет.
 
-- [ ] `src/api/payments.ts` — обёртка над `apiFetch`: типы `TariffDto`/`StudentInvoiceDto`/
+- [x] `src/api/payments.ts` — обёртка над `apiFetch`: типы `TariffDto`/`StudentInvoiceDto`/
       `StudentInvoiceDetailDto`/`InvoiceLineDto`/`InvoiceLineInput`/`PaymentConfirmationDto`/
       `StudentBalanceDto`/`DebtorDto`/`RevenueReportDto`/`PagedResponse<T>` вручную по
       контрактам (см. [[Payments]] → «Контракты»); enum'ы `TariffKind` (`PerLesson`/`PerMonth`/
       `PerPackage`/`OneTime`), `InvoiceStatus` (`Draft`/`Issued`/`PartiallyPaid`/`Paid`/
       `Cancelled`), `PaymentMethod` (`Cash`/`BankTransfer`/`Card`/`Online`/`Other`) — string
       union; ключи TanStack Query на `tariffs`/`student-invoices`/`payments`
-- [ ] `/payments/tariffs` — список (`GET /tariffs`, право `Tariffs.View`, фильтр `isActive`),
+- [x] `/payments/tariffs` — список (`GET /tariffs`, право `Tariffs.View`, фильтр `isActive`),
       создание/правка (`POST`/`PUT /tariffs/{id}`, право `Tariffs.Manage`; `kind` и `currency`
       неизменяемы после создания — не показывать их в форме правки, только в создании),
       деактивация (`POST /tariffs/{id}/deactivate`, тот же `Tariffs.Manage`); поля
       `lessonsCount`/`validDays` актуальны только для `PerPackage` — скрывать/дизейблить для
       остальных `kind` в форме
-- [ ] `/payments/invoices` — список (`GET /student-invoices`, право `StudentInvoices.View`),
+- [x] `/payments/invoices` — список (`GET /student-invoices`, право `StudentInvoices.View`),
       фильтры (`studentId`/`studyGroupId`/`status`/`periodFrom`/`periodTo`/`hasDebt`/`search`
       по номеру), пагинация и сортировка (`sortBy`/`sortDir`); колонка `isOverdue` — уже
       посчитана на бэкенде (`StudentInvoiceDto.IsOverdue`), не пересчитывать на клиенте
-  - [ ] **Мастер массового выставления** (тяжёлый компонент) — группа → период
+  - [x] **Мастер массового выставления** (тяжёлый компонент) — группа → период
         (`periodFrom`/`periodTo`) → срок оплаты (`dueDate`) → `POST
         /student-invoices/bulk-generate` (право `StudentInvoices.Create`, идемпотентен —
         повторный запуск за тот же период возвращает существующие черновики, не дублирует;
         `issueImmediately: false` по умолчанию — отдельная явная кнопка «выставить сразу»,
         не чекбокс в мастере) → список созданных/уже существующих id, ссылка на каждый
-  - [ ] Массовое выставление отмеченных черновиков — `POST /student-invoices/bulk-issue`
+  - [x] Массовое выставление отмеченных черновиков — `POST /student-invoices/bulk-issue`
         (право `StudentInvoices.Issue`), тело — массив id; best-effort — сервер молча
         пропускает не-`Draft` записи в выборке, не возвращает ошибку на всю пачку
-- [ ] `/payments/invoices/:id` — карточка счёта. `GET /student-invoices/{id}` →
+- [x] `/payments/invoices/:id` — карточка счёта. `GET /student-invoices/{id}` →
       `StudentInvoiceDetailDto` со строками (`lines[]`) и оплатами (`payments[]`) сразу —
       отдельных запросов не нужно. Правка строк (`PUT /student-invoices/{id}`, право
       `StudentInvoices.Create`, только пока `status = Draft` — сервер вернёт 409 иначе, UI
@@ -312,7 +312,7 @@ tags: [задачи, frontend]
       черновик), «Отменить» (`POST .../cancel`, право `StudentInvoices.Cancel`, только при
       `paidAmount = 0` — иначе сначала сторнировать все оплаты, показать это в подсказке),
       «Скачать PDF» (`GET .../pdf`, право `StudentInvoices.View`, `application/pdf`)
-  - [ ] Блок оплат на карточке — список `payments[]`, подтверждение новой (`POST
+  - [x] Блок оплат на карточке — список `payments[]`, подтверждение новой (`POST
         .../payments`, право `StudentPayments.Confirm` — гейтить кнопку отдельно от остальной
         карточки, самое чувствительное право модуля) с полями сумма/дата/способ
         (`PaymentMethod`)/референс/чек (`proofFileId` через presigned-загрузку [[Files]])/
@@ -321,19 +321,19 @@ tags: [задачи, frontend]
         `StudentPayments.Revoke` — держать за отдельной ролью в UI, не показывать рядом с
         обычным подтверждением) — с обязательной заметкой-причиной; сторно-строка появится в
         том же списке `payments[]` с отрицательной суммой и `reversesId`, не отдельной сущностью
-- [ ] `/payments/debtors` — отчёт (`GET /reports/debtors`, право `StudentInvoices.Export`,
+- [x] `/payments/debtors` — отчёт (`GET /reports/debtors`, право `StudentInvoices.Export`,
       опциональный фильтр `studyGroupId`) — таблица `studentId`/`debt`/`overdueInvoiceCount`/
       `oldestDueDate`, ссылка на карточку ученика (People, Этап 1)
-- [ ] `/payments/revenue` — отчёт (`GET /reports/revenue`, право `StudentInvoices.Export`,
+- [x] `/payments/revenue` — отчёт (`GET /reports/revenue`, право `StudentInvoices.Export`,
       обязательные `periodFrom`/`periodTo`) — сумма поступлений с разбивкой по
       `PaymentMethod` (`byMethod[]`); учитывает сторно автоматически (сумма со знаком), не
       нужно вычитать вручную
-- [ ] `/students/:id` (в People, Этап 1) — вкладка «Счета/Баланс»: `GET
+- [x] `/students/:id` (в People, Этап 1) — вкладка «Счета/Баланс»: `GET
       /students/{studentId}/balance` (право `StudentInvoices.View`) — `charged`/`paid`/`debt`/
       `advance` плюс список `overdueInvoices[]` со ссылками на карточки счетов; отдельно
       список всех счетов ученика через `GET /student-invoices?studentId=` для полной истории
       (баланс отдаёт только просроченные, не все)
-- [ ] `/student-invoices/my` (право `StudentInvoices.ViewOwn`) — «мои счета» для кабинета
+- [x] `/student-invoices/my` (право `StudentInvoices.ViewOwn`) — «мои счета» для кабинета
       ученика/представителя (Этап 6), `GET /student-invoices/my` (опциональный `status`) —
       свои счета для ученика, счета всех подопечных для представителя, сервер сам резолвит
       через `PeopleScope`, отдельного переключателя подопечного на этом запросе не нужно
@@ -361,7 +361,8 @@ tags: [задачи, frontend]
 - [ ] `/identity/groups` — переименовать в «Группы доступа»
 - [ ] `/tickets` — категории, привязка к ученику и счёту
 - [ ] `/chat` — каналы учебных групп
-- [ ] Развести в меню «Подписка» ([[Billing]]) и «Счета учеников» ([[Payments]])
+- [x] Развести в меню «Подписка» ([[Billing]]) и «Счета учеников» ([[Payments]]) —
+      добавлен отдельный раздел «Оплаты» в `nav-data.ts` (Этап 5)
 
 ---
 
@@ -419,8 +420,11 @@ Playwright с моками маршрутов. Обязательное покр
 или расписание:
 
 - [x] отметка посещаемости
-- [ ] выставление счёта
-- [ ] подтверждение оплаты
+- [x] выставление счёта (`tests/payments/invoice-issue.spec.ts` — 409 на пустом черновике,
+      блокировка редактора для не-`Draft`, `ReplaceLines` одним PUT)
+- [x] подтверждение оплаты (`tests/payments/payment-confirm.spec.ts` — гейт
+      `StudentPayments.Confirm`, переплата не блокируется; `payment-reverse.spec.ts` —
+      сторно с обязательной причиной, отрицательная строка + `reversesId`)
 - [ ] зачисление и перевод между группами
 - [x] перенос и отмена занятия
 - [ ] удалить спеки каталога ([[Задачи · Удаление Catalog]])
