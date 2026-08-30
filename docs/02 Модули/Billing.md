@@ -26,9 +26,19 @@ SaaS-биллинг платформы: **школа платит Edvantix**. П
 | `BillingPlan` | тарифный план платформы, лимиты; `Name` + `Description` — витрина выбора плана |
 | `Subscription` | подписка школы на план, период |
 | `Invoice`, `InvoiceLineItem` | счёт школе от Edvantix |
-| `UsageSnapshot` | снимок потребления для лимитов и тарификации |
+| `UsageSnapshot` | снимок потребления для лимитов и тарификации — одна строка на `QuotaResource` за период |
 
 Перечисления — `BillingEnums`.
+
+### Метрики потребления
+
+`UsageReporter.CaptureForPeriodAsync` снимает по одному `UsageSnapshot` на каждое значение
+`QuotaResource` (`src/BuildingBlocks/Shared/Quota`). Помимо инфраструктурных (`ApiCalls`,
+`StorageBytes` = «объём файлов», `Users`, `ActiveFeatureFlags`) сняты предметные гейджи:
+`ActiveStudents` (не архивные), `ActiveTeachers` (активные), `StudyGroups` (форма/активна),
+`MonthlySessions` (занятия за текущий календарный месяц UTC, без отменённых). Живое значение
+отдаёт `IQuotaGaugeProvider` в модуле-владельце (People / StudyGroups / Scheduling), новые
+значения enum'а **только дописываются** — enum пишется как `int`.
 
 ### Планы по умолчанию
 
@@ -44,6 +54,20 @@ SaaS-биллинг платформы: **школа платит Edvantix**. П
 
 `Description` (≤ 512, nullable) правится через `CreatePlanCommand` / `UpdatePlanCommand`
 и отдаётся в `BillingPlanDto`. Миграция `BillingPlanDescription`.
+
+Числовые лимиты плана живут в `QuotaOptions.Plans[<ключ>]` (`appsettings.json`), не в БД:
+`ActiveStudents` 50 / 1000, `ActiveTeachers` 5 / 100, `StudyGroups` 10 / 300,
+`MonthlySessions` 500 / 20000, `StorageBytes` 2 ГиБ / 50 ГиБ (`free` / `pro` = `pro-annual`).
+`QuotaOptions.Enabled` = `true` (в Development выключено, как `Auditing:Retention`).
+
+### Соблюдение лимитов
+
+Мягкая блокировка: `CreateStudent` / `CreateTeacher` / `CreateStudyGroup` / `CreateSession`
+зовут `IQuotaService.EnsureHeadroomAsync` (`src/BuildingBlocks/Quota`) до сохранения; при
+превышении — `QuotaExceededException` → **HTTP 402**, доступ к существующим данным не теряется.
+Счётчик не мутируется (гейджи считаются из состояния модуля). Не гейтятся restore/reactivate
+и массовая генерация (`GenerateSessions`, `ImportStudents`). `StorageBytes` — своей веткой в
+`RequestUploadUrlCommandHandler` → **HTTP 507**.
 
 ## Контракты
 
