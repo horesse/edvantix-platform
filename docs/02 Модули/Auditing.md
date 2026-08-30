@@ -84,7 +84,16 @@ flowchart LR
 ### Настройки
 
 `AuditHttpOptions` — что писать из HTTP-контекста.
-`AuditRetentionOptions` — срок хранения записей.
+`AuditRetentionOptions` — срок хранения записей. Ежедневный Hangfire-джоб
+(`AuditRetentionJob`, `auditing-retention`, регистрируется всегда — но `Enabled=false`
+по умолчанию) чистит `AuditRecords` порциями `ExecuteDeleteAsync` по окну на каждый тип
+события. **Политика по умолчанию** (`appsettings.json`, `Auditing:Retention`): включён,
+`EntityChange` 180 дней (изменения занятий/посещаемости растут быстрее всего — семестр
+плюс окно на спор), `Activity` 30, `Security` 730 (комплаенс), `Exception` 180,
+`Cron` `30 3 * * *`. В `Development` джоб выключен (`appsettings.Development.json`).
+Джоб отказывается работать, если любое окно `< 1` дня (иначе отсечка уходит в будущее и
+таблица очищается целиком). Привязка окон к тарифу [[Billing]] — сознательно отложена
+(требует новой оси `QuotaResource` / продуктового решения, как и прочие Quota-пункты).
 
 ## Права
 
