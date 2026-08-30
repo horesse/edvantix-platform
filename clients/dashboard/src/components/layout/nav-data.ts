@@ -1,7 +1,12 @@
 import {
   Activity,
   BookOpen,
+  CalendarDays,
+  CalendarRange,
+  CalendarX2,
+  ClipboardCheck,
   CreditCard,
+  DoorOpen,
   FolderOpen,
   FolderTree,
   GraduationCap,
@@ -114,6 +119,47 @@ export const sections: NavSection[] = [
         label: "Группы",
         icon: UsersRound,
         perm: "Permissions.StudyGroups.StudyGroups.View",
+      },
+    ],
+  },
+  {
+    id: "scheduling",
+    caption: "Расписание",
+    icon: CalendarDays,
+    items: [
+      // Each gate mirrors the permission the page's primary list endpoint enforces
+      // server-side (GET /sessions/calendar → Sessions.View, GET /sessions/{id}/attendance
+      // → Attendance.View, GET /sessions/my → Sessions.ViewOwn, GET /rooms → Rooms.View,
+      // GET /non-working-days → ScheduleTemplates.View).
+      {
+        to: "/schedule",
+        label: "Календарь",
+        icon: CalendarDays,
+        perm: "Permissions.Scheduling.Sessions.View",
+      },
+      {
+        to: "/attendance",
+        label: "Посещаемость",
+        icon: ClipboardCheck,
+        perm: "Permissions.Scheduling.Attendance.View",
+      },
+      {
+        to: "/sessions/my",
+        label: "Моё расписание",
+        icon: CalendarRange,
+        perm: "Permissions.Scheduling.Sessions.ViewOwn",
+      },
+      {
+        to: "/settings/rooms",
+        label: "Аудитории",
+        icon: DoorOpen,
+        perm: "Permissions.Scheduling.Rooms.View",
+      },
+      {
+        to: "/settings/non-working-days",
+        label: "Нерабочие дни",
+        icon: CalendarX2,
+        perm: "Permissions.Scheduling.ScheduleTemplates.View",
       },
     ],
   },

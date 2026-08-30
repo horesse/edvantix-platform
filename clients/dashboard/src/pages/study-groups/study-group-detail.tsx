@@ -4,8 +4,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeftRight,
   BookOpen,
+  CalendarClock,
   CalendarDays,
   CheckCircle2,
+  ClipboardCheck,
   Pause,
   Pencil,
   Play,
@@ -46,6 +48,10 @@ import {
 } from "@/api/study-groups";
 import { searchCourses } from "@/api/curriculum";
 import { searchStudents, searchTeachers } from "@/api/people";
+import {
+  getGroupAttendanceReport,
+  type StudentAttendanceSummaryDto,
+} from "@/api/scheduling";
 import { useAuth } from "@/auth/use-auth";
 import { ApiRequestError } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
@@ -111,6 +117,10 @@ export function StudyGroupBuilderPage() {
   const canEnrollCreate = perms.includes("Permissions.StudyGroups.Enrollments.Create");
   const canEnrollDelete = perms.includes("Permissions.StudyGroups.Enrollments.Delete");
   const canEnrollTransfer = perms.includes("Permissions.StudyGroups.Enrollments.Transfer");
+  const canViewTemplates = perms.includes(
+    "Permissions.Scheduling.ScheduleTemplates.View",
+  );
+  const canViewAttendance = perms.includes("Permissions.Scheduling.Attendance.View");
 
   const groupKey = ["study-group", studyGroupId] as const;
   const query = useQuery({
@@ -253,6 +263,19 @@ export function StudyGroupBuilderPage() {
                         />
                         <span className="hidden sm:inline">Обновить</span>
                       </Button>
+                      {canViewTemplates && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          asChild
+                          className="gap-1.5"
+                        >
+                          <Link to={`/study-groups/${studyGroupId}/schedule`}>
+                            <CalendarClock className="h-3.5 w-3.5" />
+                            <span className="hidden sm:inline">Расписание</span>
+                          </Link>
+                        </Button>
+                      )}
                       {canUpdate && !frozen && (
                         <Button
                           variant="outline"
@@ -415,6 +438,13 @@ export function StudyGroupBuilderPage() {
                       onTransfer={setTransferTarget}
                       onUnenroll={setUnenrollTarget}
                       onChanged={invalidateGroup}
+                    />
+                  )}
+
+                  {canViewAttendance && (
+                    <AttendanceReportSection
+                      studyGroupId={group.id}
+                      studentName={studentName}
                     />
                   )}
                 </div>
@@ -1573,5 +1603,110 @@ function StudyGroupEditDialog({
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// ───────────────────────────────────────────────────────────────────────
+//  Attendance report — per-student Present/Absent/Late/Excused/Total over
+//  a period, via GET /study-groups/{id}/attendance-report (Scheduling).
+// ───────────────────────────────────────────────────────────────────────
+
+function AttendanceReportSection({
+  studyGroupId,
+  studentName,
+}: {
+  studyGroupId: string;
+  studentName: Map<string, string>;
+}) {
+  const [from, setFrom] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return d.toISOString().slice(0, 10);
+  });
+  const [to, setTo] = useState(() => new Date().toISOString().slice(0, 10));
+
+  const query = useQuery({
+    queryKey: ["group-attendance-report", studyGroupId, { from, to }],
+    queryFn: () => getGroupAttendanceReport(studyGroupId, from, to),
+  });
+
+  const rows: StudentAttendanceSummaryDto[] = useMemo(
+    () =>
+      [...(query.data?.students ?? [])].sort((a, b) =>
+        (studentName.get(a.studentId) ?? a.studentId).localeCompare(
+          studentName.get(b.studentId) ?? b.studentId,
+        ),
+      ),
+    [query.data, studentName],
+  );
+
+  return (
+    <EntityDetailSection
+      title="Посещаемость"
+      icon={ClipboardCheck}
+      description="Сводка по каждому ученику за период."
+      action={
+        <div className="flex items-center gap-2">
+          <Input
+            type="date"
+            aria-label="С даты"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+            className="h-8 text-[12px]"
+          />
+          <span className="text-[12px] text-[var(--color-muted-foreground)]">–</span>
+          <Input
+            type="date"
+            aria-label="По дату"
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+            className="h-8 text-[12px]"
+          />
+        </div>
+      }
+    >
+      {query.isLoading ? (
+        <p className="text-[13px] text-[var(--color-muted-foreground)]">Загрузка…</p>
+      ) : query.isError ? (
+        <p className="text-[13px] text-[var(--color-destructive)]">
+          {describe(query.error)}
+        </p>
+      ) : rows.length === 0 ? (
+        <p className="text-[13px] text-[var(--color-muted-foreground)]">
+          За выбранный период нет данных о посещаемости.
+        </p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[520px] text-[12.5px]">
+            <thead>
+              <tr className="border-b border-[var(--color-border)] text-[11px] font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
+                <th className="py-2 pr-3 text-left">Ученик</th>
+                <th className="px-2 py-2 text-right">Был</th>
+                <th className="px-2 py-2 text-right">Не был</th>
+                <th className="px-2 py-2 text-right">Опоздал</th>
+                <th className="px-2 py-2 text-right">Уваж.</th>
+                <th className="pl-2 py-2 text-right">Всего</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[oklch(from_var(--color-border)_l_c_h_/_0.5)]">
+              {rows.map((r) => (
+                <tr key={r.studentId}>
+                  <td className="py-2 pr-3 text-[var(--color-foreground)]">
+                    {studentName.get(r.studentId) ?? short(r.studentId)}
+                  </td>
+                  <td className="px-2 py-2 text-right tabular-nums">{r.presentCount}</td>
+                  <td className="px-2 py-2 text-right tabular-nums">{r.absentCount}</td>
+                  <td className="px-2 py-2 text-right tabular-nums">{r.lateCount}</td>
+                  <td className="px-2 py-2 text-right tabular-nums">{r.excusedCount}</td>
+                  <td className="pl-2 py-2 text-right font-medium tabular-nums">
+                    {r.totalCount}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </EntityDetailSection>
   );
 }
