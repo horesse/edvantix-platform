@@ -18,7 +18,7 @@ tags: [задачи, frontend]
 
 ## dashboard · новые API-модули
 
-- [ ] `src/api/people.ts`
+- [x] `src/api/people.ts` — students/teachers/guardians + scope, все эндпоинты People
 - [ ] `src/api/curriculum.ts`
 - [ ] `src/api/study-groups.ts`
 - [ ] `src/api/scheduling.ts`
@@ -39,28 +39,27 @@ tags: [задачи, frontend]
 > Единственное, чего нет в API — `GET /teachers/{id}/workload` (ждёт [[StudyGroups]]),
 > поэтому раздел «нагрузка» на карточке преподавателя пока не строить.
 
-- [ ] `src/api/people.ts` — обёртка над `apiFetch`: типы `StudentDto`/`StudentDetailDto`/
-      `TeacherDto`/`GuardianDto`/`StudentGuardianDto`/`StudentNoteDto`/`PeopleScope`/
-      `PagedResponse<T>` вручную по контрактам (см. [[People]] → «Контракты»); ключи
-      TanStack Query на `students`/`teachers`/`guardians`
-- [ ] `/students` — список, фильтры (статус, менеджер, текст), пагинация.
-      `GET /api/v1/students`, право `Students.View`
-- [ ] `/students/:id` — профиль (`GET /students/{id}` → `StudentDetailDto`), редактирование
-      (`PUT`), архивация/восстановление (`POST .../archive`, `.../restore`), привязка/отвязка
-      учётки (`POST .../link-user`, `.../unlink-user`), представители (`GET/POST/DELETE
-      .../guardians`, `POST .../guardians/{gid}/primary-payer`), заметки — отдельная вкладка
-      под правом `Students.ViewNotes` (`GET/POST .../notes`, `DELETE .../notes/{noteId}`).
-      Группы/посещаемость/счета — заглушки до [[StudyGroups]]/[[Scheduling]]/[[Payments]]
-- [ ] `/students/import` — загрузка CSV (`multipart/form-data`, поле `file`) →
-      `POST /students/import?dryRun=true` для предпросмотра (таблица построчных результатов,
-      `ImportStudentsResultDto.Rows`, ошибки без блокировки остальных строк) → повторный
-      вызов с `?dryRun=false` для записи
-- [ ] `/teachers` — список (`GET /teachers`, право `Teachers.View`)
-- [ ] `/teachers/:id` — профиль, специализации (`string[]`), ставка, деактивация/активация
-      (`POST .../deactivate`, `.../activate`), привязка/отвязка учётки. Блок «нагрузка» —
-      не строить, эндпоинта нет (см. заметку выше)
-- [ ] `/guardians` — список, подопечные (по клику — переход на карточку ученика через
-      `StudentGuardianDto`), привязка/отвязка учётки
+- [x] `src/api/people.ts` — `clients/dashboard/src/api/people.ts`: типы `StudentDto`/
+      `StudentDetailDto`/`TeacherDto`/`GuardianDto`/`StudentGuardianDto`/`StudentNoteDto`/
+      `PeopleScope`/`PagedResponse<T>` + все команды/запросы, ключи TanStack Query
+      `students`/`teachers`/`guardians` (+ `student`/`teacher`/`guardian` для карточек)
+- [x] `/students` — список, фильтр по статусу, текстовый поиск, пагинация, создание.
+      `GET /api/v1/students`, право `Students.View`. (фильтр по менеджеру — позже, нужен
+      пикер пользователей)
+- [x] `/students/:id` — профиль + редактирование (`PUT`), архивация/восстановление,
+      привязка/отвязка учётки, вкладка «Представители» (`GET/POST/DELETE .../guardians`,
+      `POST .../guardians/{gid}/primary-payer`), вкладка «Заметки» под `Students.ViewNotes`.
+      Группы/посещаемость/счета/история — заглушки до [[StudyGroups]]/[[Scheduling]]/[[Payments]]
+- [x] `/students/import` — загрузка CSV → `POST /students/import?dryRun=true` (таблица
+      построчных результатов) → повторный вызов с `?dryRun=false` для записи
+- [x] `/teachers` — список (`GET /teachers`, право `Teachers.View`), создание
+- [x] `/teachers/:id` — профиль, специализации, ставка, био, деактивация/активация,
+      привязка/отвязка учётки. Блок «нагрузка» — заглушка (эндпоинта нет)
+- [x] `/guardians` — список, создание, привязка/отвязка учётки, редактирование.
+      «Подопечные» на карточке — заглушка: в `People.Contracts` нет запроса
+      «ученики представителя», связи задаются со стороны ученика
+- [ ] `/guardians` — блок «подопечные»: нужен `GET /guardians/{id}/students` в People
+      (сейчас связь только через `GET /students/{id}/guardians`)
 
 ### Этап 2 · Curriculum
 
