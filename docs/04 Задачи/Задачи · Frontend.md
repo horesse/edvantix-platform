@@ -20,7 +20,7 @@ tags: [задачи, frontend]
 
 - [x] `src/api/people.ts` — students/teachers/guardians + scope, все эндпоинты People
 - [x] `src/api/curriculum.ts`
-- [ ] `src/api/study-groups.ts`
+- [x] `src/api/study-groups.ts`
 - [ ] `src/api/scheduling.ts`
 - [ ] `src/api/payments.ts`
 
@@ -124,16 +124,16 @@ tags: [задачи, frontend]
 > Scheduling/Payments (Этапы 4–5) и появятся на `/study-groups/:id` только после тех модулей;
 > здесь — только то, что закрывает сам StudyGroups.
 
-- [ ] `src/api/study-groups.ts` — обёртка над `apiFetch`: типы `StudyGroupDto`/
+- [x] `src/api/study-groups.ts` — обёртка над `apiFetch`: типы `StudyGroupDto`/
       `StudyGroupDetailDto`/`GroupEnrollmentDto`/`GroupTeacherDto`/`PagedResponse<T>` вручную по
       контрактам (см. [[StudyGroups]] → «Контракты»); enum'ы `GroupFormat`/`StudyGroupStatus`/
       `EnrollmentStatus`/`TeacherRole` — string union, сериализуются как строки; ключи TanStack
       Query на `study-groups`/`enrollments`
-- [ ] `/study-groups` — список (`GET /study-groups`, право `StudyGroups.View`), фильтры по курсу
+- [x] `/study-groups` — список (`GET /study-groups`, право `StudyGroups.View`), фильтры по курсу
       (`courseId`), преподавателю (`teacherId`), статусу (`StudyGroupStatus`) и формату
       (`GroupFormat`), поиск (`search`), пагинация и сортировка (`sortBy`/`sortDir`); кнопка
       создания гейтится `StudyGroups.Create`
-- [ ] `/study-groups/:id` — **конструктор группы**: карточка (редактирование `name`/
+- [x] `/study-groups/:id` — **конструктор группы**: карточка (редактирование `name`/
       `primaryTeacherId`/`format`/`capacity`/`startDate`/`endDate`/`meetingUrl`/`roomId`/`notes`
       через `PUT /study-groups/{id}`, право `StudyGroups.Update`; `code` неизменяем после
       создания — не редактируется в форме) + состав ниже. `GET /study-groups/{id}` возвращает
@@ -144,27 +144,41 @@ tags: [задачи, frontend]
       полем причины). После `Finished`/`Cancelled` вся карточка и состав — read-only (сервер
       всё равно вернёт 409 на любую попытку изменения, но не отправлять запрос вхолостую).
       Удаление (`DELETE /study-groups/{id}`, право `StudyGroups.Delete`)
-- [ ] Ростер преподавателей на `/study-groups/:id` — список `teachers[]` (роль
+- [x] Ростер преподавателей на `/study-groups/:id` — список `teachers[]` (роль
       `Primary`/`Assistant`/`Substitute`, `PrimaryTeacherId` самой группы показывать отдельной
       меткой — они не обязаны совпадать, см. [[StudyGroups]] → примечание о `PrimaryTeacherId`),
       добавление/удаление (`POST`/`DELETE .../teachers`, право `StudyGroups.Update`)
-- [ ] Диалог **зачисления** — выбор одного или нескольких учеников (`POST
+- [x] Диалог **зачисления** — выбор одного или нескольких учеников (`POST
       /study-groups/{id}/enrollments`, тело — список `studentIds` + опционально
       `tariffId`/`discountPercent`, право `Enrollments.Create`); сервер вернёт 409 при
       превышении `Capacity` — показывать как «мест нет», не глотать
-- [ ] Диалог **отчисления** — причина + дата (`DELETE
+- [x] Диалог **отчисления** — причина + дата (`DELETE
       /study-groups/{id}/enrollments/{enrollmentId}`, право `Enrollments.Delete`) — не удаляет
       строку из UI-списка сразу, а переводит в статус `Left` (список состава показывает ушедших,
       если фильтр не скрывает их явно)
-- [ ] Диалог **перевода** — целевая группа + дата (`POST
+- [x] Диалог **перевода** — целевая группа + дата (`POST
       /enrollments/{enrollmentId}/transfer`, право `Enrollments.Transfer`); пауза/возобновление
       — отдельные быстрые действия в строке состава (`POST /enrollments/{id}/pause`|`/resume`,
       право `Enrollments.Create` — сервер гейтит оба под тем же правом, что и создание)
-- [ ] `/study-groups/my` (право `StudyGroups.ViewOwn`) — «мои группы» для кабинета
+- [x] `/study-groups/my` (право `StudyGroups.ViewOwn`) — «мои группы» для кабинета
       преподавателя/ученика (Этап 6), список без создания/редактирования
-- [ ] `/students/:id` (в People, Этап 1) — вкладка «Группы» через `GET
+- [x] `/students/:id` (в People, Этап 1) — вкладка «Группы» через `GET
       /students/{studentId}/enrollments` (право `Enrollments.View`) — все группы ученика,
       включая завершённые, не только активные
+
+> [!note] Замечания по реализации Этапа 3
+> - `roomId` в формах создания/правки группы не выводится — справочник аудиторий
+>   принадлежит Scheduling (Этап 4), пикера ещё нет; поле уедет в форму вместе с тем этапом.
+> - Диалог отчисления шлёт только `reason` (query-параметр эндпоинта `DELETE
+>   .../enrollments/{id}`); `LeftOn`/дату эндпоинт не биндит, поэтому поля даты в диалоге нет —
+>   дату проставляет сервер.
+> - `tariffId` в диалоге зачисления не выбирается (тарифы — Payments, Этап 5); доступна общая
+>   скидка `discountPercent` на весь набор.
+> - Пауза/возобновление зачисления — быстрые действия в строке состава под `Enrollments.Create`.
+> - Проверено на Aspire: батч-зачисление при превышении `Capacity` может частично примениться
+>   (первые ученики зачисляются, следующий даёт 409) — вопреки формулировке контракта об
+>   атомарности. Диалог зачисления на 409 не только показывает «мест нет», но и инвалидирует
+>   карточку группы, чтобы ростер отразил частичное зачисление.
 
 ### Этап 4 · Scheduling
 
