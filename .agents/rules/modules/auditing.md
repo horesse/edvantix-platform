@@ -3,7 +3,7 @@
 Append-only audit trail (entity changes, security events, exceptions, HTTP activity) with async channel-buffered persistence + DLQ. Module `Order = 300`.
 
 **Entities / DbContext:** `AuditRecord`, `AuditDbContext`. `AuditEnvelope` is the in-flight event. Rich Contracts surface: `IAuditClient`, `ISecurityAudit`, `IAuditPublisher`, `IAuditSink`, `IAuditDlqSink`, `IAuditEnricher`, `NoAuditAttribute`, payload records.
-**Areas:** read-only query side — GetAudits / ByCorrelation / ByTrace / Summary / Exception / Security. Full list: `Features/v1/` or `/scalar`.
+**Areas:** read-only query side — GetAudits / ByEntity / ByCorrelation / ByTrace / Summary / Exception / Security. Full list: `Features/v1/` or `/scalar`.
 
 ## Gotchas
 
@@ -13,3 +13,4 @@ Append-only audit trail (entity changes, security events, exceptions, HTTP activ
 - `SqlAuditSink` groups a batch by `TenantId` and sets tenant context per group in a fresh scope (null → Root) — background writer has no ambient tenant.
 - **JSON masking** redacts fields by keyword (password/secret/token/apiKey/connectionString…) → `****`. Add sensitive keys there.
 - Exclude an endpoint from activity auditing with `[NoAudit]` / the `NoAudit` endpoint extension.
+- **Entity history** — `GetAuditsQuery.EntityName`/`EntityKey` filter `EntityChange` rows by `EntityChangeEventPayload.EntityName`/`.Key` inside the `jsonb` payload (same `AsText(...)` + `ILIKE` trick as the exception/security filters — no dedicated columns, `PayloadJson` stays `jsonb`). `GET /audits/by-entity/{entityName}/{entityId}` is the convenience shell: it builds `EntityKey = "Id:{entityId}"`. Composite keys → pass `entityKey` to `GET /audits` directly. Validator: `EntityKey` without `EntityName` is a 400.
