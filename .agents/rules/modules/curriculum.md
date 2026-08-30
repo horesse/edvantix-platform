@@ -34,7 +34,13 @@ LessonMaterials (добавление/удаление/перестановка,
   уникальности слага, затем клонируются все `CourseModule` → `Lesson` → `LessonMaterial` с
   новыми `Id`, сохраняя `SortOrder`.
 - **`LessonMaterial`** — CHECK-ограничение в БД (`CK_LessonMaterials_FileXorUrl`) поверх
-  проверки в домене и валидаторе: ровно одно из `FileId`/`Url`. `LessonMaterialAccessPolicy`
+  проверки в домене и валидаторе: ровно одно из `FileId`/`Url`. Плюс правило «вид → источник»
+  (домен + `AddLessonMaterialCommandValidator`): `Video`/`Link` → только `Url`,
+  `File`/`Presentation` → только `FileId`, `Homework` — любое. `Video` дополнительно требует
+  хост из `CurriculumOptions.VideoMaterialAllowedHosts` (`Curriculum` секция конфига;
+  YouTube/Vimeo/RuTube/VK/Дзен по умолчанию, сравнение по хосту и поддоменам) — прямой
+  загрузки видео нет ни здесь, ни через [[Files]] (нет `.mp4/.mov/…` в категории
+  `LessonMaterial`). `LessonMaterialAccessPolicy`
   (`IFileAccessPolicy`, `OwnerType = "LessonMaterial"`, `OwnerId = LessonId`) — по образцу
   Catalog's `ProductFileAccessPolicy`; видимость ученику решает `VisibleToStudents` на самом
   материале, не файловая политика.

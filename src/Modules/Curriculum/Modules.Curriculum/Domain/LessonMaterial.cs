@@ -7,7 +7,10 @@ namespace FSH.Modules.Curriculum.Domain;
 /// A material attached to a <see cref="Lesson"/>: a file, a video/link, a homework note, or a
 /// presentation. Exactly one of <see cref="FileId"/>/<see cref="Url"/> is set — enforced here,
 /// by <c>AddLessonMaterialCommandValidator</c>, and by a DB CHECK constraint
-/// (<see cref="Data.Configurations.LessonMaterialConfiguration"/>).
+/// (<see cref="Data.Configurations.LessonMaterialConfiguration"/>). Which one is fixed by the
+/// kind: <c>Video</c>/<c>Link</c> carry an external <see cref="Url"/> (a class recording lives on
+/// an allow-listed video host — never a direct upload), <c>File</c>/<c>Presentation</c> carry a
+/// stored <see cref="FileId"/>, <c>Homework</c> may be either.
 /// <see cref="VisibleToStudents"/>&#160;=&#160;false marks teacher-only material (answer keys,
 /// methodology notes).
 /// </summary>
@@ -41,6 +44,14 @@ public sealed class LessonMaterial : AggregateRoot<Guid>
         if (fileId is null == string.IsNullOrWhiteSpace(url))
         {
             throw new ArgumentException("Exactly one of FileId or Url must be set.");
+        }
+        if (kind is MaterialKind.Video or MaterialKind.Link && fileId is not null)
+        {
+            throw new ArgumentException("Video and Link materials must use Url, not FileId.", nameof(kind));
+        }
+        if (kind is MaterialKind.File or MaterialKind.Presentation && !string.IsNullOrWhiteSpace(url))
+        {
+            throw new ArgumentException("File and Presentation materials must use FileId, not Url.", nameof(kind));
         }
 
         return new LessonMaterial

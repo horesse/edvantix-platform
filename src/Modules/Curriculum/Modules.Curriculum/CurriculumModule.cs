@@ -59,6 +59,8 @@ public sealed class CurriculumModule : IModule
 
         PermissionConstants.Register(CurriculumPermissions.All);
 
+        builder.Services.Configure<CurriculumOptions>(builder.Configuration.GetSection("Curriculum"));
+
         builder.Services.AddHeroDbContext<CurriculumDbContext>();
         builder.Services.AddScoped<IDbInitializer, CurriculumDbInitializer>();
         builder.Services.AddScoped<ICourseQueryService, CourseQueryService>();
