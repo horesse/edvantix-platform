@@ -9,6 +9,7 @@ public sealed class CreatePlanCommandValidator : AbstractValidator<CreatePlanCom
     {
         RuleFor(x => x.Key).NotEmpty().MaximumLength(64);
         RuleFor(x => x.Name).NotEmpty().MaximumLength(128);
+        RuleFor(x => x.Description).MaximumLength(512);
         RuleFor(x => x.Currency).NotEmpty().Length(3);
         RuleFor(x => x.MonthlyBasePrice).GreaterThanOrEqualTo(0);
         RuleFor(x => x.Interval).IsInEnum();

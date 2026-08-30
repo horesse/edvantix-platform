@@ -188,4 +188,34 @@ public sealed class BillingPlanTests
     }
 
     #endregion
+
+    #region Description
+
+    [Fact]
+    public void Create_Should_Store_Trimmed_Description()
+    {
+        var plan = BillingPlan.Create("pro", "Школа", "USD", 29m, description: "  до 100 учеников  ");
+
+        plan.Description.ShouldBe("до 100 учеников");
+    }
+
+    [Fact]
+    public void Create_Should_Null_Out_Blank_Description()
+    {
+        var plan = BillingPlan.Create("pro", "Школа", "USD", 29m, description: "   ");
+
+        plan.Description.ShouldBeNull();
+    }
+
+    [Fact]
+    public void Update_Should_Replace_Description()
+    {
+        var plan = BillingPlan.Create("pro", "Школа", "USD", 29m, description: "старое описание");
+
+        plan.Update("Школа", 29m, null, description: "новое описание");
+
+        plan.Description.ShouldBe("новое описание");
+    }
+
+    #endregion
 }

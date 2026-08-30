@@ -11,4 +11,5 @@ public sealed record BillingPlanDto(
     IReadOnlyDictionary<QuotaResource, decimal> OverageRates,
     bool IsActive,
     PlanInterval Interval,
-    decimal? AnnualPrice);
+    decimal? AnnualPrice,
+    string? Description = null);

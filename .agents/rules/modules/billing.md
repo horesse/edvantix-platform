@@ -8,6 +8,7 @@ Plans, subscriptions, usage metering, monthly invoicing. **Manual payment markin
 ## Gotchas
 
 - **`BillingPlan` is `IGlobalEntity`** — platform-wide catalogue rows, **not tenant-scoped** (opts out of tenant isolation). A plan's `Key` matches the quota config key (e.g. `"pro"`): limits come from `QuotaOptions`, prices/overage from the plan.
+- **Seeded plan keys are load-bearing** — `free` / `pro` / `pro-annual` (`BillingDbInitializer`). `QuotaOptions.Plans` and existing subscriptions key off them, so rename the school-facing `Name`/`Description` (blurb, ≤512, nullable, on Create/Update commands + `BillingPlanDto`), never the key.
 - **`BillingDbContext` is a plain `DbContext`** — tenant filtering is done explicitly in query services, not by the `BaseDbContext` auto-filter. Don't assume the global tenant filter applies here.
 - **Invoice state machine** — `Draft → Issued → Paid | Void`. Line items only addable in Draft; a Paid invoice can't be voided; totals recompute on add; Issue defaults due = +14 days.
 - **Usage metering is idempotent** — `IUsageReporter.CaptureForPeriodAsync` reads `IQuotaService` and persists one `UsageSnapshot` per `QuotaResource` per (tenant, period), so invoicing math is reproducible even after a mid-period plan change.

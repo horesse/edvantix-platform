@@ -18,6 +18,10 @@ public sealed class BillingPlan : BaseEntity<Guid>, IGlobalEntity
 
     public string Key { get; private set; } = default!;
     public string Name { get; private set; } = default!;
+
+    /// <summary>Customer-facing blurb for the plan-picker: who it fits and what it includes. Optional.</summary>
+    public string? Description { get; private set; }
+
     public string Currency { get; private set; } = "USD";
     public decimal MonthlyBasePrice { get; private set; }
     public PlanInterval Interval { get; private set; } = PlanInterval.Monthly;
@@ -43,7 +47,8 @@ public sealed class BillingPlan : BaseEntity<Guid>, IGlobalEntity
         decimal monthlyBasePrice,
         IReadOnlyDictionary<QuotaResource, decimal>? overageRates = null,
         PlanInterval interval = PlanInterval.Monthly,
-        decimal? annualPrice = null)
+        decimal? annualPrice = null,
+        string? description = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -64,6 +69,7 @@ public sealed class BillingPlan : BaseEntity<Guid>, IGlobalEntity
             Key = key.ToLowerInvariant(),
 #pragma warning restore CA1308
             Name = name,
+            Description = NormalizeDescription(description),
             Currency = currency.ToUpperInvariant(),
             MonthlyBasePrice = monthlyBasePrice,
             Interval = interval,
@@ -88,7 +94,8 @@ public sealed class BillingPlan : BaseEntity<Guid>, IGlobalEntity
         decimal monthlyBasePrice,
         IReadOnlyDictionary<QuotaResource, decimal>? overageRates,
         PlanInterval interval = PlanInterval.Monthly,
-        decimal? annualPrice = null)
+        decimal? annualPrice = null,
+        string? description = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         if (monthlyBasePrice < 0)
@@ -101,6 +108,7 @@ public sealed class BillingPlan : BaseEntity<Guid>, IGlobalEntity
         }
 
         Name = name;
+        Description = NormalizeDescription(description);
         MonthlyBasePrice = monthlyBasePrice;
         Interval = interval;
         AnnualPrice = annualPrice;
@@ -114,6 +122,9 @@ public sealed class BillingPlan : BaseEntity<Guid>, IGlobalEntity
         }
         UpdatedAtUtc = DateTime.UtcNow;
     }
+
+    private static string? NormalizeDescription(string? description) =>
+        string.IsNullOrWhiteSpace(description) ? null : description.Trim();
 
     public void Deactivate()
     {
