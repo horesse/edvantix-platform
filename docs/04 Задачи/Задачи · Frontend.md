@@ -21,7 +21,7 @@ tags: [задачи, frontend]
 - [x] `src/api/people.ts` — students/teachers/guardians + scope, все эндпоинты People
 - [x] `src/api/curriculum.ts`
 - [x] `src/api/study-groups.ts`
-- [ ] `src/api/scheduling.ts`
+- [x] `src/api/scheduling.ts`
 - [ ] `src/api/payments.ts`
 
 Тонкие обёртки над `apiFetch` с типами DTO и ключами TanStack Query.
@@ -195,20 +195,20 @@ tags: [задачи, frontend]
 > ([[Открытые вопросы]] → «Библиотека календаря расписания»), решить перед стартом этого
 > этапа, от неё зависит структура `/schedule`.
 
-- [ ] `src/api/scheduling.ts` — обёртка над `apiFetch`: типы `SessionDto`/`SessionDetailDto`/
+- [x] `src/api/scheduling.ts` — обёртка над `apiFetch`: типы `SessionDto`/`SessionDetailDto`/
       `CalendarEntryDto`/`ScheduleTemplateDto`/`RoomDto`/`NonWorkingDayDto`/`AttendanceDto`/
       `AttendanceReportDto`/`GenerationPreviewDto`/`GenerationResultDto`/`SessionConflictDto`
       вручную по контрактам (см. [[Scheduling]] → «Контракты»/«DTO»); enum'ы `SessionStatus`
       (`Planned`/`Held`/`Cancelled`/`Rescheduled`), `AttendanceStatus` (`Present`/`Absent`/
       `Late`/`Excused`), `SessionConflictType`, `GenerationSkipReason` — string union; ключи
       TanStack Query на `sessions`/`schedule-templates`/`rooms`/`non-working-days`/`attendance`
-- [ ] `/schedule` — **календарь** неделя/месяц через `GET /sessions/calendar` (фильтры
+- [x] `/schedule` — **календарь** неделя/месяц через `GET /sessions/calendar` (фильтры
       `studyGroupId`/`teacherId`/`roomId`), drag-n-drop переноса → `POST /sessions/{id}/reschedule`
       (право `Sessions.Reschedule`; сервер вернёт `409` при конфликте с описанием — показать как
       диалог подтверждения с `force: true`, не глотать), цвета по группам/статусу занятия,
       часовой пояс школы для отображения (не для расчёта — сервер уже отдаёт `StartUtc`/`EndUtc`
       в UTC, конвертация в локальное время школы — на клиенте)
-- [ ] `/sessions/:id` — карточка занятия. `GET /sessions/{id}` → `SessionDetailDto` с
+- [x] `/sessions/:id` — карточка занятия. `GET /sessions/{id}` → `SessionDetailDto` с
       `ResolvedTopic` (уже посчитан на бэкенде — пусто в `Session.Topic` → подставлена
       `Lesson.Title`) и вложенным `Attendance[]`. Материалы урока **не** приходят в этом
       ответе (ADR-006) — если `LessonId` не пусто, отдельным запросом к Curriculum
@@ -219,7 +219,7 @@ tags: [задачи, frontend]
       «Перенести» (`POST .../reschedule`, право `Sessions.Reschedule`, тот же диалог, что и в
       календаре). После `Held`/`Cancelled`/`Rescheduled` — не отправлять `PUT` на неизменяемое
       занятие вхолостую (сервер всё равно вернёт `409`, но UI должен блокировать кнопки заранее)
-- [ ] `/study-groups/:id/schedule` — управление шаблонами группы. `GET .../schedule-templates`
+- [x] `/study-groups/:id/schedule` — управление шаблонами группы. `GET .../schedule-templates`
       (право `ScheduleTemplates.View`) — список; создание/правка/удаление
       (`ScheduleTemplates.Manage`) — день недели, локальное время начала, длительность,
       аудитория/преподаватель (оба опциональны — пусто у преподавателя означает «берётся
@@ -231,7 +231,7 @@ tags: [задачи, frontend]
       наткнулись). Кнопка «Применить» → `POST /schedule-templates/{id}/generate`
       (право `Sessions.Generate`, тот же `horizonWeeks`) — массовая операция, отдельное право
       от `Sessions.Create` не просто так, гейтить кнопку отдельно
-- [ ] `/attendance` — **таблица посещаемости**: сетка ученики × занятия. `GET
+- [x] `/attendance` — **таблица посещаемости**: сетка ученики × занятия. `GET
       /sessions/{id}/attendance` (право `Attendance.View`) для одного занятия; массовая отметка —
       `PUT /sessions/{id}/attendance` (право `Attendance.Mark`) с телом — массив
       `{studentId, status, comment}`, один запрос на всю сетку занятия, не по ученику. Дефолт
@@ -239,20 +239,20 @@ tags: [задачи, frontend]
       исключения (`Absent`/`Late`/`Excused`), не весь список. **Нет UI-различия для `MarkAny`** —
       право зарегистрировано, но сервер его не проверяет (Payments ещё нет), можно не закладывать
       отдельную ветку интерфейса сейчас
-- [ ] `/students/:id/attendance` (в People, Этап 1) — история посещаемости ученика через `GET
+- [x] `/students/:id/attendance` (в People, Этап 1) — история посещаемости ученика через `GET
       /students/{studentId}/attendance?from=&to=` (право `Attendance.View`), не под
       `/attendance` — отдельный сегмент, как в справочнике
-- [ ] `/study-groups/:id` (в StudyGroups, Этап 3) — вкладка «Посещаемость» через `GET
+- [x] `/study-groups/:id` (в StudyGroups, Этап 3) — вкладка «Посещаемость» через `GET
       /study-groups/{id}/attendance-report?from=&to=` (право `Attendance.View`) —
       `AttendanceReportDto` со сводкой по каждому ученику (`Present`/`Absent`/`Late`/
       `Excused`/`Total`)
-- [ ] Справочники: `/settings/rooms` (CRUD аудиторий, `Rooms.Manage`/`.View`, поле `IsVirtual` —
+- [x] Справочники: `/settings/rooms` (CRUD аудиторий, `Rooms.Manage`/`.View`, поле `IsVirtual` —
       исключает аудиторию из проверки конфликта, показать явной пометкой «онлайн») и
       `/settings/non-working-days` (нерабочие дни школы, гейтится `ScheduleTemplates.Manage`/
       `.View` — не своё право)
-- [ ] `/sessions/my` (право `Sessions.ViewOwn`) — «моё расписание» для кабинета
+- [x] `/sessions/my` (право `Sessions.ViewOwn`) — «моё расписание» для кабинета
       преподавателя/ученика/представителя (Этап 6), `GET /sessions/my?from=&to=`
-- [ ] Подписка на SignalR — `AppHub`, событие `SessionScheduleChanged` в группе `tenant:{id}`
+- [x] Подписка на SignalR — `AppHub`, событие `SessionScheduleChanged` в группе `tenant:{id}`
       (подключение к хабу и общая инфраструктура уже есть, см. `frontend/dashboard.md`),
       payload `SessionDto` — обновлять карточку/ячейку календаря по `Id` без перезагрузки
       страницы. Приходит на создание/правку/отмену/перенос/проведение отдельного занятия;
@@ -418,11 +418,11 @@ tags: [задачи, frontend]
 Playwright с моками маршрутов. Обязательное покрытие — всё, что двигает деньги
 или расписание:
 
-- [ ] отметка посещаемости
+- [x] отметка посещаемости
 - [ ] выставление счёта
 - [ ] подтверждение оплаты
 - [ ] зачисление и перевод между группами
-- [ ] перенос и отмена занятия
+- [x] перенос и отмена занятия
 - [ ] удалить спеки каталога ([[Задачи · Удаление Catalog]])
 
 ## Связанное

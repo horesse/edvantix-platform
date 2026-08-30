@@ -151,6 +151,9 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         "ChatTypingStarted",
         "PresenceChanged",
         "NotificationCreated",
+        // Scheduling — a single session was created/edited/cancelled/rescheduled/
+        // held. Payload is a SessionDto. NOT fired for bulk template generation.
+        "SessionScheduleChanged",
       ]) {
         wire(event);
       }

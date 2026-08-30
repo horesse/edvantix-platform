@@ -148,6 +148,34 @@ const StudyGroupBuilderPage = lazyNamed(
   () => import("@/pages/study-groups/study-group-detail"),
   "StudyGroupBuilderPage",
 );
+const ScheduleCalendarPage = lazyNamed(
+  () => import("@/pages/scheduling/schedule-calendar"),
+  "ScheduleCalendarPage",
+);
+const SessionDetailPage = lazyNamed(
+  () => import("@/pages/scheduling/session-detail"),
+  "SessionDetailPage",
+);
+const MySchedulePage = lazyNamed(
+  () => import("@/pages/scheduling/my-schedule"),
+  "MySchedulePage",
+);
+const AttendanceGridPage = lazyNamed(
+  () => import("@/pages/scheduling/attendance-grid"),
+  "AttendanceGridPage",
+);
+const GroupScheduleTemplatesPage = lazyNamed(
+  () => import("@/pages/scheduling/group-schedule-templates"),
+  "GroupScheduleTemplatesPage",
+);
+const RoomsSettingsPage = lazyNamed(
+  () => import("@/pages/scheduling/rooms-settings"),
+  "RoomsSettingsPage",
+);
+const NonWorkingDaysSettingsPage = lazyNamed(
+  () => import("@/pages/scheduling/non-working-days-settings"),
+  "NonWorkingDaysSettingsPage",
+);
 const MyFilesPage = lazyNamed(() => import("@/pages/files/my-files"), "MyFilesPage");
 const ChatPage = lazyNamed(() => import("@/pages/chat/chat-page"), "ChatPage");
 
@@ -262,8 +290,21 @@ export const router = createBrowserRouter([
           { path: "study-groups", element: withSuspense(<StudyGroupsPage />) },
           { path: "study-groups/my", element: withSuspense(<MyStudyGroupsPage />) },
           {
+            path: "study-groups/:studyGroupId/schedule",
+            element: withSuspense(<GroupScheduleTemplatesPage />),
+          },
+          {
             path: "study-groups/:studyGroupId",
             element: withSuspense(<StudyGroupBuilderPage />),
+          },
+          { path: "schedule", element: withSuspense(<ScheduleCalendarPage />) },
+          { path: "sessions/my", element: withSuspense(<MySchedulePage />) },
+          { path: "sessions/:sessionId", element: withSuspense(<SessionDetailPage />) },
+          { path: "attendance", element: withSuspense(<AttendanceGridPage />) },
+          { path: "settings/rooms", element: withSuspense(<RoomsSettingsPage />) },
+          {
+            path: "settings/non-working-days",
+            element: withSuspense(<NonWorkingDaysSettingsPage />),
           },
           { path: "identity", element: <Navigate to="/identity/users" replace /> },
           { path: "identity/users", element: withSuspense(<UsersPage />) },

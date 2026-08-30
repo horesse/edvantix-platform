@@ -6,6 +6,7 @@ import {
   ArchiveRestore,
   CalendarDays,
   ChevronRight,
+  ClipboardCheck,
   GraduationCap,
   Link2,
   Link2Off,
@@ -47,6 +48,11 @@ import {
   searchStudyGroups,
   type EnrollmentStatus,
 } from "@/api/study-groups";
+import { getStudentAttendance } from "@/api/scheduling";
+import {
+  ATTENDANCE_STATUS_LABEL,
+  ATTENDANCE_STATUS_TONE,
+} from "@/pages/scheduling/scheduling-ui";
 import { useAuth } from "@/auth/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -102,7 +108,7 @@ const ENROLLMENT_STATUS_TONE: Record<EnrollmentStatus, EntityStatusTone> = {
   Completed: "info",
 };
 
-type Tab = "profile" | "guardians" | "notes" | "groups";
+type Tab = "profile" | "guardians" | "notes" | "groups" | "attendance";
 
 export function StudentDetailPage() {
   const { studentId = "" } = useParams();
@@ -113,6 +119,7 @@ export function StudentDetailPage() {
   const canDelete = perms.includes("Permissions.People.Students.Delete");
   const canViewNotes = perms.includes("Permissions.People.Students.ViewNotes");
   const canViewGroups = perms.includes("Permissions.StudyGroups.Enrollments.View");
+  const canViewAttendance = perms.includes("Permissions.Scheduling.Attendance.View");
 
   const [tab, setTab] = useState<Tab>("profile");
   const [editOpen, setEditOpen] = useState(false);
@@ -264,6 +271,15 @@ export function StudentDetailPage() {
             Группы
           </TabPill>
         )}
+        {canViewAttendance && (
+          <TabPill
+            active={tab === "attendance"}
+            onClick={() => setTab("attendance")}
+            icon={ClipboardCheck}
+          >
+            Посещаемость
+          </TabPill>
+        )}
         {canViewNotes && (
           <TabPill active={tab === "notes"} onClick={() => setTab("notes")} icon={NotebookPen}>
             Заметки
@@ -322,6 +338,10 @@ export function StudentDetailPage() {
       )}
 
       {tab === "groups" && canViewGroups && <GroupsTab studentId={student.id} />}
+
+      {tab === "attendance" && canViewAttendance && (
+        <AttendanceTab studentId={student.id} />
+      )}
 
       {tab === "notes" && canViewNotes && (
         <NotesTab studentId={student.id} onChanged={invalidate} />
@@ -693,6 +713,112 @@ function GroupsTab({ studentId }: { studentId: string }) {
               </li>
             );
           })}
+        </ul>
+      )}
+    </EntityDetailSection>
+  );
+}
+
+// ───────────────────────────────────────────────────────────────────────
+//  Attendance tab — the student's attendance history over a period, via
+//  GET /students/{id}/attendance?from=&to= (Scheduling, Attendance.View).
+// ───────────────────────────────────────────────────────────────────────
+
+function AttendanceTab({ studentId }: { studentId: string }) {
+  const [from, setFrom] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return d.toISOString().slice(0, 10);
+  });
+  const [to, setTo] = useState(() => new Date().toISOString().slice(0, 10));
+
+  const query = useQuery({
+    queryKey: ["student-attendance", studentId, { from, to }],
+    queryFn: () => getStudentAttendance(studentId, from, to),
+  });
+
+  const rows = useMemo(
+    () =>
+      [...(query.data ?? [])].sort((a, b) =>
+        b.markedAtUtc.localeCompare(a.markedAtUtc),
+      ),
+    [query.data],
+  );
+  const summary = useMemo(() => {
+    const s = { Present: 0, Absent: 0, Late: 0, Excused: 0 };
+    for (const r of query.data ?? []) s[r.status] += 1;
+    return s;
+  }, [query.data]);
+
+  return (
+    <EntityDetailSection
+      title="Посещаемость"
+      icon={ClipboardCheck}
+      description="История отметок за выбранный период."
+      action={
+        <div className="flex items-center gap-2">
+          <Input
+            type="date"
+            aria-label="С даты"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+            className="h-8 text-[12px]"
+          />
+          <span className="text-[12px] text-[var(--color-muted-foreground)]">–</span>
+          <Input
+            type="date"
+            aria-label="По дату"
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+            className="h-8 text-[12px]"
+          />
+        </div>
+      }
+    >
+      <div className="mb-3 flex flex-wrap gap-2">
+        {(["Present", "Absent", "Late", "Excused"] as const).map((k) => (
+          <span
+            key={k}
+            className="inline-flex items-center gap-1.5 rounded-md bg-[var(--color-muted)] px-2 py-1 text-[11.5px] text-[var(--color-foreground)]"
+          >
+            {ATTENDANCE_STATUS_LABEL[k]}: <span className="tabular-nums">{summary[k]}</span>
+          </span>
+        ))}
+      </div>
+
+      {query.isLoading ? (
+        <p className="text-[13px] text-[var(--color-muted-foreground)]">Загрузка…</p>
+      ) : query.isError ? (
+        <p className="text-[13px] text-[var(--color-destructive)]">{describe(query.error)}</p>
+      ) : rows.length === 0 ? (
+        <p className="text-[13px] text-[var(--color-muted-foreground)]">
+          За выбранный период отметок нет.
+        </p>
+      ) : (
+        <ul className="divide-y divide-[oklch(from_var(--color-border)_l_c_h_/_0.5)]">
+          {rows.map((a) => (
+            <li
+              key={a.id}
+              className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0"
+            >
+              <div className="min-w-0">
+                <Link
+                  to={`/sessions/${a.sessionId}`}
+                  className="text-[13px] text-[var(--color-foreground)] hover:underline"
+                >
+                  {formatDate(a.markedAtUtc)}
+                </Link>
+                {a.comment && (
+                  <p className="truncate text-[11.5px] text-[var(--color-muted-foreground)]">
+                    {a.comment}
+                  </p>
+                )}
+              </div>
+              <EntityStatusBadge tone={ATTENDANCE_STATUS_TONE[a.status]}>
+                {ATTENDANCE_STATUS_LABEL[a.status]}
+              </EntityStatusBadge>
+            </li>
+          ))}
         </ul>
       )}
     </EntityDetailSection>

@@ -1,0 +1,57 @@
+/* FullCalendar theming — map its CSS variables onto the dashboard tokens so
+ * the calendar reads as part of the same surface family (chroma-0 neutrals,
+ * brand accent for "today"/now). Scoped to .fsh-calendar so nothing else is
+ * affected. FullCalendar v6 injects its base stylesheet itself. */
+
+.fsh-calendar {
+  --fc-border-color: var(--color-border);
+  --fc-page-bg-color: var(--color-card);
+  --fc-neutral-bg-color: oklch(from var(--color-muted) l c h / 0.4);
+  --fc-neutral-text-color: var(--color-muted-foreground);
+  --fc-today-bg-color: oklch(from var(--color-primary) l c h / 0.06);
+  --fc-now-indicator-color: var(--color-primary);
+  --fc-event-text-color: #fff;
+  --fc-small-font-size: 11px;
+  font-size: 13px;
+}
+
+.fsh-calendar .fc {
+  color: var(--color-foreground);
+}
+
+.fsh-calendar .fc .fc-col-header-cell-cushion,
+.fsh-calendar .fc .fc-timegrid-axis-cushion,
+.fsh-calendar .fc .fc-timegrid-slot-label-cushion,
+.fsh-calendar .fc .fc-daygrid-day-number {
+  color: var(--color-muted-foreground);
+  text-decoration: none;
+}
+
+.fsh-calendar .fc .fc-daygrid-day.fc-day-today,
+.fsh-calendar .fc .fc-timegrid-col.fc-day-today {
+  background: var(--fc-today-bg-color);
+}
+
+.fsh-calendar .fc-event {
+  border-radius: 6px;
+  padding: 1px 3px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.fsh-calendar .fc-event.fc-session-dim {
+  opacity: 0.5;
+}
+
+.fsh-calendar .fc-event.fc-session-dim .fc-event-title {
+  text-decoration: line-through;
+}
+
+.fsh-calendar .fc .fc-timegrid-now-indicator-line {
+  border-color: var(--fc-now-indicator-color);
+}
+
+/* Keep the grid from overflowing the page on small screens. */
+.fsh-calendar {
+  overflow-x: auto;
+}
