@@ -6,21 +6,28 @@ import {
   ArrowRight,
   ArrowUpRight,
   Calendar,
+  CalendarDays,
   ChevronRight,
   CreditCard,
+  GraduationCap,
   Gauge,
-  Package,
   RefreshCw,
   ScrollText,
   Server,
   ShieldCheck,
   Sparkles,
   UsersRound,
+  Wallet,
   Wifi,
   WifiOff,
   X,
   Zap,
 } from "lucide-react";
+import { searchStudents } from "@/api/people";
+import { searchStudyGroups } from "@/api/study-groups";
+import { getCalendar } from "@/api/scheduling";
+import { getDebtorsReport } from "@/api/payments";
+import { getTenantSettings } from "@/api/tenant-settings";
 import {
   getMyStatus,
   getMySubscription,
@@ -664,23 +671,23 @@ type QuickAction = {
 
 const QUICK_ACTIONS: QuickAction[] = [
   {
-    to: "/identity/users",
-    title: "Invite users",
-    description: "Add teammates, assign roles.",
-    icon: UsersRound,
+    to: "/students",
+    title: "Ученики",
+    description: "Список, импорт, карточки.",
+    icon: GraduationCap,
     tone: "info",
   },
   {
-    to: "/catalog/products",
-    title: "Browse catalog",
-    description: "Products, brands, categories.",
-    icon: Package,
+    to: "/schedule",
+    title: "Расписание",
+    description: "Календарь занятий и переносы.",
+    icon: CalendarDays,
     tone: "success",
   },
   {
     to: "/subscription",
-    title: "Subscription",
-    description: "Plan, usage, invoices.",
+    title: "Подписка",
+    description: "План, лимиты, счета.",
     icon: CreditCard,
     tone: "primary",
   },
@@ -822,11 +829,11 @@ const SETUP_TILES: SetupTileSpec[] = [
     tone: "info",
   },
   {
-    to: "/catalog/products",
+    to: "/students",
     step: "03",
-    title: "Browse catalog",
-    description: "Sample products, brands, categories ready to go.",
-    icon: Package,
+    title: "Add students",
+    description: "Register students, import a roster, link accounts.",
+    icon: GraduationCap,
     tone: "success",
   },
   {
@@ -932,6 +939,151 @@ function SetupTile({ spec }: { spec: SetupTileSpec }) {
         <ArrowRight className="size-3 transition-transform group-hover/tile:translate-x-0.5" />
       </div>
     </Link>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────────
+// School metrics — a manager-facing band of headline school numbers, built
+// from the `totalCount` of existing list endpoints (no dedicated aggregate
+// endpoint exists). Each tile is gated on the permission its source endpoint
+// enforces, and its query only fires when the user holds it — so a user who
+// can't see students never triggers a 403 for the students count. The whole
+// band hides when the user holds none of the four.
+// ────────────────────────────────────────────────────────────────────────
+
+function monthWindow(now: Date = new Date()): { from: string; to: string } {
+  const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  const to = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+  return { from: from.toISOString(), to: to.toISOString() };
+}
+
+function SchoolMetricsBand() {
+  const perms = useAuth().user?.permissions ?? [];
+  const canStudents = perms.includes("Permissions.People.Students.View");
+  const canGroups = perms.includes("Permissions.StudyGroups.StudyGroups.View");
+  const canSessions = perms.includes("Permissions.Scheduling.Sessions.View");
+  const canDebt = perms.includes("Permissions.Payments.StudentInvoices.Export");
+
+  const win = useMemo(() => monthWindow(), []);
+
+  const settings = useQuery({
+    queryKey: ["tenant-settings"],
+    queryFn: getTenantSettings,
+    staleTime: 5 * 60_000,
+    enabled: canDebt,
+  });
+
+  const students = useQuery({
+    queryKey: ["students", { status: "Active", pageSize: 1, overview: true }],
+    queryFn: () => searchStudents({ status: "Active", pageNumber: 1, pageSize: 1 }),
+    staleTime: 60_000,
+    enabled: canStudents,
+  });
+
+  const groups = useQuery({
+    queryKey: ["study-groups", { status: "Active", pageSize: 1, overview: true }],
+    queryFn: () => searchStudyGroups({ status: "Active", pageNumber: 1, pageSize: 1 }),
+    staleTime: 60_000,
+    enabled: canGroups,
+  });
+
+  const sessions = useQuery({
+    queryKey: ["sessions", "calendar", "overview", win],
+    queryFn: () => getCalendar({ from: win.from, to: win.to }),
+    staleTime: 60_000,
+    enabled: canSessions,
+  });
+
+  const debtors = useQuery({
+    queryKey: ["reports", "debtors", "overview"],
+    queryFn: () => getDebtorsReport(),
+    staleTime: 60_000,
+    enabled: canDebt,
+  });
+
+  if (!canStudents && !canGroups && !canSessions && !canDebt) return null;
+
+  const debtTotal = (debtors.data ?? []).reduce((sum, d) => sum + (d.debt ?? 0), 0);
+  const currency = settings.data?.currency ?? "RUB";
+  const debtLabel = (() => {
+    try {
+      return new Intl.NumberFormat("ru-RU", {
+        style: "currency",
+        currency,
+        maximumFractionDigits: 0,
+      }).format(debtTotal);
+    } catch {
+      return `${formatNumber(Math.round(debtTotal))} ${currency}`;
+    }
+  })();
+
+  const numeric = (q: { isLoading: boolean; isError: boolean; data: unknown }, value: number) =>
+    q.isLoading ? (
+      <Skeleton className="h-5 w-12" />
+    ) : q.isError ? (
+      "—"
+    ) : (
+      <span className="tabular-nums">{formatNumber(value)}</span>
+    );
+
+  let i = 0;
+  return (
+    <section aria-label="Показатели школы" className="fsh-enter">
+      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
+        {canStudents && (
+          <StatCard
+            index={i++}
+            tone="info"
+            icon={GraduationCap}
+            label="Активные ученики"
+            value={numeric(students, students.data?.totalCount ?? 0)}
+            sublabel="со статусом «Активен»"
+            href="/students"
+          />
+        )}
+        {canGroups && (
+          <StatCard
+            index={i++}
+            tone="primary"
+            icon={UsersRound}
+            label="Активные группы"
+            value={numeric(groups, groups.data?.totalCount ?? 0)}
+            sublabel="набор идёт или уже начался"
+            href="/study-groups"
+          />
+        )}
+        {canSessions && (
+          <StatCard
+            index={i++}
+            tone="success"
+            icon={CalendarDays}
+            label="Занятия за месяц"
+            value={numeric(sessions, sessions.data?.length ?? 0)}
+            sublabel="в текущем календарном месяце"
+            href="/schedule"
+          />
+        )}
+        {canDebt && (
+          <StatCard
+            index={i++}
+            tone={debtTotal > 0 ? "warning" : "success"}
+            icon={Wallet}
+            label="Долг по школе"
+            value={
+              debtors.isLoading ? (
+                <Skeleton className="h-5 w-20" />
+              ) : debtors.isError ? (
+                "—"
+              ) : (
+                <span className="tabular-nums">{debtLabel}</span>
+              )
+            }
+            sublabel={`${formatNumber((debtors.data ?? []).length)} должников`}
+            href="/payments/debtors"
+          />
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -1136,6 +1288,9 @@ export function OverviewPage() {
           </Button>
         </div>
       </header>
+
+      {/* ── School metrics — manager-facing headline numbers ────────── */}
+      <SchoolMetricsBand />
 
       {/* ── Stats row — 4 cards ─────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">

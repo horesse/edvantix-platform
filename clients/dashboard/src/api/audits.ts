@@ -287,6 +287,49 @@ export async function getAuditSummary(
   );
 }
 
+/**
+ * Friendly-label dictionaries for the raw CLR type names and property names
+ * that appear in EntityChange audit payloads (`Student` → "Ученик",
+ * `Status` → "Статус"). Static reference data — same for every tenant, so
+ * callers should cache it aggressively. An unlabelled name falls back to itself.
+ * `GET /api/v1/audits/entity-labels` → Permissions.AuditTrails.View.
+ */
+export type AuditLabels = {
+  entities: Record<string, string>;
+  fields: Record<string, string>;
+};
+
+export async function getAuditLabels(signal?: AbortSignal): Promise<AuditLabels> {
+  return apiFetch<AuditLabels>("/api/v1/audits/entity-labels", { signal });
+}
+
+/** Shape of an EntityChange audit payload (camelCase over the wire). */
+export type EntityChangePayload = {
+  dbContext?: string;
+  schema?: string | null;
+  table?: string;
+  entityName?: string;
+  key?: string;
+  operation?: "None" | "Insert" | "Update" | "Delete" | "SoftDelete" | "Restore";
+  changes?: Array<{
+    name: string;
+    dataType?: string | null;
+    oldValue?: unknown;
+    newValue?: unknown;
+    isSensitive?: boolean;
+  }>;
+  transactionId?: string | null;
+};
+
+export const ENTITY_OPERATION_LABELS: Record<string, string> = {
+  None: "Изменение",
+  Insert: "Создание",
+  Update: "Изменение",
+  Delete: "Удаление",
+  SoftDelete: "Удаление (в корзину)",
+  Restore: "Восстановление",
+};
+
 export async function getAuditsByCorrelation(
   correlationId: string,
   query: { fromUtc?: string; toUtc?: string } = {},

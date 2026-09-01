@@ -1,14 +1,17 @@
+import { useMemo } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import {
   Bell,
   ChevronRight,
   KeyRound,
+  Landmark,
   Palette,
   Settings as SettingsIcon,
   Shield,
   UserRound,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { useAuth } from "@/auth/use-auth";
 import { EntityPageHeader } from "@/components/list";
 import { cn } from "@/lib/cn";
 
@@ -17,9 +20,20 @@ type Tab = {
   label: string;
   hint: string;
   icon: LucideIcon;
+  /** When set, the tab is hidden unless the user holds this permission —
+   *  mirrors the endpoint the tab's page manages (School settings → PUT
+   *  /tenants/settings → SchoolSettings.Manage). */
+  perm?: string;
 };
 
-const TABS: Tab[] = [
+const ALL_TABS: Tab[] = [
+  {
+    to: "/settings/school",
+    label: "Школа",
+    hint: "Часовой пояс, валюта, нумерация счетов",
+    icon: Landmark,
+    perm: "Permissions.SchoolSettings.Manage",
+  },
   { to: "/settings/profile", label: "Profile", hint: "Your identity across the tenant", icon: UserRound },
   { to: "/settings/security", label: "Security", hint: "Password and active sessions", icon: Shield },
   { to: "/settings/appearance", label: "Appearance", hint: "Theme and visual preferences", icon: Palette },
@@ -37,6 +51,11 @@ const pad2 = (n: number) => n.toString().padStart(2, "0");
  */
 export function SettingsLayout() {
   const location = useLocation();
+  const permissions = useAuth().user?.permissions;
+  const TABS = useMemo(() => {
+    const held = new Set(permissions ?? []);
+    return ALL_TABS.filter((t) => !t.perm || held.has(t.perm));
+  }, [permissions]);
   const activeIndex = Math.max(
     0,
     TABS.findIndex((t) => location.pathname.startsWith(t.to)),

@@ -28,11 +28,15 @@ import {
   severityRank,
   decodeTags,
   getAuditById,
+  getAuditLabels,
   getAuditsByCorrelation,
   getAuditSummary,
   listAudits,
+  ENTITY_OPERATION_LABELS,
   type AuditDetailDto,
+  type AuditLabels,
   type AuditSummaryDto,
+  type EntityChangePayload,
 } from "@/api/audits";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -1127,6 +1131,66 @@ function DrawerHeader({ detail, loading }: { detail?: AuditDetailDto; loading: b
   );
 }
 
+/** Static entity/field label dictionaries — cached for the session. */
+function useAuditLabels() {
+  return useQuery<AuditLabels>({
+    queryKey: ["audits", "entity-labels"],
+    queryFn: ({ signal }) => getAuditLabels(signal),
+    staleTime: Infinity,
+    gcTime: Infinity,
+  });
+}
+
+/** Readable summary of an EntityChange payload: friendly entity name, the
+ *  operation, and the list of changed fields (also relabelled). Falls back to
+ *  raw names while the label dictionary loads or when a name isn't catalogued. */
+function EntityChangeSummary({ payload }: { payload: EntityChangePayload | null | undefined }) {
+  const labels = useAuditLabels();
+  if (!payload || typeof payload !== "object") return null;
+
+  const entities = labels.data?.entities ?? {};
+  const fields = labels.data?.fields ?? {};
+  const rawEntity = payload.entityName ?? payload.table ?? "";
+  const entityLabel = entities[rawEntity] ?? rawEntity;
+  const opLabel = payload.operation
+    ? ENTITY_OPERATION_LABELS[payload.operation] ?? payload.operation
+    : "Изменение";
+  const changed = (payload.changes ?? [])
+    .map((c) => fields[c.name] ?? c.name)
+    .filter(Boolean);
+
+  if (!rawEntity && changed.length === 0) return null;
+
+  return (
+    <section>
+      <SectionLabel>Изменение</SectionLabel>
+      <div className="mt-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-1)] p-3 text-[12px]">
+        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+          <span className="font-medium text-[var(--color-foreground)]">{entityLabel || "—"}</span>
+          <span className="text-[var(--color-muted-foreground)]">· {opLabel}</span>
+          {payload.key && (
+            <code className="font-mono text-[11px] text-[var(--color-muted-foreground)]">
+              {payload.key}
+            </code>
+          )}
+        </div>
+        {changed.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {changed.map((f, i) => (
+              <span
+                key={`${f}-${i}`}
+                className="rounded-md border border-[var(--color-border)] bg-[var(--color-card)] px-1.5 py-0.5 text-[11px] text-[var(--color-muted-foreground)]"
+              >
+                {f}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function DrawerBody({
   detail,
   onJumpAudit,
@@ -1188,6 +1252,13 @@ function DrawerBody({
           currentOccurredAtUtc={detail.occurredAtUtc}
           onJumpAudit={onJumpAudit}
         />
+      )}
+
+      {/* Human-readable entity change — friendly labels for the CLR type and
+          the changed fields, resolved from GET /audits/entity-labels. Only for
+          EntityChange events; the raw payload is still shown below. */}
+      {detail.eventType === AuditEventType.EntityChange && (
+        <EntityChangeSummary payload={detail.payload as EntityChangePayload} />
       )}
 
       {/* Payload */}

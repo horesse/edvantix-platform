@@ -8,6 +8,7 @@ import {
   CalendarDays,
   CheckCircle2,
   ClipboardCheck,
+  MessageCircle,
   Pause,
   Pencil,
   Play,
@@ -121,6 +122,7 @@ export function StudyGroupBuilderPage() {
     "Permissions.Scheduling.ScheduleTemplates.View",
   );
   const canViewAttendance = perms.includes("Permissions.Scheduling.Attendance.View");
+  const canViewChat = perms.includes("Permissions.Chat.Channels.View");
 
   const groupKey = ["study-group", studyGroupId] as const;
   const query = useQuery({
@@ -388,6 +390,16 @@ export function StudyGroupBuilderPage() {
                           >
                             Ссылка на встречу
                           </a>
+                        </EntityDetailMeta>
+                      )}
+                      {group.chatChannelId && canViewChat && (
+                        <EntityDetailMeta icon={MessageCircle}>
+                          <Link
+                            to={`/chat/${group.chatChannelId}`}
+                            className="hover:text-[var(--color-foreground)]"
+                          >
+                            Чат группы
+                          </Link>
                         </EntityDetailMeta>
                       )}
                     </>
