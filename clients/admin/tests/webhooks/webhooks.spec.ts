@@ -22,6 +22,17 @@ const DELIVERY = {
   errorMessage: null,
 };
 
+// GET /api/v1/webhooks/event-types — the catalog powering the create-dialog
+// checklist. Includes the school-domain event types added for Curriculum /
+// StudyGroups / Scheduling / Payments / People.
+const EVENT_CATALOG = [
+  { name: "StudentCreatedIntegrationEvent", module: "People", description: "Создан профиль ученика." },
+  { name: "StudyGroupCreatedIntegrationEvent", module: "StudyGroups", description: "Создана учебная группа." },
+  { name: "SessionScheduledIntegrationEvent", module: "Scheduling", description: "Занятие поставлено в расписание." },
+  { name: "CoursePublishedIntegrationEvent", module: "Curriculum", description: "Курс опубликован." },
+  { name: "StudentPaymentConfirmedIntegrationEvent", module: "Payments", description: "Оплата по счёту подтверждена." },
+];
+
 test.beforeEach(async ({ page }) => {
   await seedAuthedSession(page, { ...TEST_USER, permissions: [...ADMIN_PERMS] });
   await installAdminShellMocks(page);
@@ -35,13 +46,13 @@ test.describe("webhooks subscriptions list", () => {
 
     const main = page.getByRole("main");
     await expect(
-      main.getByRole("heading", { name: "Webhooks", exact: true }),
+      main.getByRole("heading", { name: "Вебхуки", exact: true }),
     ).toBeVisible({ timeout: 10_000 });
 
     await expect(main.getByText(SUB.url, { exact: true })).toBeVisible();
     await expect(main.getByText("tenant.created", { exact: true })).toBeVisible();
     // New subscription button present.
-    await expect(main.getByRole("button", { name: /new subscription/i })).toBeVisible();
+    await expect(main.getByRole("button", { name: /новая подписка/i })).toBeVisible();
   });
 
   test("shows the empty state when there are no subscriptions", async ({ page }) => {
@@ -51,14 +62,52 @@ test.describe("webhooks subscriptions list", () => {
 
     const main = page.getByRole("main");
     await expect(
-      main.getByText("No webhook subscriptions yet.", { exact: true }),
+      main.getByText("Подписок вебхуков пока нет.", { exact: true }),
     ).toBeVisible({ timeout: 10_000 });
     await expect(
       main.getByText(
-        "Add an endpoint and pick which events should fire. We'll retry failed deliveries automatically.",
+        "Добавьте endpoint и выберите события. Неудачные доставки повторяются автоматически.",
         { exact: true },
       ),
     ).toBeVisible();
+  });
+
+  test("the create dialog groups the event catalog by module and lists new school event types", async ({ page }) => {
+    await mockJsonResponse(page, "**/api/v1/webhooks/subscriptions?*", paged([SUB]));
+    await mockJsonResponse(page, "**/api/v1/webhooks/event-types", EVENT_CATALOG);
+
+    await page.goto("/webhooks");
+    await page.getByRole("button", { name: /новая подписка/i }).click();
+
+    const dialog = page.getByRole("dialog");
+    await expect(
+      dialog.getByRole("heading", { name: "Новая подписка вебхука" }),
+    ).toBeVisible({ timeout: 10_000 });
+
+    // Module legends (Russian labels from MODULE_LABEL).
+    await expect(dialog.getByText("Люди", { exact: true })).toBeVisible();
+    await expect(dialog.getByText("Учебные группы", { exact: true })).toBeVisible();
+    await expect(dialog.getByText("Расписание", { exact: true })).toBeVisible();
+    await expect(dialog.getByText("Платежи", { exact: true })).toBeVisible();
+
+    // New school-domain event types from the catalog are selectable.
+    await expect(dialog.getByText("StudyGroupCreatedIntegrationEvent", { exact: true })).toBeVisible();
+    const paymentRow = dialog.getByText("StudentPaymentConfirmedIntegrationEvent", { exact: true });
+    await expect(paymentRow).toBeVisible();
+
+    // Ticking one and creating sends it in the events array.
+    await paymentRow.click();
+    const reqPromise = page.waitForRequest(
+      (r) => r.url().endsWith("/api/v1/webhooks/subscriptions") && r.method() === "POST",
+      { timeout: 5_000 },
+    );
+    await mockJsonResponse(page, "**/api/v1/webhooks/subscriptions", '"new-sub-id"', { method: "POST" });
+    await dialog.getByLabel("URL endpoint").fill("https://hooks.example.com/edvantix");
+    await dialog.getByRole("button", { name: /создать подписку/i }).click();
+    const req = await reqPromise;
+
+    const body = JSON.parse(req.postData() ?? "{}");
+    expect(body.events).toContain("StudentPaymentConfirmedIntegrationEvent");
   });
 });
 
@@ -85,7 +134,7 @@ test.describe("webhook detail (deliveries)", () => {
       main.getByRole("heading", { name: "Endpoint", exact: true }),
     ).toBeVisible();
     await expect(
-      main.getByRole("heading", { name: "Deliveries", exact: true }),
+      main.getByRole("heading", { name: "Доставки", exact: true }),
     ).toBeVisible();
 
     // Delivery row: event type chip + HTTP status badge.
@@ -106,7 +155,7 @@ test.describe("webhook detail (deliveries)", () => {
     const main = page.getByRole("main");
     await expect(
       main.getByText(
-        "No deliveries yet. Try the test button above, or wait for matching events to fire.",
+        "Доставок пока нет. Нажмите «Отправить тестовое событие» выше или дождитесь события.",
         { exact: true },
       ),
     ).toBeVisible({ timeout: 10_000 });

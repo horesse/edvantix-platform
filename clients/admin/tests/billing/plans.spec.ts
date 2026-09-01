@@ -39,14 +39,14 @@ test.describe("billing plans list", () => {
 
     // CardTitle "All plans" identifies the list (scoped to main; the sidebar
     // nav also contains the word "Plans").
-    await expect(main.getByText("All plans", { exact: true })).toBeVisible({ timeout: 10_000 });
+    await expect(main.getByText("Все тарифы", { exact: true })).toBeVisible({ timeout: 10_000 });
 
-    // The plan row from our mock: key code + display name + Active badge.
+    // The plan row from our mock: key code + display name + Активен badge.
     await expect(main.getByText("pro", { exact: true })).toBeVisible();
     await expect(main.getByText("Pro", { exact: true })).toBeVisible();
-    await expect(main.getByText("Active", { exact: true }).first()).toBeVisible();
+    await expect(main.getByText("Активен", { exact: true }).first()).toBeVisible();
 
-    await expect(main.getByRole("button", { name: /new plan/i })).toBeVisible();
+    await expect(main.getByRole("button", { name: /новый тариф/i })).toBeVisible();
   });
 
   test("hides New plan + per-row Edit for a Billing.View-only user", async ({ page }) => {
@@ -70,12 +70,12 @@ test.describe("billing plans list", () => {
     await page.goto("/billing/plans");
 
     const main = page.getByRole("main");
-    await expect(main.getByText("All plans", { exact: true })).toBeVisible({ timeout: 10_000 });
+    await expect(main.getByText("Все тарифы", { exact: true })).toBeVisible({ timeout: 10_000 });
     await expect(main.getByText("Pro", { exact: true })).toBeVisible();
 
     // Manage affordances must be absent.
-    await expect(main.getByRole("button", { name: /new plan/i })).toHaveCount(0);
-    await expect(main.getByRole("button", { name: /edit pro/i })).toHaveCount(0);
+    await expect(main.getByRole("button", { name: /новый тариф/i })).toHaveCount(0);
+    await expect(main.getByRole("button", { name: /изменить тариф «pro»/i })).toHaveCount(0);
   });
 
   test("shows the empty state when there are no plans", async ({ page }) => {
@@ -94,7 +94,7 @@ test.describe("billing plans list", () => {
     await page.goto("/billing/plans");
 
     await expect(
-      page.getByText(/no plans yet/i),
+      page.getByText(/тарифов пока нет/i),
     ).toBeVisible({ timeout: 10_000 });
   });
 });

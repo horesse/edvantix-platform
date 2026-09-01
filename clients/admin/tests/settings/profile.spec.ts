@@ -35,14 +35,14 @@ test.describe("settings · profile", () => {
 
     const main = page.getByRole("main");
     // Section titles render with a literal "\\ " prefix → match via regex.
-    await expect(main.getByText(/Identity/)).toBeVisible({ timeout: 10_000 });
-    await expect(main.getByText(/Avatar/)).toBeVisible();
+    await expect(main.getByText(/Идентификация/)).toBeVisible({ timeout: 10_000 });
+    await expect(main.getByText(/Аватар/)).toBeVisible();
 
     // Read-only identity inputs are surfaced via labelled fields.
-    await expect(main.getByLabel(/^Username/)).toHaveValue("rootadmin");
-    await expect(main.getByLabel(/^Display name/)).toHaveValue("Root Admin");
-    await expect(main.getByLabel(/^Email/)).toHaveValue("admin@root.com");
-    await expect(main.getByLabel(/^Phone/)).toHaveValue("+1 555 0142");
+    await expect(main.getByLabel(/^Логин/)).toHaveValue("rootadmin");
+    await expect(main.getByLabel(/^Отображаемое имя/)).toHaveValue("Root Admin");
+    await expect(main.getByLabel(/^E-mail/)).toHaveValue("admin@root.com");
+    await expect(main.getByLabel(/^Телефон/)).toHaveValue("+1 555 0142");
   });
 
   test("shows status badges driven by the profile flags", async ({ page }) => {
@@ -51,10 +51,10 @@ test.describe("settings · profile", () => {
     await page.goto("/settings/profile");
 
     const main = page.getByRole("main");
-    await expect(main.getByText(/Identity/)).toBeVisible({ timeout: 10_000 });
-    await expect(main.getByText("Active", { exact: true })).toBeVisible();
-    await expect(main.getByText("Email confirmed", { exact: true })).toBeVisible();
-    await expect(main.getByText("2FA off", { exact: true })).toBeVisible();
+    await expect(main.getByText(/Идентификация/)).toBeVisible({ timeout: 10_000 });
+    await expect(main.getByText("Активна", { exact: true })).toBeVisible();
+    await expect(main.getByText("E-mail подтверждён", { exact: true })).toBeVisible();
+    await expect(main.getByText("2FA выкл", { exact: true })).toBeVisible();
   });
 
   test("reflects a disabled / unverified / 2FA-enabled profile", async ({ page }) => {
@@ -68,9 +68,9 @@ test.describe("settings · profile", () => {
     await page.goto("/settings/profile");
 
     const main = page.getByRole("main");
-    await expect(main.getByText("Disabled", { exact: true })).toBeVisible({ timeout: 10_000 });
-    await expect(main.getByText("Email pending", { exact: true })).toBeVisible();
-    await expect(main.getByText("2FA enabled", { exact: true })).toBeVisible();
+    await expect(main.getByText("Отключена", { exact: true })).toBeVisible({ timeout: 10_000 });
+    await expect(main.getByText("E-mail ожидает", { exact: true })).toBeVisible();
+    await expect(main.getByText("2FA включена", { exact: true })).toBeVisible();
   });
 
   test("uploads a new avatar and PUTs the durable URL to /identity/profile/image", async ({
@@ -128,7 +128,7 @@ test.describe("settings · profile", () => {
 
     const main = page.getByRole("main");
     // With no current image the upload affordance reads "Choose image".
-    const upload = main.getByRole("button", { name: /choose image/i });
+    const upload = main.getByRole("button", { name: /выбрать изображение/i });
     await expect(upload).toBeVisible({ timeout: 10_000 });
 
     const reqPromise = page.waitForRequest(
@@ -152,6 +152,6 @@ test.describe("settings · profile", () => {
     // The page persists the durable publicUrl, not a base64 data: URL.
     expect(body.imageUrl).toBe(PUBLIC_URL);
 
-    await expect(page.getByText(/profile image updated/i)).toBeVisible();
+    await expect(page.getByText(/фото профиля обновлено/i)).toBeVisible();
   });
 });

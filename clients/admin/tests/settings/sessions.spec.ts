@@ -54,13 +54,13 @@ test.describe("settings · sessions", () => {
     await page.goto("/settings/sessions");
 
     const main = page.getByRole("main");
-    await expect(main.getByText(/Active sessions/)).toBeVisible({ timeout: 10_000 });
+    await expect(main.getByText(/Активные сессии/)).toBeVisible({ timeout: 10_000 });
 
     // Both device rows surface their browser-on-os summary.
-    await expect(main.getByText(/Chrome 120 on Windows/)).toBeVisible();
-    await expect(main.getByText(/Safari 17 on iOS/)).toBeVisible();
+    await expect(main.getByText(/Chrome 120 · Windows/)).toBeVisible();
+    await expect(main.getByText(/Safari 17 · iOS/)).toBeVisible();
     // Current session is badged and has no Revoke button.
-    await expect(main.getByText("This device", { exact: true })).toBeVisible();
+    await expect(main.getByText("Это устройство", { exact: true })).toBeVisible();
   });
 
   test("shows a revoke affordance for non-current sessions", async ({ page }) => {
@@ -73,12 +73,12 @@ test.describe("settings · sessions", () => {
 
     const main = page.getByRole("main");
     // Per-row Revoke for the other device.
-    await expect(main.getByRole("button", { name: /^revoke$/i })).toBeVisible({
+    await expect(main.getByRole("button", { name: /^отозвать$/i })).toBeVisible({
       timeout: 10_000,
     });
     // Bulk affordance because an active non-current session exists.
     await expect(
-      main.getByRole("button", { name: /sign out everywhere else/i }),
+      main.getByRole("button", { name: /выйти на всех остальных/i }),
     ).toBeVisible();
   });
 
@@ -96,7 +96,7 @@ test.describe("settings · sessions", () => {
     await page.goto("/settings/sessions");
 
     const main = page.getByRole("main");
-    const revoke = main.getByRole("button", { name: /^revoke$/i });
+    const revoke = main.getByRole("button", { name: /^отозвать$/i });
     await expect(revoke).toBeVisible({ timeout: 10_000 });
 
     const reqPromise = page.waitForRequest(
@@ -108,7 +108,7 @@ test.describe("settings · sessions", () => {
     await revoke.click();
     await reqPromise;
 
-    await expect(page.getByText(/session revoked/i)).toBeVisible();
+    await expect(page.getByText(/сессия отозвана/i)).toBeVisible();
   });
 
   test("renders the empty state when there are no sessions", async ({ page }) => {
@@ -117,11 +117,11 @@ test.describe("settings · sessions", () => {
     await page.goto("/settings/sessions");
 
     const main = page.getByRole("main");
-    await expect(main.getByText(/Active sessions/)).toBeVisible({ timeout: 10_000 });
-    await expect(main.getByText(/no active sessions found/i)).toBeVisible();
+    await expect(main.getByText(/Активные сессии/)).toBeVisible({ timeout: 10_000 });
+    await expect(main.getByText(/активных сессий не найдено/i)).toBeVisible();
     // No bulk sign-out button when nothing is active.
     await expect(
-      main.getByRole("button", { name: /sign out everywhere else/i }),
+      main.getByRole("button", { name: /выйти на всех остальных/i }),
     ).toHaveCount(0);
   });
 });

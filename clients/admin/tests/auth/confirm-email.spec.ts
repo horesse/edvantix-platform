@@ -6,20 +6,20 @@ const VALID_LINK = "/confirm-email?userId=u-1&code=verify-code&tenant=root";
 test.describe("admin confirm-email", () => {
   test("malformed-link state when params are missing", async ({ page }) => {
     await page.goto("/confirm-email");
-    await expect(page.getByText(/missing required parameters/i)).toBeVisible();
-    await expect(page.getByRole("heading", { name: /couldn't confirm your email/i })).toBeVisible();
+    await expect(page.getByText(/не хватает обязательных параметров/i)).toBeVisible();
+    await expect(page.getByRole("heading", { name: /не удалось.*подтвердить.*e-mail/i })).toBeVisible();
   });
 
   test("success state on 2xx with continue-to-signin CTA", async ({ page }) => {
     await mockJsonResponse(
       page,
       "**/api/v1/identity/confirm-email**",
-      '"Your email is confirmed."',
+      '"E-mail подтверждён."',
     );
     await page.goto(VALID_LINK);
 
-    await expect(page.getByText(/your email is confirmed/i)).toBeVisible();
-    const cta = page.getByRole("link", { name: /continue to sign in/i });
+    await expect(page.getByText(/e-mail подтверждён/i)).toBeVisible();
+    const cta = page.getByRole("link", { name: /перейти ко входу/i });
     await expect(cta).toBeVisible();
     await cta.click();
     await expect(page).toHaveURL(/\/login$/);
@@ -33,7 +33,7 @@ test.describe("admin confirm-email", () => {
     await page.goto(VALID_LINK);
 
     await expect(page.getByText(/no longer valid/i)).toBeVisible();
-    await expect(page.getByRole("link", { name: "Back to sign in", exact: true })).toBeVisible();
-    await expect(page.getByRole("link", { name: /reset password instead/i })).toBeVisible();
+    await expect(page.getByRole("link", { name: "К входу", exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: /сбросить пароль/i })).toBeVisible();
   });
 });

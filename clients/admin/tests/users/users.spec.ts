@@ -50,11 +50,11 @@ test.describe("users directory list", () => {
     await page.goto("/users");
 
     const main = page.getByRole("main");
-    await expect(main.getByRole("heading", { name: "Directory", exact: true })).toBeVisible({
+    await expect(main.getByRole("heading", { name: "Пользователи", exact: true })).toBeVisible({
       timeout: 10_000,
     });
     // Account count line.
-    await expect(main.getByText(/2 accounts on this tenant\./i)).toBeVisible();
+    await expect(main.getByText(/Учётных записей в этой школе: 2\./i)).toBeVisible();
     // A row from the mock. The name renders in both the mobile card and the
     // desktop row (responsive duplication) — scope to the desktop row's
     // username chip (`@bob.patel`, desktop-only) and the row buttons' names.
@@ -77,12 +77,12 @@ test.describe("users directory list", () => {
     await page.goto("/users");
 
     const main = page.getByRole("main");
-    await expect(main.getByText("No matches.", { exact: true })).toBeVisible({ timeout: 10_000 });
+    await expect(main.getByText("Ничего не найдено.", { exact: true })).toBeVisible({ timeout: 10_000 });
     // No search term / filters are active here, so the empty state shows the
     // "seed this tenant" prompt (the "adjust filters" copy only renders when a
     // search/filter is active).
     await expect(
-      main.getByText("Register the first member to seed this tenant."),
+      main.getByText("Заведите первого пользователя этой школы."),
     ).toBeVisible();
   });
 
@@ -94,7 +94,7 @@ test.describe("users directory list", () => {
     );
 
     await page.goto("/users");
-    const search = page.getByPlaceholder("Search name, username, email…");
+    const search = page.getByPlaceholder("Поиск по имени, логину, e-mail…");
     await expect(search).toBeVisible({ timeout: 10_000 });
 
     const reqPromise = page.waitForRequest(
@@ -119,22 +119,22 @@ test.describe("users create form", () => {
       paged(USERS, { pageSize: 12, totalCount: 2 }),
     );
     await page.goto("/users");
-    await page.getByRole("button", { name: "New user", exact: true }).click();
+    await page.getByRole("button", { name: "Новый пользователь", exact: true }).click();
 
     const dialog = page.getByRole("dialog");
     await expect(
-      dialog.getByRole("heading", { name: "New account", exact: true }),
+      dialog.getByRole("heading", { name: "Новая учётка", exact: true }),
     ).toBeVisible({ timeout: 10_000 });
 
-    await expect(dialog.getByLabel(/^First name/)).toBeVisible();
-    await expect(dialog.getByLabel(/^Last name/)).toBeVisible();
-    await expect(dialog.getByLabel(/^Username/)).toBeVisible();
-    await expect(dialog.getByLabel(/^Email/)).toBeVisible();
-    await expect(dialog.getByLabel(/^Password/, { exact: false })).toBeVisible();
-    await expect(dialog.getByLabel(/^Confirm password/)).toBeVisible();
+    await expect(dialog.getByLabel(/^Имя/)).toBeVisible();
+    await expect(dialog.getByLabel(/^Фамилия/)).toBeVisible();
+    await expect(dialog.getByLabel(/^Логин/)).toBeVisible();
+    await expect(dialog.getByLabel(/^E-mail/)).toBeVisible();
+    await expect(dialog.getByLabel(/^Пароль/, { exact: false })).toBeVisible();
+    await expect(dialog.getByLabel(/^Повтор пароля/)).toBeVisible();
 
     await expect(
-      dialog.getByRole("button", { name: "Create account", exact: true }),
+      dialog.getByRole("button", { name: "Создать учётку", exact: true }),
     ).toBeVisible();
   });
 
@@ -166,23 +166,23 @@ test.describe("users create form", () => {
     );
 
     await page.goto("/users");
-    await page.getByRole("button", { name: "New user", exact: true }).click();
+    await page.getByRole("button", { name: "Новый пользователь", exact: true }).click();
 
     const dialog = page.getByRole("dialog");
-    await expect(dialog.getByLabel(/^First name/)).toBeVisible({ timeout: 10_000 });
+    await expect(dialog.getByLabel(/^Имя/)).toBeVisible({ timeout: 10_000 });
 
-    await dialog.getByLabel(/^First name/).fill("Mei");
-    await dialog.getByLabel(/^Last name/).fill("Chen");
-    await dialog.getByLabel(/^Username/).fill("m.chen");
-    await dialog.getByLabel(/^Email/).fill("m.chen@root.com");
-    await dialog.getByLabel(/^Password/, { exact: false }).first().fill("Sup3rSecret!");
-    await dialog.getByLabel(/^Confirm password/).fill("Sup3rSecret!");
+    await dialog.getByLabel(/^Имя/).fill("Mei");
+    await dialog.getByLabel(/^Фамилия/).fill("Chen");
+    await dialog.getByLabel(/^Логин/).fill("m.chen");
+    await dialog.getByLabel(/^E-mail/).fill("m.chen@root.com");
+    await dialog.getByLabel(/^Пароль/, { exact: false }).first().fill("Sup3rSecret!");
+    await dialog.getByLabel(/^Повтор пароля/).fill("Sup3rSecret!");
 
     const reqPromise = page.waitForRequest(
       (r) => r.url().endsWith("/api/v1/identity/users/register") && r.method() === "POST",
       { timeout: 5_000 },
     );
-    await dialog.getByRole("button", { name: "Create account", exact: true }).click();
+    await dialog.getByRole("button", { name: "Создать учётку", exact: true }).click();
     const req = await reqPromise;
 
     const body = JSON.parse(req.postData() ?? "{}");
@@ -215,22 +215,22 @@ test.describe("users create form", () => {
     );
 
     await page.goto("/users");
-    await page.getByRole("button", { name: "New user", exact: true }).click();
+    await page.getByRole("button", { name: "Новый пользователь", exact: true }).click();
 
     const dialog = page.getByRole("dialog");
-    await expect(dialog.getByLabel(/^First name/)).toBeVisible({ timeout: 10_000 });
+    await expect(dialog.getByLabel(/^Имя/)).toBeVisible({ timeout: 10_000 });
 
     // Leave email blank so native email validation doesn't pre-empt zod.
     // Username "1x" violates the start-with-a-letter / length rule.
-    await dialog.getByLabel(/^First name/).fill("Mei");
-    await dialog.getByLabel(/^Last name/).fill("Chen");
-    await dialog.getByLabel(/^Username/).fill("1x");
-    await dialog.getByLabel(/^Password/, { exact: false }).first().fill("Sup3rSecret!");
-    await dialog.getByLabel(/^Confirm password/).fill("Sup3rSecret!");
+    await dialog.getByLabel(/^Имя/).fill("Mei");
+    await dialog.getByLabel(/^Фамилия/).fill("Chen");
+    await dialog.getByLabel(/^Логин/).fill("1x");
+    await dialog.getByLabel(/^Пароль/, { exact: false }).first().fill("Sup3rSecret!");
+    await dialog.getByLabel(/^Повтор пароля/).fill("Sup3rSecret!");
 
-    await dialog.getByRole("button", { name: "Create account", exact: true }).click();
+    await dialog.getByRole("button", { name: "Создать учётку", exact: true }).click();
 
-    await expect(dialog.getByText(/Start with a letter\./i)).toBeVisible();
+    await expect(dialog.getByText(/Начинается с буквы\./i)).toBeVisible();
     expect(posted).toBe(false);
   });
 });
@@ -270,25 +270,24 @@ test.describe("user detail page", () => {
     ).toBeVisible({ timeout: 10_000 });
 
     // Status + email badges.
-    await expect(main.getByText("Active", { exact: true }).first()).toBeVisible();
-    await expect(main.getByText(/Email confirmed/i).first()).toBeVisible();
+    await expect(main.getByText("Активна", { exact: true }).first()).toBeVisible();
+    await expect(main.getByText(/E-mail подтверждён/i).first()).toBeVisible();
 
-    // Section headings. Identity + roles now render via SettingsSection (h2
-    // with plain titles); the sessions card still uses FormSection ("\ Sessions").
+    // Section headings — all render via SettingsSection (h2 with plain titles).
     await expect(
-      main.getByRole("heading", { name: "Identity card", exact: true }),
+      main.getByRole("heading", { name: "Карточка учётки", exact: true }),
     ).toBeVisible();
     await expect(
-      main.getByRole("heading", { name: "Role assignment", exact: true }),
+      main.getByRole("heading", { name: "Назначение ролей", exact: true }),
     ).toBeVisible();
-    await expect(main.getByText(/\\ Sessions/i).first()).toBeVisible();
+    await expect(main.getByRole("heading", { name: "Сессии", exact: true }).first()).toBeVisible();
 
     // Role chips rendered from the roles endpoint.
     await expect(main.getByText("Admin", { exact: true })).toBeVisible();
     await expect(main.getByText("Manager", { exact: true })).toBeVisible();
 
     // Session row rendered from the sessions endpoint.
-    await expect(main.getByText(/Chrome 120 on Windows/i)).toBeVisible();
+    await expect(main.getByText(/Chrome 120 · Windows/i)).toBeVisible();
   });
 
   test("surfaces a server error band when the user fails to load", async ({ page }) => {

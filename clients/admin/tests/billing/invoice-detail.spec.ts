@@ -64,13 +64,13 @@ test.describe("billing invoice detail", () => {
 
     // Hero: invoice number + status badge + amount.
     await expect(main.getByText("INV-2026-0001", { exact: true })).toBeVisible({ timeout: 10_000 });
-    await expect(main.getByText("Draft", { exact: true }).first()).toBeVisible();
+    await expect(main.getByText("Черновик", { exact: true }).first()).toBeVisible();
     // Amount renders formatted (USD). $129.50 appears in the hero + subtotal.
     await expect(main.getByText("$129.50").first()).toBeVisible();
 
     // Line item description + kind badge.
     await expect(main.getByText("Pro monthly base fee", { exact: true })).toBeVisible();
-    await expect(main.getByText("BaseFee", { exact: true })).toBeVisible();
+    await expect(main.getByText("Базовая плата", { exact: true })).toBeVisible();
   });
 
   test("hides Issue/Mark-paid/Void + Download for a Billing.View-only user", async ({ page }) => {
@@ -99,10 +99,10 @@ test.describe("billing invoice detail", () => {
     await expect(main.getByText("Pro monthly base fee", { exact: true })).toBeVisible();
 
     // Every manage affordance must be absent.
-    await expect(main.getByRole("button", { name: /issue invoice/i })).toHaveCount(0);
-    await expect(main.getByRole("button", { name: /mark as paid/i })).toHaveCount(0);
-    await expect(main.getByRole("button", { name: /void invoice/i })).toHaveCount(0);
-    await expect(main.getByRole("button", { name: /download pdf/i })).toHaveCount(0);
+    await expect(main.getByRole("button", { name: /выставить счёт/i })).toHaveCount(0);
+    await expect(main.getByRole("button", { name: /отметить оплаченным/i })).toHaveCount(0);
+    await expect(main.getByRole("button", { name: /аннулировать счёт/i })).toHaveCount(0);
+    await expect(main.getByRole("button", { name: /скачать pdf/i })).toHaveCount(0);
   });
 
   test("renders an error state (not a stuck Loading…) when the invoice fails to load", async ({ page }) => {
@@ -122,8 +122,8 @@ test.describe("billing invoice detail", () => {
     const main = page.getByRole("main");
 
     // Line-items section surfaces the error and does NOT stick on "Loading…".
-    await expect(main.getByText(/boom\.|failed to load/i).first()).toBeVisible({ timeout: 10_000 });
-    await expect(main.getByText("Loading…", { exact: true })).toHaveCount(0);
+    await expect(main.getByText(/boom\.|не удалось загрузить/i).first()).toBeVisible({ timeout: 10_000 });
+    await expect(main.getByText("Загрузка…", { exact: true })).toHaveCount(0);
   });
 
   test("Issue invoice POSTs to /issue for a Draft invoice", async ({ page }) => {
@@ -153,7 +153,7 @@ test.describe("billing invoice detail", () => {
 
     await page.goto("/billing/invoices/inv-1");
     const main = page.getByRole("main");
-    const issueBtn = main.getByRole("button", { name: /issue invoice/i });
+    const issueBtn = main.getByRole("button", { name: /выставить счёт/i });
     await expect(issueBtn).toBeEnabled({ timeout: 10_000 });
 
     const reqPromise = page.waitForRequest(
@@ -163,7 +163,7 @@ test.describe("billing invoice detail", () => {
     await issueBtn.click();
     await reqPromise;
 
-    await expect(page.getByText(/invoice issued/i)).toBeVisible();
+    await expect(page.getByText(/счёт выставлен/i)).toBeVisible();
   });
 
   test("Mark as paid POSTs to /pay for an Issued invoice", async ({ page }) => {
@@ -193,7 +193,7 @@ test.describe("billing invoice detail", () => {
 
     await page.goto("/billing/invoices/inv-2");
     const main = page.getByRole("main");
-    const payBtn = main.getByRole("button", { name: /mark as paid/i });
+    const payBtn = main.getByRole("button", { name: /отметить оплаченным/i });
     await expect(payBtn).toBeEnabled({ timeout: 10_000 });
 
     const reqPromise = page.waitForRequest(
@@ -203,7 +203,7 @@ test.describe("billing invoice detail", () => {
     await payBtn.click();
     await reqPromise;
 
-    await expect(page.getByText(/marked paid/i)).toBeVisible();
+    await expect(page.getByText(/отмечен как оплаченный/i)).toBeVisible();
   });
 
   test("Download PDF fetches the invoice /pdf endpoint", async ({ page }) => {
@@ -230,7 +230,7 @@ test.describe("billing invoice detail", () => {
 
     await page.goto("/billing/invoices/inv-1");
     const main = page.getByRole("main");
-    const downloadBtn = main.getByRole("button", { name: /download pdf/i });
+    const downloadBtn = main.getByRole("button", { name: /скачать pdf/i });
     await expect(downloadBtn).toBeEnabled({ timeout: 10_000 });
 
     const reqPromise = page.waitForRequest(
@@ -272,10 +272,10 @@ test.describe("billing invoice detail", () => {
 
     await page.goto("/billing/invoices/inv-1");
     const main = page.getByRole("main");
-    const voidBtn = main.getByRole("button", { name: /void invoice/i });
+    const voidBtn = main.getByRole("button", { name: /аннулировать счёт/i });
     await expect(voidBtn).toBeEnabled({ timeout: 10_000 });
 
-    await main.getByLabel(/^Reason/).fill("duplicate");
+    await main.getByLabel(/^Причина/).fill("duplicate");
 
     const reqPromise = page.waitForRequest(
       (r) => r.url().endsWith("/api/v1/billing/invoices/inv-1/void") && r.method() === "POST",
@@ -287,6 +287,6 @@ test.describe("billing invoice detail", () => {
     const body = JSON.parse(req.postData() ?? "{}");
     expect(body.reason).toBe("duplicate");
 
-    await expect(page.getByText(/invoice voided/i)).toBeVisible();
+    await expect(page.getByText(/счёт аннулирован/i)).toBeVisible();
   });
 });

@@ -3,145 +3,107 @@ import { seedAuthedSession, TEST_USER } from "../helpers/auth-seed";
 import { installAdminShellMocks, ADMIN_PERMS, paged } from "../helpers/shell-mocks";
 import { mockJsonResponse } from "../helpers/api-mocks";
 
-// DashboardPage ("/") is protected. The RouteGuard reads the in-memory
-// permission set, which the auth context re-hydrates from
-// /identity/permissions after mount — installAdminShellMocks echoes ADMIN_PERMS
-// from that endpoint, so the seeded perms and the helper's perms must match.
-//
-// On load the page fires three queries:
-//   GET /api/v1/tenants/?PageNumber=1&PageSize=1   (totalCount drives "Tenants")
-//   GET /api/v1/billing/plans?includeInactive=true (array, drives "Plans")
-//   GET /api/v1/billing/invoices?pageNumber=1&pageSize=50 (paged, drives invoices)
+// The platform dashboard ("/") is protected. On load it fires:
+//   GET /api/v1/tenants/?PageNumber=1&PageSize=100   (list, drives KPIs + names)
+//   GET /api/v1/billing/invoices?pageNumber=1&pageSize=50
+//   GET /api/v1/billing/usage                         (all-tenant snapshots)
+//   GET /api/v1/tenants/{id}/status                   (per-tenant fan-out for "по тарифам")
+
+const SOON = new Date(Date.now() + 12 * 86_400_000).toISOString();
+const LATER = new Date(Date.now() + 400 * 86_400_000).toISOString();
 
 const TENANTS_PAGE = paged(
   [
-    {
-      id: "acme",
-      name: "Acme Corp",
-      adminEmail: "admin@acme.com",
-      isActive: true,
-      validUpto: "2027-01-01T00:00:00Z",
-    },
+    { id: "acme", name: "Acme Corp", adminEmail: "admin@acme.com", isActive: true, validUpto: LATER },
+    { id: "globex", name: "Globex", adminEmail: "admin@globex.com", isActive: true, validUpto: SOON },
+    { id: "initech", name: "Initech", adminEmail: "admin@initech.com", isActive: false, validUpto: LATER },
   ],
-  { pageNumber: 1, pageSize: 1, totalCount: 12 },
+  { pageNumber: 1, pageSize: 100, totalCount: 3 },
 );
-
-const PLANS = [
-  {
-    id: "p-free",
-    key: "free",
-    name: "Free",
-    currency: "USD",
-    monthlyBasePrice: 0,
-    overageRates: {},
-    isActive: true,
-  },
-  {
-    id: "p-pro",
-    key: "pro",
-    name: "Pro",
-    currency: "USD",
-    monthlyBasePrice: 49,
-    overageRates: {},
-    isActive: true,
-  },
-  {
-    id: "p-legacy",
-    key: "legacy",
-    name: "Legacy",
-    currency: "USD",
-    monthlyBasePrice: 19,
-    overageRates: {},
-    isActive: false,
-  },
-];
 
 const INVOICES_PAGE = paged(
   [
-    {
-      id: "inv-1",
-      tenantId: "acme",
-      invoiceNumber: "INV-0001",
-      periodYear: 2026,
-      periodMonth: 5,
-      currency: "USD",
-      subtotalAmount: 49,
-      status: "Issued",
-      createdAtUtc: "2026-05-01T00:00:00Z",
-      lineItems: [],
-    },
-    {
-      id: "inv-2",
-      tenantId: "acme",
-      invoiceNumber: "INV-0002",
-      periodYear: 2026,
-      periodMonth: 4,
-      currency: "USD",
-      subtotalAmount: 49,
-      status: "Paid",
-      createdAtUtc: "2026-04-01T00:00:00Z",
-      lineItems: [],
-    },
+    { id: "inv-1", tenantId: "acme", invoiceNumber: "INV-0001", periodYear: 2026, periodMonth: 8, currency: "USD", subtotalAmount: 49, status: "Issued", createdAtUtc: "2026-08-01T00:00:00Z", lineItems: [] },
   ],
-  { pageNumber: 1, pageSize: 50, totalCount: 134 },
+  { pageNumber: 1, pageSize: 50, totalCount: 1 },
 );
+
+// One tenant near a limit: Acme at 92% of ActiveStudents.
+const USAGE = [
+  { id: "u1", tenantId: "acme", periodYear: 2026, periodMonth: 8, resource: "ActiveStudents", usedUnits: 138, limitUnits: 150, overage: 0, capturedAtUtc: "2026-08-31T00:00:00Z" },
+  { id: "u2", tenantId: "acme", periodYear: 2026, periodMonth: 8, resource: "ActiveTeachers", usedUnits: 4, limitUnits: 12, overage: 0, capturedAtUtc: "2026-08-31T00:00:00Z" },
+  { id: "u3", tenantId: "globex", periodYear: 2026, periodMonth: 8, resource: "ActiveStudents", usedUnits: 3, limitUnits: 30, overage: 0, capturedAtUtc: "2026-08-31T00:00:00Z" },
+];
+
+const STATUS = {
+  acme: { id: "acme", name: "Acme Corp", isActive: true, validUpto: LATER, adminEmail: "admin@acme.com", plan: "pro-annual", expiryState: "Active", graceEndsUtc: LATER },
+  globex: { id: "globex", name: "Globex", isActive: true, validUpto: SOON, adminEmail: "admin@globex.com", plan: "free", expiryState: "Active", graceEndsUtc: SOON },
+  initech: { id: "initech", name: "Initech", isActive: false, validUpto: LATER, adminEmail: "admin@initech.com", plan: "free", expiryState: "Active", graceEndsUtc: LATER },
+};
 
 test.beforeEach(async ({ page }) => {
   await seedAuthedSession(page, { ...TEST_USER, permissions: [...ADMIN_PERMS] });
   await installAdminShellMocks(page);
 
-  // Page-specific mocks AFTER the shell mocks so they win.
-  await mockJsonResponse(page, "**/api/v1/tenants**", TENANTS_PAGE);
-  await mockJsonResponse(page, "**/api/v1/billing/plans**", PLANS);
+  await mockJsonResponse(page, "**/api/v1/tenants/?*", TENANTS_PAGE);
   await mockJsonResponse(page, "**/api/v1/billing/invoices**", INVOICES_PAGE);
+  await mockJsonResponse(page, "**/api/v1/billing/usage**", USAGE);
+  for (const [id, body] of Object.entries(STATUS)) {
+    await mockJsonResponse(page, `**/api/v1/tenants/${id}/status`, body);
+  }
 });
 
-test.describe("admin dashboard", () => {
+test.describe("platform dashboard", () => {
   test("greets the operator by first name in the hero heading", async ({ page }) => {
     await page.goto("/");
-
-    // Seeded user is "Root Admin" → first name "Root". The EntityPageHeader h1
-    // renders "Overview" + a muted ", Root" subspan, so match the accessible name.
     await expect(
-      page.getByRole("heading", { name: /Overview,\s*Root/i }),
+      page.getByRole("heading", { name: /Обзор платформы,\s*Root/i }),
     ).toBeVisible({ timeout: 10_000 });
   });
 
-  test("renders the four KPI tiles with values from the load endpoints", async ({ page }) => {
+  test("renders the four platform KPI tiles", async ({ page }) => {
     await page.goto("/");
-
-    // Scope to the page content region — the KPI labels ("Tenants", "Plans")
-    // also appear in the sidebar nav, so an unscoped getByText collides.
     const main = page.getByRole("main");
+    const kpiLabel = (text: string) => main.locator("div.meta", { hasText: text });
 
-    // KPI tile labels render as the Stat component's mono-caps ".meta" crumb.
-    // "Tenants"/"Plans" also appear as pivot-card titles, so target the label
-    // element by its class rather than a bare text match.
-    const kpiLabel = (text: string) =>
-      main.locator("div.meta", { hasText: text });
-    await expect(kpiLabel("Tenants")).toBeVisible({ timeout: 10_000 });
-    await expect(kpiLabel("Plans")).toBeVisible();
-    await expect(kpiLabel("Invoices")).toBeVisible();
-    await expect(kpiLabel("Outstanding")).toBeVisible();
+    await expect(kpiLabel("Школы")).toBeVisible({ timeout: 10_000 });
+    await expect(kpiLabel("Активные")).toBeVisible();
+    await expect(kpiLabel("Истекают")).toBeVisible();
+    await expect(kpiLabel("У лимитов")).toBeVisible();
 
-    // Values: tenants totalCount = 12, plans length = 3, invoices on page = 2,
-    // outstanding (status === "Issued") = 1.
-    await expect(main.getByText("12", { exact: true })).toBeVisible();
-    await expect(main.getByText("2 active")).toBeVisible();
-    await expect(main.getByText("134 total ledger")).toBeVisible();
+    // Истекают = 1 (Globex within 45d); У лимитов = 1 (Acme ActiveStudents ≥ 80%).
+    await expect(main.getByText("в ближайшие 45 дн.")).toBeVisible();
+    await expect(main.getByText("≥ 80% лимита тарифа")).toBeVisible();
   });
 
-  test("renders the entry-point pivot cards", async ({ page }) => {
+  test("shows schools-by-plan, expiring subscriptions and near-limit sections", async ({ page }) => {
     await page.goto("/");
-
-    // The sidebar nav lives OUTSIDE <main>, so scoping to the content region
-    // isolates the four pivot-card links from the nav's own route links.
     const main = page.getByRole("main");
-    await expect(main.getByText("Entry points")).toBeVisible({ timeout: 10_000 });
 
-    await expect(main.getByRole("link", { name: /Tenants/ })).toBeVisible();
-    await expect(main.getByRole("link", { name: /Users/ })).toBeVisible();
-    await expect(main.getByRole("link", { name: /Billing/ })).toBeVisible();
-    await expect(main.getByRole("link", { name: /Invoices/ })).toBeVisible();
+    await expect(main.getByRole("heading", { name: "Школы по тарифам" })).toBeVisible({ timeout: 10_000 });
+    // Plan keys resolved from the per-tenant status fan-out.
+    await expect(main.getByText("pro-annual", { exact: true })).toBeVisible();
+    await expect(main.getByText("free", { exact: true }).first()).toBeVisible();
+
+    await expect(main.getByRole("heading", { name: "Истекающие подписки" })).toBeVisible();
+    await expect(main.getByRole("link", { name: /Globex/ })).toBeVisible();
+
+    await expect(main.getByRole("heading", { name: "Приближаются к лимитам" })).toBeVisible();
+    // Acme near ActiveStudents limit: label "ученики" + "138 / 150 · 92%".
+    await expect(main.getByText(/138 \/ 150 · 92%/)).toBeVisible();
+  });
+
+  test("renders the entry-point pivot cards with Russian labels", async ({ page }) => {
+    await page.goto("/");
+    const main = page.getByRole("main");
+    await expect(main.getByText("Точки входа")).toBeVisible({ timeout: 10_000 });
+
+    await expect(main.getByRole("link", { name: /Школы/ })).toBeVisible();
+    await expect(main.getByRole("link", { name: /Пользователи/ })).toBeVisible();
+    await expect(main.getByRole("link", { name: /Биллинг/ })).toBeVisible();
+    await expect(main.getByRole("link", { name: /Счета/ })).toBeVisible();
+
+    // Terminology: no visible "Tenant" copy on the dashboard.
+    await expect(main.getByText(/\bTenant\b/)).toHaveCount(0);
   });
 });

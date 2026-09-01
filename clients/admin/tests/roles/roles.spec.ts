@@ -23,7 +23,7 @@ test.describe("roles list", () => {
     await page.goto("/roles");
 
     const main = page.getByRole("main");
-    await expect(main.getByRole("heading", { name: "Roles", exact: true })).toBeVisible({
+    await expect(main.getByRole("heading", { name: "Роли", exact: true })).toBeVisible({
       timeout: 10_000,
     });
     // Each role renders in both a mobile card (hidden at desktop width) and a
@@ -36,7 +36,7 @@ test.describe("roles list", () => {
     // System roles (Admin/Basic) get a "System" badge — scope to the visible
     // desktop Admin row so we don't match the hidden mobile-card duplicate.
     await expect(
-      main.getByRole("button", { name: /^Admin\b/ }).getByText("System", { exact: true }),
+      main.getByRole("button", { name: /^Admin\b/ }).getByText("Системная", { exact: true }),
     ).toBeVisible();
   });
 
@@ -46,10 +46,10 @@ test.describe("roles list", () => {
     await page.goto("/roles");
 
     const main = page.getByRole("main");
-    await expect(main.getByText("No roles defined yet.", { exact: true })).toBeVisible({
+    await expect(main.getByText("Роли ещё не заданы.", { exact: true })).toBeVisible({
       timeout: 10_000,
     });
-    await expect(main.getByText("Create your first role to start bundling permissions.")).toBeVisible();
+    await expect(main.getByText("Создайте первую роль, чтобы объединять права.")).toBeVisible();
   });
 });
 
@@ -64,18 +64,18 @@ test.describe("roles create form", () => {
     await page.goto("/roles");
 
     const main = page.getByRole("main");
-    await main.getByRole("button", { name: "New role" }).click();
+    await main.getByRole("button", { name: "Новая роль" }).click();
 
     const dialog = page.getByRole("dialog");
     await expect(
-      dialog.getByRole("heading", { name: "New role", exact: true }),
+      dialog.getByRole("heading", { name: "Новая роль", exact: true }),
     ).toBeVisible({ timeout: 10_000 });
 
-    await expect(dialog.getByLabel(/^Name/)).toBeVisible();
-    await expect(dialog.getByLabel(/^Description/)).toBeVisible();
+    await expect(dialog.getByLabel(/^Название/)).toBeVisible();
+    await expect(dialog.getByLabel(/^Описание/)).toBeVisible();
 
     await expect(
-      dialog.getByRole("button", { name: "Create role", exact: true }),
+      dialog.getByRole("button", { name: "Создать роль", exact: true }),
     ).toBeVisible();
   });
 
@@ -103,19 +103,19 @@ test.describe("roles create form", () => {
 
     await page.goto("/roles");
     const main = page.getByRole("main");
-    await main.getByRole("button", { name: "New role" }).click();
+    await main.getByRole("button", { name: "Новая роль" }).click();
 
     const dialog = page.getByRole("dialog");
-    await expect(dialog.getByLabel(/^Name/)).toBeVisible({ timeout: 10_000 });
+    await expect(dialog.getByLabel(/^Название/)).toBeVisible({ timeout: 10_000 });
 
-    await dialog.getByLabel(/^Name/).fill("Support agent");
-    await dialog.getByLabel(/^Description/).fill("Inbound support");
+    await dialog.getByLabel(/^Название/).fill("Support agent");
+    await dialog.getByLabel(/^Описание/).fill("Inbound support");
 
     const reqPromise = page.waitForRequest(
       (r) => r.url().endsWith("/api/v1/identity/roles") && r.method() === "POST",
       { timeout: 5_000 },
     );
-    await dialog.getByRole("button", { name: "Create role", exact: true }).click();
+    await dialog.getByRole("button", { name: "Создать роль", exact: true }).click();
     const req = await reqPromise;
 
     const body = JSON.parse(req.postData() ?? "{}");
@@ -148,15 +148,15 @@ test.describe("roles create form", () => {
 
     await page.goto("/roles");
     const main = page.getByRole("main");
-    await main.getByRole("button", { name: "New role" }).click();
+    await main.getByRole("button", { name: "Новая роль" }).click();
 
     const dialog = page.getByRole("dialog");
-    await expect(dialog.getByLabel(/^Name/)).toBeVisible({ timeout: 10_000 });
+    await expect(dialog.getByLabel(/^Название/)).toBeVisible({ timeout: 10_000 });
 
-    await dialog.getByLabel(/^Name/).fill("A");
-    await dialog.getByRole("button", { name: "Create role", exact: true }).click();
+    await dialog.getByLabel(/^Название/).fill("A");
+    await dialog.getByRole("button", { name: "Создать роль", exact: true }).click();
 
-    await expect(dialog.getByText(/At least 2 characters\./i)).toBeVisible();
+    await expect(dialog.getByText(/Не меньше 2 символов\./i)).toBeVisible();
     expect(posted).toBe(false);
   });
 });
@@ -182,16 +182,15 @@ test.describe("role detail permission matrix", () => {
     });
 
     // Hydrated profile name field.
-    await expect(main.getByLabel(/^Name/)).toHaveValue("Manager");
+    await expect(main.getByLabel(/^Название/)).toHaveValue("Manager");
 
     // Section heading + catalog groups (rendered client-side from PERMISSION_CATALOG).
-    // SettingsSection renders the title as a plain <h2>Permissions</h2>.
     await expect(
-      main.getByRole("heading", { name: "Permissions", exact: true }),
+      main.getByRole("heading", { name: "Права", exact: true }),
     ).toBeVisible();
-    await expect(main.getByRole("heading", { name: "Users", exact: true })).toBeVisible();
-    await expect(main.getByRole("heading", { name: "Roles", exact: true })).toBeVisible();
-    await expect(main.getByRole("heading", { name: "Sessions", exact: true })).toBeVisible();
+    await expect(main.getByRole("heading", { name: "Пользователи", exact: true })).toBeVisible();
+    await expect(main.getByRole("heading", { name: "Роли", exact: true })).toBeVisible();
+    await expect(main.getByRole("heading", { name: "Сессии", exact: true })).toBeVisible();
 
     // A specific permission entry from the catalog.
     await expect(main.getByText("Permissions.Users.View", { exact: true })).toBeVisible();
@@ -206,15 +205,15 @@ test.describe("role detail permission matrix", () => {
       timeout: 10_000,
     });
 
-    // Toggle a not-yet-granted permission ("Create users").
-    await main.getByText("Create users", { exact: true }).click();
+    // Toggle a not-yet-granted permission ("Создание пользователей").
+    await main.getByText("Создание пользователей", { exact: true }).click();
 
     const reqPromise = page.waitForRequest(
       (r) =>
         r.url().endsWith(`/api/v1/identity/${ROLE.id}/permissions`) && r.method() === "PUT",
       { timeout: 5_000 },
     );
-    await main.getByRole("button", { name: /save permissions/i }).click();
+    await main.getByRole("button", { name: /сохранить права/i }).click();
     const req = await reqPromise;
 
     const body = JSON.parse(req.postData() ?? "{}");

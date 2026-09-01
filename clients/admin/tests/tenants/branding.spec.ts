@@ -101,51 +101,50 @@ test.describe("tenant branding card", () => {
     await page.goto(`/tenants/${TENANT_ID}`);
 
     // Wait for the branding card heading.
-    const branding = page.locator("section, div").filter({ hasText: "Branding" }).first();
+    const branding = page.locator("section, div").filter({ hasText: "Брендирование" }).first();
     await expect(branding).toBeVisible({ timeout: 10_000 });
 
     // Default badge (server returned isDefault: true).
-    await expect(page.locator("text=/^default$/i").first()).toBeVisible();
+    await expect(page.getByText("по умолчанию").first()).toBeVisible();
 
     // Both palette sections render.
-    await expect(page.getByText(/light palette/i)).toBeVisible();
-    await expect(page.getByText(/dark palette/i)).toBeVisible();
+    await expect(page.getByText(/светлая палитра/i)).toBeVisible();
+    await expect(page.getByText(/тёмная палитра/i)).toBeVisible();
 
     // Brand asset URL fields render.
-    await expect(page.getByLabel("Logo URL", { exact: true })).toBeVisible();
-    await expect(page.getByLabel("Logo URL (dark mode)")).toBeVisible();
-    await expect(page.getByLabel("Favicon URL")).toBeVisible();
+    await expect(page.getByLabel("URL логотипа", { exact: true })).toBeVisible();
+    await expect(page.getByLabel("URL логотипа (тёмная тема)")).toBeVisible();
+    await expect(page.getByLabel("URL favicon")).toBeVisible();
   });
 
   test("Save button is disabled until the operator edits something", async ({ page }) => {
     await mockJsonResponse(page, "**/api/v1/tenants/theme", THEME_DEFAULT);
 
     await page.goto(`/tenants/${TENANT_ID}`);
-    const save = page.getByRole("button", { name: /save branding/i });
+    const save = page.getByRole("button", { name: /сохранить брендирование/i });
     await expect(save).toBeVisible({ timeout: 10_000 });
     await expect(save).toBeDisabled();
 
-    // Edit the logo URL via the visible textbox (avoids strict-mode
-    // collisions with the hidden color inputs).
-    await page.getByLabel("Logo URL", { exact: true }).fill("https://cdn.example.com/acme.svg");
+    // Edit the logo URL via the visible textbox.
+    await page.getByLabel("URL логотипа", { exact: true }).fill("https://cdn.example.com/acme.svg");
     await expect(save).toBeEnabled();
-    await expect(page.locator("text=/^unsaved$/i").first()).toBeVisible();
+    await expect(page.getByText("не сохранено").first()).toBeVisible();
   });
 
   test("Save PUTs the edited theme with the tenant header", async ({ page }) => {
     await mockJsonResponse(page, "**/api/v1/tenants/theme", THEME_DEFAULT);
 
     await page.goto(`/tenants/${TENANT_ID}`);
-    await expect(page.getByLabel("Logo URL", { exact: true })).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByLabel("URL логотипа", { exact: true })).toBeVisible({ timeout: 10_000 });
 
-    await page.getByLabel("Logo URL", { exact: true }).fill("https://cdn.example.com/acme.svg");
+    await page.getByLabel("URL логотипа", { exact: true }).fill("https://cdn.example.com/acme.svg");
 
     const reqPromise = page.waitForRequest(
       (r) =>
         r.url().endsWith("/api/v1/tenants/theme") && r.method() === "PUT",
       { timeout: 5_000 },
     );
-    await page.getByRole("button", { name: /save branding/i }).click();
+    await page.getByRole("button", { name: /сохранить брендирование/i }).click();
     const req = await reqPromise;
 
     expect(req.headers().tenant).toBe(TENANT_ID);
@@ -159,7 +158,7 @@ test.describe("tenant branding card", () => {
     await mockJsonResponse(page, "**/api/v1/tenants/theme/reset", '""');
 
     await page.goto(`/tenants/${TENANT_ID}`);
-    await expect(page.getByRole("button", { name: /reset (branding )?to defaults/i })).toBeVisible({
+    await expect(page.getByRole("button", { name: /сбросить.*умолчани/i })).toBeVisible({
       timeout: 10_000,
     });
 
@@ -168,11 +167,11 @@ test.describe("tenant branding card", () => {
         r.url().endsWith("/api/v1/tenants/theme/reset") && r.method() === "POST",
       { timeout: 5_000 },
     );
-    await page.getByRole("button", { name: /reset (branding )?to defaults/i }).click();
+    await page.getByRole("button", { name: /сбросить.*умолчани/i }).click();
     const req = await reqPromise;
     expect(req.headers().tenant).toBe(TENANT_ID);
 
-    await expect(page.getByText(/branding reset to defaults/i)).toBeVisible();
+    await expect(page.getByText(/брендирование сброшено к умолчаниям/i)).toBeVisible();
   });
 
   test("surfaces a server error in the error band, not as a toast", async ({ page }) => {
@@ -186,6 +185,6 @@ test.describe("tenant branding card", () => {
       timeout: 10_000,
     });
     // No save button when the editor never loaded.
-    await expect(page.getByRole("button", { name: /save branding/i })).not.toBeVisible();
+    await expect(page.getByRole("button", { name: /сохранить брендирование/i })).not.toBeVisible();
   });
 });

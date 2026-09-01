@@ -62,21 +62,21 @@ export function TenantBrandingCard({ tenantId }: { tenantId: string }) {
   const saveMutation = useMutation({
     mutationFn: (theme: TenantThemeDto) => updateTenantTheme(tenantId, theme),
     onSuccess: () => {
-      toast.success("Branding saved");
+      toast.success("Брендирование сохранено");
       void queryClient.invalidateQueries({ queryKey: themeQueryKey });
     },
     onError: (err) =>
-      toast.error("Save failed", { description: apiErr(err) }),
+      toast.error("Не удалось сохранить", { description: apiErr(err) }),
   });
 
   const resetMutation = useMutation({
     mutationFn: () => resetTenantTheme(tenantId),
     onSuccess: () => {
-      toast.success("Branding reset to defaults");
+      toast.success("Брендирование сброшено к умолчаниям");
       void queryClient.invalidateQueries({ queryKey: themeQueryKey });
     },
     onError: (err) =>
-      toast.error("Reset failed", { description: apiErr(err) }),
+      toast.error("Не удалось сбросить", { description: apiErr(err) }),
   });
 
   if (themeQuery.isLoading) {
@@ -116,12 +116,12 @@ export function TenantBrandingCard({ tenantId }: { tenantId: string }) {
       <div className="flex items-center gap-2">
         {draft.isDefault && !dirty && (
           <Badge variant="outline" className="font-mono uppercase tracking-[0.14em]">
-            default
+            по умолчанию
           </Badge>
         )}
         {dirty && (
           <Badge variant="warning" className="font-mono uppercase tracking-[0.14em]">
-            unsaved
+            не сохранено
           </Badge>
         )}
       </div>

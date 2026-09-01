@@ -51,6 +51,16 @@ const THEME_DEFAULT = {
   isDefault: true,
 };
 
+// School-card metrics — one row per QuotaResource, newest period first
+// (GET /api/v1/billing/usage?tenantId=acme).
+const USAGE = [
+  { id: "u1", tenantId: TENANT_ID, periodYear: 2026, periodMonth: 8, resource: "ActiveStudents", usedUnits: 138, limitUnits: 150, overage: 0, capturedAtUtc: "2026-08-31T00:00:00Z" },
+  { id: "u2", tenantId: TENANT_ID, periodYear: 2026, periodMonth: 8, resource: "ActiveTeachers", usedUnits: 9, limitUnits: 12, overage: 0, capturedAtUtc: "2026-08-31T00:00:00Z" },
+  { id: "u3", tenantId: TENANT_ID, periodYear: 2026, periodMonth: 8, resource: "StudyGroups", usedUnits: 21, limitUnits: -1, overage: 0, capturedAtUtc: "2026-08-31T00:00:00Z" },
+  { id: "u4", tenantId: TENANT_ID, periodYear: 2026, periodMonth: 8, resource: "MonthlySessions", usedUnits: 340, limitUnits: 500, overage: 0, capturedAtUtc: "2026-08-31T00:00:00Z" },
+  { id: "u5", tenantId: TENANT_ID, periodYear: 2026, periodMonth: 8, resource: "StorageBytes", usedUnits: 1_610_612_736, limitUnits: 5_368_709_120, overage: 0, capturedAtUtc: "2026-08-31T00:00:00Z" },
+];
+
 test.beforeEach(async ({ page }) => {
   await seedAuthedSession(page, { ...TEST_USER, permissions: [...ADMIN_PERMS] });
   await installAdminShellMocks(page);
@@ -58,6 +68,7 @@ test.beforeEach(async ({ page }) => {
   // satisfied so the page renders, but we don't assert on them here.
   await mockJsonResponse(page, "**/api/v1/tenants/theme", THEME_DEFAULT);
   await mockJsonResponse(page, "**/api/v1/identity/impersonation/grants**", []);
+  await mockJsonResponse(page, "**/api/v1/billing/usage**", USAGE);
 });
 
 test.describe("tenant detail header + provisioning", () => {
@@ -76,7 +87,44 @@ test.describe("tenant detail header + provisioning", () => {
     // Header chips: tenant id, admin email, active badge.
     await expect(page.getByText("acme", { exact: true }).first()).toBeVisible();
     await expect(page.getByText("admin@acme.com", { exact: true }).first()).toBeVisible();
-    await expect(page.getByText("Active", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("Активна", { exact: true }).first()).toBeVisible();
+    // Terminology: no visible "Tenant" copy on the school card.
+    await expect(page.getByRole("main").getByText(/\bTenant\b/)).toHaveCount(0);
+  });
+
+  test("renders the school metrics band from the usage snapshot mock", async ({ page }) => {
+    await mockJsonResponse(page, `**/api/v1/tenants/${TENANT_ID}/status`, TENANT);
+    await mockJsonResponse(page, `**/api/v1/tenants/${TENANT_ID}/provisioning`, PROVISIONING);
+
+    await page.goto(`/tenants/${TENANT_ID}`);
+
+    const main = page.getByRole("main");
+    await expect(
+      main.getByRole("heading", { level: 2, name: "Показатели школы", exact: true }),
+    ).toBeVisible({ timeout: 10_000 });
+
+    // Metric tiles + values from the mock.
+    await expect(main.getByText("Активные ученики", { exact: true })).toBeVisible();
+    await expect(main.getByText("138", { exact: true })).toBeVisible();
+    await expect(main.getByText("Преподаватели", { exact: true })).toBeVisible();
+    await expect(main.getByText("Учебные группы", { exact: true })).toBeVisible();
+    // Unlimited resource shows "без лимита".
+    await expect(main.getByText("лимит: без лимита", { exact: true })).toBeVisible();
+    // Storage bytes formatted as a size.
+    await expect(main.getByText("Объём файлов", { exact: true })).toBeVisible();
+    await expect(main.getByText(/1\.5 ГБ/)).toBeVisible();
+  });
+
+  test("shows the no-data note when there are no usage snapshots", async ({ page }) => {
+    await mockJsonResponse(page, `**/api/v1/tenants/${TENANT_ID}/status`, TENANT);
+    await mockJsonResponse(page, `**/api/v1/tenants/${TENANT_ID}/provisioning`, PROVISIONING);
+    await mockJsonResponse(page, "**/api/v1/billing/usage**", []);
+
+    await page.goto(`/tenants/${TENANT_ID}`);
+
+    await expect(
+      page.getByText(/Снимков использования для этой школы пока нет/i),
+    ).toBeVisible({ timeout: 10_000 });
   });
 
   test("renders the provisioning panel with the completed steps", async ({ page }) => {
@@ -88,11 +136,11 @@ test.describe("tenant detail header + provisioning", () => {
     // Provisioning section heading — SettingsSection renders the title as an
     // <h2>. (The old mono "\ Provisioning" crumb was dropped in the reskin.)
     await expect(
-      page.getByRole("heading", { level: 2, name: "Provisioning", exact: true }),
+      page.getByRole("heading", { level: 2, name: "Провижининг", exact: true }),
     ).toBeVisible({ timeout: 10_000 });
 
     // Overall status badge reflects Completed + current step.
-    await expect(page.getByText(/Completed · CacheWarm/i)).toBeVisible();
+    await expect(page.getByText(/Готово · CacheWarm/i)).toBeVisible();
 
     // The step rows from our mock render.
     await expect(page.getByText("SeedDatabase", { exact: true })).toBeVisible();
@@ -121,9 +169,9 @@ test.describe("tenant detail header + provisioning", () => {
     ).toBeVisible({ timeout: 10_000 });
 
     const main = page.getByRole("main");
-    await expect(main.getByRole("button", { name: /deactivate tenant|activate tenant/i })).toHaveCount(0);
-    await expect(main.getByRole("button", { name: /renew \/ change plan/i })).toHaveCount(0);
-    await expect(main.getByRole("button", { name: /adjust validity/i })).toHaveCount(0);
+    await expect(main.getByRole("button", { name: /деактивировать школу|активировать школу/i })).toHaveCount(0);
+    await expect(main.getByRole("button", { name: /продлить \/ сменить тариф/i })).toHaveCount(0);
+    await expect(main.getByRole("button", { name: /скорректировать срок/i })).toHaveCount(0);
   });
 
   test("surfaces a status load error in an error band", async ({ page }) => {
