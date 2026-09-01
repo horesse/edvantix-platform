@@ -43,6 +43,14 @@ export async function installShellMocks(page: Page): Promise<void> {
   // Topbar chat unread badge.
   await mockJsonResponse(page, "**/api/v1/chat/channels**", []);
 
+  // Audit entity-label dictionary — the audit detail drawer fetches this for
+  // EntityChange rows to show friendly names. Default to empty maps (→ raw
+  // names); audit specs can override with real labels after this call.
+  await mockJsonResponse(page, "**/api/v1/audits/entity-labels", {
+    entities: {},
+    fields: {},
+  });
+
   // Defensive: profile + permissions (harmless if a page re-reads them).
   await mockJsonResponse(page, "**/api/v1/identity/profile", DEFAULT_PROFILE);
   await mockJsonResponse(page, "**/api/v1/identity/permissions", []);

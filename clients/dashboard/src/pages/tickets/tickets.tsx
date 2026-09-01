@@ -21,13 +21,19 @@ import { toast } from "sonner";
 import {
   createTicket,
   searchTickets,
+  TICKET_CATEGORIES,
+  TICKET_CATEGORY_LABELS,
   TICKET_PRIORITIES,
   TICKET_STATUSES,
   type CreateTicketInput,
+  type TicketCategory,
   type TicketDto,
   type TicketPriority,
   type TicketStatus,
 } from "@/api/tickets";
+import { searchStudents } from "@/api/people";
+import { searchStudentInvoices } from "@/api/payments";
+import { useAuth } from "@/auth/use-auth";
 import {
   PRIORITY_LABEL,
   PRIORITY_TONE,
@@ -85,6 +91,7 @@ export function TicketsPage() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<TicketStatus | null>(null);
   const [priorityFilter, setPriorityFilter] = useState<TicketPriority | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<TicketCategory | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [editor, setEditor] = useState<EditorState>({ mode: "closed" });
 
@@ -94,19 +101,23 @@ export function TicketsPage() {
     return () => window.clearTimeout(id);
   }, [search]);
 
-  useEffect(() => setPageNumber(1), [debouncedSearch, statusFilter, priorityFilter]);
+  useEffect(
+    () => setPageNumber(1),
+    [debouncedSearch, statusFilter, priorityFilter, categoryFilter],
+  );
 
   const query = useQuery({
     queryKey: [
       "tickets",
       "list",
-      { search: debouncedSearch, statusFilter, priorityFilter, pageNumber },
+      { search: debouncedSearch, statusFilter, priorityFilter, categoryFilter, pageNumber },
     ],
     queryFn: () =>
       searchTickets({
         search: debouncedSearch || undefined,
         status: statusFilter ?? undefined,
         priority: priorityFilter ?? undefined,
+        category: categoryFilter ?? undefined,
         pageNumber,
         pageSize: PAGE_SIZE,
         sortBy: "createdAtUtc",
@@ -118,7 +129,8 @@ export function TicketsPage() {
   const data = query.data;
   const items = data?.items ?? [];
 
-  const filtersApplied = statusFilter !== null || priorityFilter !== null;
+  const filtersApplied =
+    statusFilter !== null || priorityFilter !== null || categoryFilter !== null;
   const searchActive = debouncedSearch.length > 0 || filtersApplied;
 
   return (
@@ -171,6 +183,18 @@ export function TicketsPage() {
             })),
           ]}
         />
+        <EntityFilterPill<TicketCategory | null>
+          label="Category filter"
+          value={categoryFilter}
+          onChange={setCategoryFilter}
+          options={[
+            { value: null, label: "Все категории" },
+            ...TICKET_CATEGORIES.map((c) => ({
+              value: c,
+              label: TICKET_CATEGORY_LABELS[c],
+            })),
+          ]}
+        />
       </div>
 
       {/* Results */}
@@ -195,6 +219,7 @@ export function TicketsPage() {
                   setSearch("");
                   setStatusFilter(null);
                   setPriorityFilter(null);
+                  setCategoryFilter(null);
                 }}
                 className="h-9 rounded-lg px-4 text-[13px]"
               >
@@ -302,10 +327,15 @@ function MobileCard({ ticket }: { ticket: TicketDto }) {
                 {ticket.title}
               </p>
             </div>
-            <div className="mt-0.5 flex items-center gap-1.5">
+            <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
               <code className="font-mono text-[11px] text-[var(--color-muted-foreground)]">
                 {ticket.number}
               </code>
+              {ticket.category && ticket.category !== "General" && (
+                <span className="text-[11px] text-[var(--color-muted-foreground)]">
+                  · {TICKET_CATEGORY_LABELS[ticket.category]}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -350,9 +380,12 @@ function DesktopRow({
           <span className="block truncate text-[14px] font-medium text-[var(--color-foreground)] transition-colors group-hover:text-[var(--color-primary)]">
             {ticket.title}
           </span>
-          <code className="block truncate font-mono text-[11px] text-[var(--color-muted-foreground)]">
+          <span className="block truncate font-mono text-[11px] text-[var(--color-muted-foreground)]">
             {ticket.number}
-          </code>
+            {ticket.category && ticket.category !== "General" && (
+              <span className="font-sans"> · {TICKET_CATEGORY_LABELS[ticket.category]}</span>
+            )}
+          </span>
         </div>
       </Link>
 
@@ -413,17 +446,60 @@ function CreateTicketDialog({
   onClose: () => void;
   onCreated: () => void;
 }) {
+  const perms = useAuth().user?.permissions ?? [];
+  const canPickStudent = perms.includes("Permissions.People.Students.View");
+  const canPickInvoice = perms.includes("Permissions.Payments.StudentInvoices.View");
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<TicketPriority>("Medium");
+  const [category, setCategory] = useState<TicketCategory>("General");
+  const [relatedStudentId, setRelatedStudentId] = useState<string | null>(null);
+  const [relatedInvoiceId, setRelatedInvoiceId] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
       setTitle("");
       setDescription("");
       setPriority("Medium");
+      setCategory("General");
+      setRelatedStudentId(null);
+      setRelatedInvoiceId(null);
     }
   }, [open]);
+
+  // Reset the invoice link whenever the student changes — an invoice belongs
+  // to one student, so a stale pairing makes no sense.
+  useEffect(() => setRelatedInvoiceId(null), [relatedStudentId]);
+
+  const studentsQuery = useQuery({
+    queryKey: ["students", { pageSize: 50, forTicket: true }],
+    queryFn: () => searchStudents({ pageNumber: 1, pageSize: 50, sortBy: "lastName" }),
+    enabled: open && canPickStudent,
+    staleTime: 60_000,
+  });
+
+  const invoicesQuery = useQuery({
+    queryKey: ["student-invoices", { studentId: relatedStudentId, forTicket: true }],
+    queryFn: () =>
+      searchStudentInvoices({ studentId: relatedStudentId ?? undefined, pageNumber: 1, pageSize: 50 }),
+    enabled: open && canPickInvoice && !!relatedStudentId,
+    staleTime: 60_000,
+  });
+
+  const studentOptions = useMemo(
+    () => (studentsQuery.data?.items ?? []).map((s) => ({ value: s.id, label: s.displayName })),
+    [studentsQuery.data],
+  );
+  const invoiceOptions = useMemo(
+    () =>
+      (invoicesQuery.data?.items ?? []).map((inv) => ({
+        value: inv.id,
+        label: inv.number,
+        hint: `${inv.total} ${inv.currency}`,
+      })),
+    [invoicesQuery.data],
+  );
 
   const mutation = useMutation({
     mutationFn: (input: CreateTicketInput) => createTicket(input),
@@ -444,6 +520,9 @@ function CreateTicketDialog({
       title: title.trim(),
       description: description.trim() || null,
       priority,
+      category,
+      relatedStudentId,
+      relatedInvoiceId,
     });
   };
 
@@ -453,6 +532,11 @@ function CreateTicketDialog({
         value: p,
         label: PRIORITY_LABEL[p],
       })),
+    [],
+  );
+
+  const categoryOptions = useMemo(
+    () => TICKET_CATEGORIES.map((c) => ({ value: c, label: TICKET_CATEGORY_LABELS[c] })),
     [],
   );
 
@@ -497,16 +581,64 @@ function CreateTicketDialog({
                 maxLength={4096}
               />
             </Field>
-            <Field id="ticket-priority" label="Priority">
-              <Combobox
-                id="ticket-priority"
-                variant="field"
-                label="Priority"
-                value={priority}
-                onChange={(v) => setPriority((v as TicketPriority) ?? "Medium")}
-                options={priorityOptions}
-              />
-            </Field>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field id="ticket-priority" label="Priority">
+                <Combobox
+                  id="ticket-priority"
+                  variant="field"
+                  label="Priority"
+                  value={priority}
+                  onChange={(v) => setPriority((v as TicketPriority) ?? "Medium")}
+                  options={priorityOptions}
+                />
+              </Field>
+              <Field id="ticket-category" label="Категория" hint="Определяет, кто разбирает обращение">
+                <Combobox
+                  id="ticket-category"
+                  variant="field"
+                  label="Категория"
+                  value={category}
+                  onChange={(v) => setCategory((v as TicketCategory) ?? "General")}
+                  options={categoryOptions}
+                />
+              </Field>
+            </div>
+            {canPickStudent && (
+              <Field id="ticket-student" label="Ученик" hint="Необязательно — привязка обращения к ученику">
+                <Combobox
+                  id="ticket-student"
+                  variant="field"
+                  label="Ученик"
+                  value={relatedStudentId}
+                  onChange={setRelatedStudentId}
+                  options={studentOptions}
+                  searchable
+                  clearable
+                  placeholder={studentsQuery.isLoading ? "Загрузка…" : "Не выбран"}
+                />
+              </Field>
+            )}
+            {canPickInvoice && relatedStudentId && (
+              <Field id="ticket-invoice" label="Счёт" hint="Необязательно — счёт выбранного ученика">
+                <Combobox
+                  id="ticket-invoice"
+                  variant="field"
+                  label="Счёт"
+                  value={relatedInvoiceId}
+                  onChange={setRelatedInvoiceId}
+                  options={invoiceOptions}
+                  searchable
+                  clearable
+                  placeholder={
+                    invoicesQuery.isLoading
+                      ? "Загрузка…"
+                      : invoiceOptions.length === 0
+                        ? "У ученика нет счетов"
+                        : "Не выбран"
+                  }
+                />
+              </Field>
+            )}
           </DialogBody>
           <DialogFooter>
             <DialogClose asChild>

@@ -12,8 +12,8 @@ import { cn } from "@/lib/cn";
 // Lazy route boundaries
 //
 // Each route is split into its own bundle so first paint after login only
-// loads the chunk for the landing page (Overview). Catalog, Settings,
-// Login, Activity, etc. fetch on demand.
+// loads the chunk for the landing page (Overview). Settings, Login,
+// Activity, etc. fetch on demand.
 //
 // `lazyNamed` wraps a dynamic import that exports a *named* component
 // (we don't use default exports anywhere in this codebase). Returns a
@@ -58,13 +58,6 @@ const SubscriptionPage = lazyNamed(
   () => import("@/pages/subscription"),
   "SubscriptionPage",
 );
-const BrandsPage = lazyNamed(() => import("@/pages/catalog/brands"), "BrandsPage");
-const CategoriesPage = lazyNamed(() => import("@/pages/catalog/categories"), "CategoriesPage");
-const ProductsPage = lazyNamed(() => import("@/pages/catalog/products"), "ProductsPage");
-const ProductDetailPage = lazyNamed(
-  () => import("@/pages/catalog/product-detail"),
-  "ProductDetailPage",
-);
 const NotFoundPage = lazyNamed(() => import("@/pages/not-found"), "NotFoundPage");
 const TenantDeactivatedPage = lazyNamed(
   () => import("@/pages/tenant-deactivated"),
@@ -89,6 +82,7 @@ const NotificationsSettings = lazyNamed(
   "NotificationsSettings",
 );
 const ApiKeysSettings = lazyNamed(() => import("@/pages/settings/api-keys"), "ApiKeysSettings");
+const SchoolSettings = lazyNamed(() => import("@/pages/settings/school"), "SchoolSettings");
 const HealthPage = lazyNamed(() => import("@/pages/health"), "HealthPage");
 const AuditsPage = lazyNamed(() => import("@/pages/audits"), "AuditsPage");
 const TicketsPage = lazyNamed(() => import("@/pages/tickets/tickets"), "TicketsPage");
@@ -392,19 +386,12 @@ export const router = createBrowserRouter([
           { path: "identity/roles/:roleId", element: withSuspense(<RoleDetailPage />) },
           { path: "identity/groups", element: withSuspense(<GroupsPage />) },
           { path: "identity/groups/:groupId", element: withSuspense(<GroupDetailPage />) },
-          { path: "catalog", element: <Navigate to="/catalog/brands" replace /> },
-          { path: "catalog/brands", element: withSuspense(<BrandsPage />) },
-          { path: "catalog/categories", element: withSuspense(<CategoriesPage />) },
-          { path: "catalog/products", element: withSuspense(<ProductsPage />) },
-          {
-            path: "catalog/products/:productId",
-            element: withSuspense(<ProductDetailPage />),
-          },
           {
             path: "settings",
             element: withSuspense(<SettingsLayout />),
             children: [
               { index: true, element: <Navigate to="profile" replace /> },
+              { path: "school", element: withSuspense(<SchoolSettings />) },
               { path: "profile", element: withSuspense(<ProfileSettings />) },
               { path: "security", element: withSuspense(<SecuritySettings />) },
               { path: "appearance", element: withSuspense(<AppearanceSettings />) },

@@ -123,7 +123,17 @@ DROP SCHEMA IF EXISTS catalog CASCADE;
 > добавила скрипт — прогон против любой реальной БД (dev/staging/prod) должен быть отдельным,
 > осознанным шагом оператора.
 
-## Frontend — остаётся (`clients/dashboard`)
+## Frontend — готово ✅ (`clients/dashboard`, этап 7)
+
+Всё ниже выполнено в PR этапа 7 ([[Задачи · Frontend]] → «Этап 7»). `PagedResponse`
+вынесен в новый `src/api/pagination.ts` (раньше `files.ts`/`identity.ts`/`sessions.ts`/
+`tickets.ts` импортировали его из `@/api/catalog`); `image-input.tsx` оставлен
+(используется в `settings/profile.tsx`), удалён только `product-image-manager.tsx`.
+`grep -rn "@/api/catalog"` — чисто; оставшиеся совпадения по строке `catalog` —
+только `permissions-catalog` из [[Identity]] (ловушка №2 ниже). Прогон: `tsc -b` /
+`eslint` / `vite build` чисто, Playwright 233 passed.
+
+## Frontend — исходный план (`clients/dashboard`)
 
 ### Удалить файлы
 
@@ -181,9 +191,14 @@ categories: "Permissions.Catalog.Categories.Restore",
 - [x] `src/Tests/Integration.Tests` — `Tests/Catalog/` (10 файлов) удалён, 665/666
       (1 пропуск не связан), `TestConstants.CatalogBasePath` убран из обоих проектов
       (`Integration.Tests`, `Integration.Middleware.Tests`) как мёртвый код
-- [ ] `clients/dashboard/tests/` — спеки каталога (frontend, вне скоупа этой сессии)
-- [ ] `clients/admin/tests/roles/roles.spec.ts` — проверить: если ожидает права Catalog
-  в каталоге прав, поправить (frontend, вне скоупа этой сессии)
+- [x] `clients/dashboard/tests/` — `tests/catalog/catalog.spec.ts` удалён;
+      `tests/system/trash.spec.ts` переписан под `Courses`/`Tickets`/`Files`;
+      catalog-моки/ссылки вычищены из `impersonation-ended` / `system/audits`
+      спеков (этап 7)
+- [x] `clients/admin/tests/roles/roles.spec.ts` — в скоупе frontend был
+      `clients/dashboard/tests/identity/roles.spec.ts`: синтетическая запись
+      каталога прав `Permissions.Products.Update` заменена на
+      `Permissions.Curriculum.Courses.Update`. `clients/admin` — отдельный этап
 
 ## Прочее в репозитории
 

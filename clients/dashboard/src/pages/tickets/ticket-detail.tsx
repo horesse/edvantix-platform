@@ -35,6 +35,7 @@ import {
   listTicketComments,
   reopenTicket,
   resolveTicket,
+  TICKET_CATEGORY_LABELS,
   TICKET_PRIORITIES,
   type TicketDto,
 } from "@/api/tickets";
@@ -555,6 +556,41 @@ function PropertiesSection({ ticket }: { ticket: TicketDto }) {
             {PRIORITY_LABEL[ticket.priority]}
           </EntityStatusBadge>
         </Prop>
+        <Prop label="Категория">
+          <span className="text-[var(--color-foreground)]">
+            {TICKET_CATEGORY_LABELS[ticket.category] ?? ticket.category}
+          </span>
+        </Prop>
+        {ticket.relatedStudentId && (
+          <Prop label="Ученик">
+            <Link
+              to={`/students/${ticket.relatedStudentId}`}
+              className="font-medium text-[var(--color-primary)] hover:underline"
+            >
+              Карточка ученика
+            </Link>
+          </Prop>
+        )}
+        {ticket.relatedStudyGroupId && (
+          <Prop label="Группа">
+            <Link
+              to={`/study-groups/${ticket.relatedStudyGroupId}`}
+              className="font-medium text-[var(--color-primary)] hover:underline"
+            >
+              Карточка группы
+            </Link>
+          </Prop>
+        )}
+        {ticket.relatedInvoiceId && (
+          <Prop label="Счёт">
+            <Link
+              to={`/payments/invoices/${ticket.relatedInvoiceId}`}
+              className="font-medium text-[var(--color-primary)] hover:underline"
+            >
+              Карточка счёта
+            </Link>
+          </Prop>
+        )}
         <Prop
           label="Created"
           value={formatDate(ticket.createdAtUtc)}

@@ -3,10 +3,8 @@ import {
   BookOpen,
   CalendarDays,
   CalendarRange,
-  CalendarX2,
   ClipboardCheck,
   CreditCard,
-  DoorOpen,
   FolderOpen,
   FolderTree,
   GraduationCap,
@@ -14,12 +12,10 @@ import {
   HeartPulse,
   LayoutDashboard,
   MessageCircle,
-  Package,
   Receipt,
   ScrollText,
   Settings,
   ShieldCheck,
-  Tags,
   Ticket,
   Trash2,
   TrendingUp,
@@ -63,19 +59,20 @@ export type NavSection = {
 // Top-level items live OUTSIDE any section. Overview opens the app;
 // Settings is account-scoped and lives at the very bottom.
 export const topNavTop: NavSpec[] = [
-  { to: "/", label: "Overview", icon: LayoutDashboard },
+  { to: "/", label: "Обзор", icon: LayoutDashboard },
   // Each gate mirrors the permission the page's primary list endpoint enforces
   // server-side (Chat → channels list, Files → /files/mine). Same convention
   // as trash-permissions.ts: if the endpoint's permission changes, mirror it.
-  { to: "/chat", label: "Chat", icon: MessageCircle, perm: "Permissions.Chat.Channels.View" },
-  { to: "/files", label: "My Files", icon: FolderOpen, perm: "Permissions.Files.Upload" },
+  { to: "/chat", label: "Чат", icon: MessageCircle, perm: "Permissions.Chat.Channels.View" },
+  { to: "/files", label: "Файлы", icon: FolderOpen, perm: "Permissions.Files.Upload" },
 ];
 
 export const topNavBottom: NavSpec[] = [
-  { to: "/settings", label: "Settings", icon: Settings },
+  { to: "/settings", label: "Настройки", icon: Settings },
 ];
 
 // Section accordion. Single-select — only one section open at a time.
+// Layout mirrors docs/03 Frontend/Dashboard (школа).md → «Навигация».
 export const sections: NavSection[] = [
   {
     // Личный кабинет — «свои» экраны для преподавателя / ученика / представителя.
@@ -106,17 +103,6 @@ export const sections: NavSection[] = [
     ],
   },
   {
-    id: "operations",
-    caption: "Operations",
-    icon: Activity,
-    items: [
-      // Live activity is SSE-backed; the stream is auth-only (no permission), so no gate.
-      { to: "/activity", label: "Live activity", icon: Activity },
-      { to: "/subscription", label: "Subscription", icon: CreditCard, perm: "Permissions.Billing.View" },
-      { to: "/invoices", label: "Invoices", icon: Receipt, perm: "Permissions.Billing.View" },
-    ],
-  },
-  {
     id: "people",
     caption: "Люди",
     icon: GraduationCap,
@@ -129,42 +115,27 @@ export const sections: NavSection[] = [
     ],
   },
   {
-    id: "curriculum",
-    caption: "Программа",
+    id: "learning",
+    caption: "Учебный процесс",
     icon: BookOpen,
     items: [
-      // Each gate mirrors the permission the page's primary list endpoint enforces
-      // server-side (GET /subjects/tree → Subjects.View, GET /courses → Courses.View).
+      // Each gate mirrors the primary list endpoint's permission:
+      //   GET /subjects/tree            → Subjects.View
+      //   GET /courses                  → Courses.View
+      //   GET /study-groups             → StudyGroups.View
+      //   GET /sessions/calendar        → Sessions.View
+      //   GET /sessions/{id}/attendance → Attendance.View
       { to: "/subjects", label: "Направления", icon: FolderTree, perm: "Permissions.Curriculum.Subjects.View" },
       { to: "/courses", label: "Курсы", icon: BookOpen, perm: "Permissions.Curriculum.Courses.View" },
-    ],
-  },
-  {
-    id: "study-groups",
-    caption: "Учебные группы",
-    icon: UsersRound,
-    items: [
-      // Gate mirrors GET /study-groups → StudyGroups.View (the list endpoint's permission).
       {
         to: "/study-groups",
         label: "Группы",
         icon: UsersRound,
         perm: "Permissions.StudyGroups.StudyGroups.View",
       },
-    ],
-  },
-  {
-    id: "scheduling",
-    caption: "Расписание",
-    icon: CalendarDays,
-    items: [
-      // Each gate mirrors the permission the page's primary list endpoint enforces
-      // server-side (GET /sessions/calendar → Sessions.View, GET /sessions/{id}/attendance
-      // → Attendance.View, GET /sessions/my → Sessions.ViewOwn, GET /rooms → Rooms.View,
-      // GET /non-working-days → ScheduleTemplates.View).
       {
         to: "/schedule",
-        label: "Календарь",
+        label: "Расписание",
         icon: CalendarDays,
         perm: "Permissions.Scheduling.Sessions.View",
       },
@@ -174,18 +145,6 @@ export const sections: NavSection[] = [
         icon: ClipboardCheck,
         perm: "Permissions.Scheduling.Attendance.View",
       },
-      {
-        to: "/settings/rooms",
-        label: "Аудитории",
-        icon: DoorOpen,
-        perm: "Permissions.Scheduling.Rooms.View",
-      },
-      {
-        to: "/settings/non-working-days",
-        label: "Нерабочие дни",
-        icon: CalendarX2,
-        perm: "Permissions.Scheduling.ScheduleTemplates.View",
-      },
     ],
   },
   {
@@ -194,21 +153,21 @@ export const sections: NavSection[] = [
     icon: Wallet,
     items: [
       // Each gate mirrors the permission the page's primary list endpoint
-      // enforces server-side (GET /student-invoices → StudentInvoices.View,
-      // GET /tariffs → Tariffs.View, GET /reports/* → StudentInvoices.Export).
+      // enforces server-side (GET /tariffs → Tariffs.View, GET /student-invoices
+      // → StudentInvoices.View, GET /reports/* → StudentInvoices.Export).
       // These are invoices for STUDENTS — distinct from /invoices (Billing
-      // subscription invoices) under "Operations".
-      {
-        to: "/payments/invoices",
-        label: "Счета учеников",
-        icon: Receipt,
-        perm: "Permissions.Payments.StudentInvoices.View",
-      },
+      // subscription invoices) under «Подписка».
       {
         to: "/payments/tariffs",
         label: "Тарифы",
         icon: Wallet,
         perm: "Permissions.Payments.Tariffs.View",
+      },
+      {
+        to: "/payments/invoices",
+        label: "Счета учеников",
+        icon: Receipt,
+        perm: "Permissions.Payments.StudentInvoices.View",
       },
       {
         to: "/payments/debtors",
@@ -218,56 +177,62 @@ export const sections: NavSection[] = [
       },
       {
         to: "/payments/revenue",
-        label: "Поступления",
+        label: "Выручка",
         icon: TrendingUp,
         perm: "Permissions.Payments.StudentInvoices.Export",
       },
     ],
   },
   {
-    id: "catalog",
-    caption: "Catalog",
-    icon: Package,
+    id: "helpdesk",
+    caption: "Хелпдеск",
+    icon: Ticket,
     items: [
-      { to: "/catalog/products", label: "Products", icon: Package, perm: "Permissions.Catalog.Products.View" },
-      { to: "/catalog/brands", label: "Brands", icon: Tags, perm: "Permissions.Catalog.Brands.View" },
-      { to: "/catalog/categories", label: "Categories", icon: FolderTree, perm: "Permissions.Catalog.Categories.View" },
+      // GET /tickets → Tickets.View.
+      { to: "/tickets", label: "Обращения", icon: Ticket, perm: "Permissions.Tickets.View" },
     ],
   },
   {
-    id: "helpdesk",
-    caption: "Helpdesk",
-    icon: Ticket,
+    id: "subscription",
+    caption: "Подписка",
+    icon: CreditCard,
     items: [
-      { to: "/tickets", label: "Tickets", icon: Ticket, perm: "Permissions.Tickets.View" },
+      // Billing — the school's own subscription to Edvantix. Kept separate from
+      // «Оплаты» (student money). GET /subscriptions/me + GET /invoices →
+      // Billing.View.
+      { to: "/subscription", label: "Подписка", icon: CreditCard, perm: "Permissions.Billing.View" },
+      { to: "/invoices", label: "Счета", icon: Receipt, perm: "Permissions.Billing.View" },
     ],
   },
   {
     id: "identity",
-    caption: "Identity",
+    caption: "Идентификация",
     icon: Users,
     items: [
       // Gate the identity-management pages on a manage permission (not View): View Users/Roles/Groups
       // are IsBasic so every member holds them (the chat/user picker relies on Users.View), but only
       // managers should see these admin pages. Basic lacks the *.Update perms, so the items hide for them.
-      { to: "/identity/users", label: "Users", icon: Users, perm: "Permissions.Users.Update" },
-      { to: "/identity/roles", label: "Roles", icon: ShieldCheck, perm: "Permissions.Roles.Update" },
-      { to: "/identity/groups", label: "Groups", icon: UsersRound, perm: "Permissions.Groups.Update" },
+      { to: "/identity/users", label: "Пользователи", icon: Users, perm: "Permissions.Users.Update" },
+      { to: "/identity/roles", label: "Роли", icon: ShieldCheck, perm: "Permissions.Roles.Update" },
+      // Route + endpoints stay `/identity/groups`; only the UI wording changed.
+      { to: "/identity/groups", label: "Группы доступа", icon: UsersRound, perm: "Permissions.Groups.Update" },
     ],
   },
   {
     id: "system",
-    caption: "System",
+    caption: "Система",
     icon: HeartPulse,
     items: [
+      // Live activity is SSE-backed; the stream is auth-only (no permission), so no gate.
+      { to: "/activity", label: "Активность", icon: Activity },
       // Health hits the anonymous /health/ready probe — visible to everyone.
-      { to: "/system/health", label: "Health", icon: HeartPulse },
-      { to: "/system/audits", label: "Audit trail", icon: ScrollText, perm: "Permissions.AuditTrails.View" },
-      { to: "/system/sessions", label: "Sessions", icon: Wifi, perm: "Permissions.Sessions.ViewAll" },
-      // Trash fronts five tabs, each gated on a different resource's restore /
+      { to: "/system/health", label: "Здоровье", icon: HeartPulse },
+      { to: "/system/audits", label: "Аудит", icon: ScrollText, perm: "Permissions.AuditTrails.View" },
+      { to: "/system/sessions", label: "Сессии", icon: Wifi, perm: "Permissions.Sessions.ViewAll" },
+      // Trash fronts several tabs, each gated on a different resource's restore /
       // view-trash permission. Show the entry if the user can reach any tab; the
       // page hides the individual tabs they can't (see trash-permissions.ts).
-      { to: "/system/trash", label: "Trash", icon: Trash2, anyPerm: ALL_TRASH_PERMISSIONS },
+      { to: "/system/trash", label: "Корзина", icon: Trash2, anyPerm: ALL_TRASH_PERMISSIONS },
     ],
   },
 ];

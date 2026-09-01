@@ -376,26 +376,55 @@ tags: [задачи, frontend]
 
 ### Этап 7 · Настройки и уборка
 
-- [ ] `/settings/school` — часовой пояс, валюта, нумерация счетов, нерабочие дни
-- [ ] `/` — обзор со школьными показателями, разный по роли
-- [ ] `/system/trash` — убрать вкладки Catalog, добавить новые сущности
-- [ ] `/audits` — читаемые названия сущностей
-- [ ] `/identity/groups` — переименовать в «Группы доступа»
-- [ ] `/tickets` — категории, привязка к ученику и счёту
-- [ ] `/chat` — каналы учебных групп
+- [x] `/settings/school` — часовой пояс + валюта через `GET/PUT /api/v1/tenants/settings`
+      (`SchoolSettings.View`/`.Manage`), read-only без `.Manage`; вкладка «Школа» в
+      `settings-layout`. Нумерация счетов — заглушка (бэкенд-настройки нет,
+      `StudentInvoice.GenerateNumber` жёстко зашит). Нерабочие дни и аудитории —
+      ссылки на `/settings/non-working-days` и `/settings/rooms` (этап 4)
+- [x] `/` — полоса школьных показателей для менеджера (`SchoolMetricsBand`): активные
+      ученики/группы, занятия за месяц, долг по школе из `totalCount` существующих
+      списков; каждая плитка гейтится правом своего эндпоинта и не шлёт 403.
+      Готового агрегата нет — показано то, что есть. Индексный редирект по роли — этап 6
+- [x] `/system/trash` — вкладки `Courses` / `Tickets` / `Files`; вкладки Catalog убраны,
+      `src/lib/trash-permissions.ts` перецеплен на `Curriculum.Courses.Restore`
+      (единственная новая soft-deletable сущность с `/trash` + `Restore`; у Students
+      есть Restore, но нет trash-списка)
+- [x] `/audits` — в карточке события читаемые названия сущностей и полей через
+      `GET /api/v1/audits/entity-labels` (`AuditTrails.View`); некаталогизированное имя
+      падает на сырое
+- [x] `/identity/groups` — переименовано в UI в «Группы доступа» (пункт меню +
+      командная палитра); маршрут `/identity/groups` и эндпоинты не тронуты
+- [x] `/tickets` — категория (`TicketCategory`): фильтр-пилюля, метка в списке, выбор
+      при создании; привязка к ученику/счёту (`relatedStudentId`/`relatedInvoiceId`) —
+      комбобоксы в диалоге создания (гейт `People.Students.View` / `Payments.StudentInvoices.View`),
+      ссылки на карточке обращения. Бэкенд уже поддерживает поля (`SearchTicketsQuery`,
+      `CreateTicketCommand`, `UpdateTicketCommand`)
+- [x] `/chat` — на карточке группы ссылка «Чат группы» по `chatChannelId` (`Chat.Channels.View`).
+      Отдельного раздела/фильтра «каналы учебных групп» в самом чате нет: бэкенд не
+      различает тип канала «study-group» (`ChannelType` = DirectMessage/GroupMessage/Channel),
+      связь только через `StudyGroup.ChatChannelId` — вынести в отдельную задачу при
+      появлении контракта
 - [x] Развести в меню «Подписка» ([[Billing]]) и «Счета учеников» ([[Payments]]) —
-      добавлен отдельный раздел «Оплаты» в `nav-data.ts` (Этап 5)
+      добавлен отдельный раздел «Оплаты» в `nav-data.ts` (Этап 5); в этапе 7 добавлен
+      отдельный раздел «Подписка» (`/subscription`, `/invoices`)
 
 ---
 
 ## dashboard · навигация
 
-- [ ] Перестроить `src/components/layout/nav-data.ts` под структуру меню
-      из [[Dashboard (школа)]]
-- [ ] Проверить, что гейт каждого пункта (`perm` / `anyPerm`) зеркалит право
-      основного списочного эндпоинта страницы — иначе пользователь упрётся в 403
-- [ ] Обновить `src/lib/trash-permissions.ts` под новые модули
-- [ ] Команды новых разделов в командной палитре
+- [x] Перестроить `src/components/layout/nav-data.ts` под структуру меню
+      из [[Dashboard (школа)]] — разделы Кабинет / Люди / Учебный процесс
+      (направления, курсы, группы, расписание, посещаемость) / Оплаты (тарифы,
+      счета учеников, должники, выручка) / Хелпдеск / Подписка / Идентификация /
+      Система. `/settings/rooms` и `/settings/non-working-days` убраны из сайдбара
+      (маршруты живы, доступны из `/settings/school`)
+- [x] Проверить, что гейт каждого пункта (`perm` / `anyPerm`) зеркалит право
+      основного списочного эндпоинта страницы — сверено со всеми api-модулями
+      этапов 1–6; покрыто `tests/system/navigation.spec.ts`
+- [x] Обновить `src/lib/trash-permissions.ts` под новые модули — `Curriculum.Courses.Restore`;
+      у StudyGroups/Scheduling/Payments нет trash-списков (только `DELETE`/архив)
+- [x] Команды новых разделов в командной палитре (`command-palette-dialog.tsx`) +
+      «Настройки школы»; catalog-команды убраны; «Группы» → «Группы доступа»
 
 ---
 
@@ -449,7 +478,11 @@ Playwright с моками маршрутов. Обязательное покр
       сторно с обязательной причиной, отрицательная строка + `reversesId`)
 - [ ] зачисление и перевод между группами
 - [x] перенос и отмена занятия
-- [ ] удалить спеки каталога ([[Задачи · Удаление Catalog]])
+- [x] удалить спеки каталога ([[Задачи · Удаление Catalog]]) — `tests/catalog/` удалён;
+      `tests/system/trash.spec.ts` переписан под `Courses`/`Tickets`/`Files`;
+      catalog-ссылки вычищены из `impersonation-ended` / `audits` / `identity/roles`
+      спеков; добавлены `tests/system/navigation.spec.ts` и
+      `tests/settings/school.spec.ts`; вся сюита — 233 passed
 
 ## Связанное
 

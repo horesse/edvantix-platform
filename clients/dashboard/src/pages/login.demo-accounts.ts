@@ -92,10 +92,10 @@ export const DEMO_ACCOUNT_GROUPS: Array<{
   {
     tenant: "acme",
     tenantLabel: "Acme Corp",
-    blurb: "operations · populated catalog",
+    blurb: "operations · populated school",
     accounts: [
       acme("admin@acme.com", "Acme", "Admin", "tenant-admin", "Tenant administrator — full access"),
-      acme("manager@acme.com", "Maya", "Lin", "manager", "Catalog + tickets, read-only users"),
+      acme("manager@acme.com", "Maya", "Lin", "manager", "School manager — students, groups, payments"),
       acme("support@acme.com", "Sam", "Rivera", "support", "Tickets only — support agent"),
       acme("alice@acme.com", "Alice", "Nguyen", "basic", "Default member"),
       acme("bob@acme.com", "Bob", "Patel", "basic", "Default member"),
