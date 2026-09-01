@@ -21,26 +21,26 @@ type Tab = {
 const TABS: Tab[] = [
   {
     to: "/settings/profile",
-    label: "Profile",
-    hint: "Your identity and avatar",
+    label: "Профиль",
+    hint: "Ваши данные и аватар",
     icon: UserRound,
   },
   {
     to: "/settings/security",
-    label: "Security",
-    hint: "Password and two-factor auth",
+    label: "Безопасность",
+    hint: "Пароль и двухфакторная аутентификация",
     icon: ShieldCheck,
   },
   {
     to: "/settings/sessions",
-    label: "Sessions",
-    hint: "Active devices and sign-outs",
+    label: "Сессии",
+    hint: "Активные устройства и выходы",
     icon: MonitorSmartphone,
   },
   {
     to: "/settings/appearance",
-    label: "Appearance",
-    hint: "Theme and visual preferences",
+    label: "Оформление",
+    hint: "Тема и визуальные настройки",
     icon: Palette,
   },
 ];
@@ -71,7 +71,7 @@ export function SettingsLayout() {
         icon={Settings}
         title={
           <span className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
-            <span>Settings</span>
+            <span>Настройки</span>
             <span
               aria-hidden
               className="text-[oklch(from_var(--color-border-strong)_l_c_h_/_0.7)]"
@@ -88,11 +88,11 @@ export function SettingsLayout() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[260px_1fr] lg:gap-10">
         {/* ─── Editorial left nav ─── */}
-        <nav aria-label="Settings sections">
+        <nav aria-label="Разделы настроек">
           {/* Desktop: sticky vertical numbered list */}
           <div className="sticky top-6 hidden lg:block">
             <p className="mb-4 pl-5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[oklch(from_var(--color-muted-foreground)_l_c_h_/_0.6)]">
-              Sections
+              Разделы
             </p>
             <ul className="relative space-y-px">
               {/* Faint vertical rail tying the numbers together */}

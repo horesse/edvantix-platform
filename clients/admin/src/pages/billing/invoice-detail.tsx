@@ -20,6 +20,7 @@ import { EntityPageHeader, SettingsSection, Field } from "@/components/list";
 import { ApiRequestError } from "@/lib/api-client";
 import { cn } from "@/lib/cn";
 import { useAuth } from "@/auth/use-auth";
+import { INVOICE_PURPOSE_RU, INVOICE_STATUS_RU, LINE_ITEM_KIND_RU } from "@/lib/billing-labels";
 import { BillingPermissions } from "@/lib/permissions";
 
 // ─── helpers ─────────────────────────────────────────────────────────
@@ -32,7 +33,7 @@ function formatMoney(amount: number, currency: string) {
   }
 }
 
-const dateLong = new Intl.DateTimeFormat(undefined, {
+const dateLong = new Intl.DateTimeFormat("ru-RU", {
   month: "long",
   day: "numeric",
   year: "numeric",
@@ -99,36 +100,36 @@ export function InvoiceDetailPage() {
   // could be stale if the query refetched between render and click.
   const downloadMutation = useMutation({
     mutationFn: ({ id, number }: { id: string; number: string }) => downloadInvoicePdf(id, number),
-    onError: (err) => toast.error("Download failed", { description: describe(err, "Could not download the invoice PDF.") }),
+    onError: (err) => toast.error("Не удалось скачать", { description: describe(err, "Не удалось скачать PDF счёта.") }),
   });
 
   const issueMutation = useMutation({
     mutationFn: () => issueInvoice(invoiceId, dueAt ? new Date(dueAt).toISOString() : null),
     onSuccess: () => {
-      toast.success("Invoice issued", { description: "Status moved to Issued." });
+      toast.success("Счёт выставлен", { description: "Статус изменён на «Выставлен»." });
       setDueAt("");
       invalidate();
     },
-    onError: (err) => toast.error("Issue failed", { description: describe(err, "Could not issue invoice.") }),
+    onError: (err) => toast.error("Не удалось выставить", { description: describe(err, "Не удалось выставить счёт.") }),
   });
 
   const payMutation = useMutation({
     mutationFn: () => markInvoicePaid(invoiceId),
     onSuccess: () => {
-      toast.success("Marked paid");
+      toast.success("Отмечен как оплаченный");
       invalidate();
     },
-    onError: (err) => toast.error("Mark-paid failed", { description: describe(err, "Could not mark paid.") }),
+    onError: (err) => toast.error("Не удалось отметить оплату", { description: describe(err, "Не удалось отметить оплату.") }),
   });
 
   const voidMutation = useMutation({
     mutationFn: () => voidInvoice(invoiceId, voidReason.trim() ? voidReason.trim() : null),
     onSuccess: () => {
-      toast.success("Invoice voided");
+      toast.success("Счёт аннулирован");
       setVoidReason("");
       invalidate();
     },
-    onError: (err) => toast.error("Void failed", { description: describe(err, "Could not void invoice.") }),
+    onError: (err) => toast.error("Не удалось аннулировать", { description: describe(err, "Не удалось аннулировать счёт.") }),
   });
 
   // ── render ─────────────────────────────────────────────────────────
@@ -137,7 +138,7 @@ export function InvoiceDetailPage() {
     <div className="space-y-6">
       <div>
         <Button variant="ghost" size="sm" onClick={() => navigate("/billing/invoices")} className="-ml-2 mb-4">
-          <ArrowLeft className="mr-1 h-4 w-4" /> All invoices
+          <ArrowLeft className="mr-1 h-4 w-4" /> Все счета
         </Button>
 
         {query.isLoading ? (
@@ -147,7 +148,7 @@ export function InvoiceDetailPage() {
           </div>
         ) : query.isError ? (
           <div className="text-sm text-[var(--color-destructive)]">
-            {describe(query.error, "Failed to load invoice.")}
+            {describe(query.error, "Не удалось загрузить счёт.")}
           </div>
         ) : invoice ? (
           <EntityPageHeader
@@ -159,26 +160,26 @@ export function InvoiceDetailPage() {
                 <code className="rounded bg-[var(--color-surface-2)] px-1.5 py-0.5 font-mono text-[11px] font-medium tracking-tight">
                   {invoice.invoiceNumber}
                 </code>
-                <Badge variant={statusVariant(invoice.status)}>{invoice.status}</Badge>
+                <Badge variant={statusVariant(invoice.status)}>{INVOICE_STATUS_RU[invoice.status] ?? invoice.status}</Badge>
                 {invoice.purpose && (
                   <Badge variant="outline">
-                    {invoice.purpose === "Subscription" ? "Subscription" : "Usage"}
+                    {INVOICE_PURPOSE_RU[invoice.purpose] ?? invoice.purpose}
                   </Badge>
                 )}
                 <span className="font-mono text-[11px] text-[var(--color-muted-foreground)]">
-                  tenant {invoice.tenantId} · period {formatPeriod(invoice.periodYear, invoice.periodMonth)} · created {formatDate(invoice.createdAtUtc)}
+                  школа {invoice.tenantId} · период {formatPeriod(invoice.periodYear, invoice.periodMonth)} · создан {formatDate(invoice.createdAtUtc)}
                   {invoice.periodStartUtc && invoice.periodEndUtc && (
-                    ` · term ${formatDate(invoice.periodStartUtc)} – ${formatDate(invoice.periodEndUtc)}`
+                    ` · срок ${formatDate(invoice.periodStartUtc)} – ${formatDate(invoice.periodEndUtc)}`
                   )}
-                  {invoice.issuedAtUtc && ` · issued ${formatDate(invoice.issuedAtUtc)}`}
+                  {invoice.issuedAtUtc && ` · выставлен ${formatDate(invoice.issuedAtUtc)}`}
                   {invoice.dueAtUtc && invoice.status === "Issued" && (
-                    <span className="text-[var(--color-warning)]"> · due {formatDate(invoice.dueAtUtc)}</span>
+                    <span className="text-[var(--color-warning)]"> · срок {formatDate(invoice.dueAtUtc)}</span>
                   )}
                   {invoice.paidAtUtc && (
-                    <span className="text-[var(--color-success)]"> · paid {formatDate(invoice.paidAtUtc)}</span>
+                    <span className="text-[var(--color-success)]"> · оплачен {formatDate(invoice.paidAtUtc)}</span>
                   )}
                   {invoice.voidedAtUtc && (
-                    <span className="text-[var(--color-destructive)]"> · voided {formatDate(invoice.voidedAtUtc)}</span>
+                    <span className="text-[var(--color-destructive)]"> · аннулирован {formatDate(invoice.voidedAtUtc)}</span>
                   )}
                 </span>
               </span>
@@ -192,10 +193,10 @@ export function InvoiceDetailPage() {
                   downloadMutation.mutate({ id: invoice.id, number: invoice.invoiceNumber })
                 }
                 disabled={downloadMutation.isPending}
-                title="Download this invoice as a PDF"
+                title="Скачать счёт в PDF"
               >
                 <Download className="mr-1.5 h-3.5 w-3.5" />
-                {downloadMutation.isPending ? "Preparing…" : "Download PDF"}
+                {downloadMutation.isPending ? "Подготовка…" : "Скачать PDF"}
               </Button>
             )}
           </EntityPageHeader>
@@ -205,18 +206,18 @@ export function InvoiceDetailPage() {
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         {/* Line items */}
         <SettingsSection
-          title="Line items"
+          title="Позиции"
           description={
             invoice
-              ? `${invoice.lineItems.length} line${invoice.lineItems.length === 1 ? "" : "s"}`
+              ? `позиций: ${invoice.lineItems.length}`
               : query.isError
-                ? "Unavailable"
-                : "Loading…"
+                ? "Недоступно"
+                : "Загрузка…"
           }
         >
           {query.isError ? (
             <div className="py-8 text-center text-sm text-[var(--color-destructive)]">
-              {describe(query.error, "Failed to load line items.")}
+              {describe(query.error, "Не удалось загрузить позиции.")}
             </div>
           ) : query.isLoading ? (
             <ul className="-mx-5 divide-y divide-[var(--color-border)] border-t border-[var(--color-border)]">
@@ -229,7 +230,7 @@ export function InvoiceDetailPage() {
             </ul>
           ) : invoice && invoice.lineItems.length === 0 ? (
             <div className="py-8 text-center text-sm text-[var(--color-muted-foreground)]">
-              No line items.
+              Позиций нет.
             </div>
           ) : invoice ? (
             <ul className="-mx-5 border-t border-[var(--color-border)]">
@@ -238,7 +239,7 @@ export function InvoiceDetailPage() {
               ))}
               <li className="grid grid-cols-[1fr_auto] items-baseline gap-x-6 border-t-2 border-[var(--color-border-strong)] px-5 py-4">
                 <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
-                  subtotal
+                  итого
                 </div>
                 <div className="text-display text-xl font-semibold tabular-nums">
                   {formatMoney(invoice.subtotalAmount, invoice.currency)}
@@ -259,11 +260,11 @@ export function InvoiceDetailPage() {
               {/* Issue */}
               <SettingsSection
                 icon={Send}
-                title="Issue"
-                description="Transition from Draft to Issued status."
+                title="Выставить"
+                description="Перевод из «Черновик» в «Выставлен»."
               >
                 <div className={cn("space-y-3", invoice.status !== "Draft" && "opacity-60")}>
-                  <Field id="dueAt" label="Due date" hint="Leave blank for server default (+14 days).">
+                  <Field id="dueAt" label="Срок оплаты" hint="Пусто — значение сервера по умолчанию (+14 дней).">
                     <Input
                       id="dueAt"
                       type="date"
@@ -278,7 +279,7 @@ export function InvoiceDetailPage() {
                     onClick={() => issueMutation.mutate()}
                     className="w-full"
                   >
-                    {issueMutation.isPending ? "Issuing…" : "Issue invoice"}
+                    {issueMutation.isPending ? "Выставление…" : "Выставить счёт"}
                   </Button>
                 </div>
               </SettingsSection>
@@ -286,8 +287,8 @@ export function InvoiceDetailPage() {
               {/* Mark paid */}
               <SettingsSection
                 icon={CheckCircle2}
-                title="Mark paid"
-                description="Records manual payment receipt. Idempotent."
+                title="Отметить оплату"
+                description="Фиксирует ручное получение оплаты. Идемпотентно."
               >
                 <div className={cn(invoice.status !== "Issued" && "opacity-60")}>
                   <Button
@@ -296,7 +297,7 @@ export function InvoiceDetailPage() {
                     onClick={() => payMutation.mutate()}
                     className="w-full"
                   >
-                    {payMutation.isPending ? "Saving…" : "Mark as paid"}
+                    {payMutation.isPending ? "Сохранение…" : "Отметить оплаченным"}
                   </Button>
                 </div>
               </SettingsSection>
@@ -304,8 +305,8 @@ export function InvoiceDetailPage() {
               {/* Void */}
               <SettingsSection
                 icon={Ban}
-                title="Void"
-                description="Cancel from Draft or Issued. Irreversible."
+                title="Аннулировать"
+                description="Отмена из «Черновик» или «Выставлен». Необратимо."
               >
                 <div
                   className={cn(
@@ -313,10 +314,10 @@ export function InvoiceDetailPage() {
                     (invoice.status === "Paid" || invoice.status === "Void") && "opacity-60",
                   )}
                 >
-                  <Field id="voidReason" label="Reason" hint="Optional — appended to notes.">
+                  <Field id="voidReason" label="Причина" hint="Необязательно — добавится в примечания.">
                     <Input
                       id="voidReason"
-                      placeholder="duplicate · disputed · …"
+                      placeholder="дубль · спор · …"
                       value={voidReason}
                       onChange={(e) => setVoidReason(e.target.value)}
                       disabled={
@@ -337,7 +338,7 @@ export function InvoiceDetailPage() {
                     onClick={() => voidMutation.mutate()}
                     className="w-full"
                   >
-                    {voidMutation.isPending ? "Voiding…" : "Void invoice"}
+                    {voidMutation.isPending ? "Аннулирование…" : "Аннулировать счёт"}
                   </Button>
                 </div>
               </SettingsSection>
@@ -345,7 +346,7 @@ export function InvoiceDetailPage() {
               )}
 
               {invoice.notes && (
-                <SettingsSection title="Notes">
+                <SettingsSection title="Примечания">
                   <p className="whitespace-pre-line text-xs text-[var(--color-foreground)]">
                     {invoice.notes}
                   </p>
@@ -379,7 +380,7 @@ function LineItemRow({
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm font-medium">{item.description}</span>
           <Badge variant={item.kind === "BaseFee" ? "default" : item.kind === "Overage" ? "warning" : "muted"}>
-            {item.kind}
+            {LINE_ITEM_KIND_RU[item.kind] ?? item.kind}
           </Badge>
           {item.resource && (
             <span className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
@@ -388,7 +389,7 @@ function LineItemRow({
           )}
         </div>
         <div className="mt-1 font-mono text-[11px] text-[var(--color-muted-foreground)] tabular-nums">
-          {item.quantity.toLocaleString()} × {formatMoney(item.unitPrice, currency)}
+          {item.quantity.toLocaleString("ru-RU")} × {formatMoney(item.unitPrice, currency)}
         </div>
       </div>
       <div className="text-right text-sm font-semibold tabular-nums">
