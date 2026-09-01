@@ -261,9 +261,19 @@ export function searchSessions(
   return apiFetch<PagedResponse<SessionDto>>(`${SESSIONS}?${q.toString()}`);
 }
 
-/** "My schedule" — teacher/student/guardian, resolved server-side via PeopleScope. */
-export function getMySchedule(from: string, to: string): Promise<SessionDto[]> {
+/** "My schedule" — teacher/student/guardian, resolved server-side via PeopleScope.
+ *
+ *  `studentId` — narrowing hint the guardian cabinet passes when a specific
+ *  ward is selected in the ward switcher. The server currently returns the
+ *  union of the caller's (and all their wards') groups' sessions; the param
+ *  is forward-compatible and also keys the client cache per selected ward. */
+export function getMySchedule(
+  from: string,
+  to: string,
+  studentId?: string | null,
+): Promise<SessionDto[]> {
   const q = new URLSearchParams({ from, to });
+  if (studentId) q.set("studentId", studentId);
   return apiFetch<SessionDto[]>(`${SESSIONS}/my?${q.toString()}`);
 }
 

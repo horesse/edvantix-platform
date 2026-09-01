@@ -196,7 +196,7 @@ export function StudyGroupsPage() {
             asChild
             className="h-9 gap-1.5 rounded-lg px-4 text-[13px] font-semibold"
           >
-            <Link to="/study-groups/my">
+            <Link to="/my/groups">
               <Users className="size-4" />
               Мои группы
             </Link>

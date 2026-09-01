@@ -16,11 +16,15 @@ import {
   EntityStatusBadge,
 } from "@/components/list";
 import { describe } from "@/lib/list-helpers";
-import { FORMAT_LABEL, STATUS_LABEL, STATUS_TONE } from "./study-groups-ui";
+import {
+  FORMAT_LABEL,
+  STATUS_LABEL,
+  STATUS_TONE,
+} from "@/pages/study-groups/study-groups-ui";
 
 const DESKTOP_COLS = "grid-cols-[1fr_110px_24px] lg:grid-cols-[1.7fr_120px_90px_24px]";
 
-export function MyStudyGroupsPage() {
+export function CabinetGroupsPage() {
   const query = useQuery({
     queryKey: ["my-study-groups"],
     queryFn: getMyStudyGroups,
@@ -46,7 +50,7 @@ export function MyStudyGroupsPage() {
         title="Мои группы"
         total={query.data?.length ?? null}
         unit="группа"
-        description="Учебные группы, где вы — преподаватель или ученик. Полноценный кабинет появится на этапе 6."
+        description="Учебные группы, где вы — преподаватель или ученик, а также группы ваших подопечных. Только просмотр."
       />
 
       {query.isLoading ? (
