@@ -47,6 +47,17 @@ export async function installShellMocks(page: Page): Promise<void> {
   await mockJsonResponse(page, "**/api/v1/identity/profile", DEFAULT_PROFILE);
   await mockJsonResponse(page, "**/api/v1/identity/permissions", []);
 
+  // People scope drives the role-based index redirect (RoleLanding) and the
+  // guardian ward switcher (WardProvider), both mounted around every authed
+  // route. Default to an empty scope (→ Overview / no ward switcher); cabinet
+  // specs override this after the call with a teacher/student/guardian scope.
+  await mockJsonResponse(page, "**/api/v1/people/me/scope", {
+    studentId: null,
+    teacherId: null,
+    guardianId: null,
+    wardStudentIds: [],
+  });
+
   // Tenant status drives the global expiry/grace banner mounted in the
   // AppShell. Default to a healthy, far-future tenant so the banner stays
   // hidden; specs that exercise the banner override this after the call.
