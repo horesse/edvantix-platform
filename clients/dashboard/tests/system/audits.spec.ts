@@ -118,21 +118,21 @@ test.describe("system/audits", () => {
     await mockJsonResponse(
       page,
       "**/api/v1/audits**",
-      paged([row({ id: "a-42", source: "api.catalog.CreateProduct" })], {
+      paged([row({ id: "a-42", source: "api.people.CreateStudent" })], {
         totalCount: 1,
       }),
     );
     await mockSummary(page);
     // Detail endpoint — registered after the list glob so it wins for /{id}.
     await mockJsonResponse(page, "**/api/v1/audits/a-42", {
-      ...row({ id: "a-42", source: "api.catalog.CreateProduct" }),
+      ...row({ id: "a-42", source: "api.people.CreateStudent" }),
       receivedAtUtc: "2026-05-20T14:32:11.300Z",
-      payload: { entity: "Product", action: "Created" },
+      payload: { entity: "Student", action: "Created" },
     });
 
     await page.goto("/system/audits");
 
-    await page.getByText("api.catalog.CreateProduct").last().click();
+    await page.getByText("api.people.CreateStudent").last().click();
 
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();

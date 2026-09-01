@@ -14,8 +14,8 @@ const ROLES = [
   {
     id: "33333333-3333-3333-3333-333333333333",
     name: "Editor",
-    description: "Can edit catalog content",
-    permissions: ["Permissions.Products.Update"],
+    description: "Can edit courses",
+    permissions: ["Permissions.Curriculum.Courses.Update"],
   },
 ];
 
@@ -37,9 +37,9 @@ const CATALOG = [
     isRoot: false,
   },
   {
-    name: "Permissions.Products.Update",
-    description: "Update products",
-    resource: "Products",
+    name: "Permissions.Curriculum.Courses.Update",
+    description: "Update courses",
+    resource: "Courses",
     action: "Update",
     isBasic: false,
     isRoot: false,
@@ -64,7 +64,7 @@ test.describe("identity/roles — list", () => {
     // hidden mobile card and the desktop row — the desktop row is last in DOM
     // and visible at the default (lg) viewport.
     await expect(page.getByText("Editor", { exact: true }).last()).toBeVisible();
-    await expect(page.getByText("Can edit catalog content").last()).toBeVisible();
+    await expect(page.getByText("Can edit courses").last()).toBeVisible();
   });
 
   test("client-side search filters the list to the empty state", async ({ page }) => {
@@ -124,14 +124,14 @@ test.describe("identity/roles/:roleId — detail", () => {
     await expect(
       page.getByRole("heading", { name: "Permissions" }),
     ).toBeVisible();
-    // groupPermissions buckets the catalog by resource → Users + Products.
+    // groupPermissions buckets the catalog by resource → Users + Courses.
     // Each group renders a tri-state "Toggle all {resource}" button — assert
     // on those to avoid colliding with the sidebar "Users" nav link.
     await expect(
       page.getByRole("button", { name: "Toggle all Users", exact: true }),
     ).toBeVisible();
     await expect(
-      page.getByRole("button", { name: "Toggle all Products", exact: true }),
+      page.getByRole("button", { name: "Toggle all Courses", exact: true }),
     ).toBeVisible();
   });
 });
