@@ -35,11 +35,11 @@ export function NotFoundPage() {
         </div>
 
         <h1 className="mb-2 font-display text-[clamp(1.5rem,5vw,2rem)] font-semibold tracking-tight text-[var(--color-foreground)]">
-          Page not found
+          Страница не найдена
         </h1>
         <p className="mb-2 max-w-[380px] text-[14px] leading-relaxed text-[var(--color-muted-foreground)]">
-          We couldn't find anything at that address. It may be a stale link, a
-          renamed route, or a path that never existed.
+          По этому адресу ничего нет. Возможно, ссылка устарела, маршрут
+          переименован или такого пути никогда не было.
         </p>
 
         {/* Requested path — soft inline display */}
@@ -48,7 +48,7 @@ export function NotFoundPage() {
           title={requested}
         >
           <span className="text-[oklch(from_var(--color-muted-foreground)_l_c_h_/_0.6)]">
-            Requested
+            Запрошено
           </span>
           <span className="truncate text-[var(--color-foreground)]">{requested}</span>
         </p>
@@ -58,7 +58,7 @@ export function NotFoundPage() {
           <Button asChild className="group h-11 px-5 text-[14px] font-semibold">
             <Link to="/">
               <Home className="size-4" />
-              <span>Back home</span>
+              <span>На главную</span>
             </Link>
           </Button>
         </div>
@@ -70,7 +70,7 @@ export function NotFoundPage() {
           className="mt-5 inline-flex items-center gap-1.5 text-[12px] text-[var(--color-muted-foreground)] transition-colors hover:text-[var(--color-foreground)]"
         >
           <ArrowLeft className="size-3.5" />
-          <span>Go back to the previous page</span>
+          <span>Вернуться на предыдущую страницу</span>
         </button>
       </div>
     </div>
