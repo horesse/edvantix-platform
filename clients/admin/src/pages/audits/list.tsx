@@ -30,6 +30,7 @@ import { ApiRequestError } from "@/lib/api-client";
 import { AuditingPermissions } from "@/lib/permissions";
 import { AuditDetailSheet } from "@/pages/audits/detail";
 import { cn } from "@/lib/cn";
+import { AUDIT_SEVERITY_RU, AUDIT_TYPE_RU } from "@/lib/audit-labels";
 
 const PAGE_SIZE = 25;
 
@@ -128,10 +129,10 @@ export function AuditsListPage() {
     <div className="space-y-8">
       <EntityPageHeader
         icon={ScrollText}
-        title="Audit trail"
+        title="Журнал аудита"
         total={data?.totalCount ?? null}
-        unit="event"
-        description="Every security action, entity change, and exception captured by the auditing pipeline. Filter by event type, severity, or correlation id to follow a request end-to-end."
+        unit="событие"
+        description="Все действия безопасности, изменения сущностей и исключения из конвейера аудита. Фильтруйте по типу, важности или correlation id, чтобы проследить запрос целиком."
       >
         <Button
           variant="outline"
@@ -141,22 +142,22 @@ export function AuditsListPage() {
           className="flex-1 sm:flex-none"
         >
           <RefreshCw className={cn("mr-1.5 h-3.5 w-3.5", query.isFetching && "animate-spin")} />
-          Refresh
+          Обновить
         </Button>
       </EntityPageHeader>
 
       <StatStrip cols={4}>
-        <Stat label="Total events" value={summary.isLoading ? "—" : summaryStats.total.toLocaleString()} hint="across all event types" />
-        <Stat label="Errors + critical" value={summary.isLoading ? "—" : summaryStats.errors.toLocaleString()} hint="severity ≥ Error" tone={summaryStats.errors > 0 ? "danger" : "default"} />
-        <Stat label="Security events" value={summary.isLoading ? "—" : summaryStats.security.toLocaleString()} hint="logins, role grants, tokens" tone={summaryStats.security > 0 ? "info" : "default"} />
-        <Stat label="Exceptions" value={summary.isLoading ? "—" : summaryStats.exceptions.toLocaleString()} hint="unhandled / classified" tone={summaryStats.exceptions > 0 ? "warning" : "default"} />
+        <Stat label="Всего событий" value={summary.isLoading ? "—" : summaryStats.total.toLocaleString("ru-RU")} hint="по всем типам" />
+        <Stat label="Ошибки и критичные" value={summary.isLoading ? "—" : summaryStats.errors.toLocaleString("ru-RU")} hint="важность ≥ Ошибка" tone={summaryStats.errors > 0 ? "danger" : "default"} />
+        <Stat label="События безопасности" value={summary.isLoading ? "—" : summaryStats.security.toLocaleString("ru-RU")} hint="входы, выдача ролей, токены" tone={summaryStats.security > 0 ? "info" : "default"} />
+        <Stat label="Исключения" value={summary.isLoading ? "—" : summaryStats.exceptions.toLocaleString("ru-RU")} hint="необработанные / классифицированные" tone={summaryStats.exceptions > 0 ? "warning" : "default"} />
       </StatStrip>
 
       <FilterBar
         trailing={
           activeFilters > 0 ? (
             <Button variant="ghost" size="sm" onClick={clearAll} className="text-xs">
-              <X className="mr-1 h-3.5 w-3.5" /> Clear all ({activeFilters})
+              <X className="mr-1 h-3.5 w-3.5" /> Сбросить всё ({activeFilters})
             </Button>
           ) : undefined
         }
@@ -165,23 +166,23 @@ export function AuditsListPage() {
           <Input
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Search user, source, correlation…"
-            aria-label="Search audit trail"
+            placeholder="Поиск: пользователь, источник, correlation…"
+            aria-label="Поиск по журналу аудита"
             className="h-8"
           />
         </div>
         <Select
           value={eventType}
           onValueChange={(v) => setParam("type", v || null)}
-          options={AUDIT_EVENT_TYPES.map((t) => ({ value: t, label: t }))}
-          emptyLabel="All event types"
+          options={AUDIT_EVENT_TYPES.map((t) => ({ value: t, label: AUDIT_TYPE_RU[t] ?? t }))}
+          emptyLabel="Все типы"
           className="min-w-[10rem]"
         />
         <Select
           value={severity}
           onValueChange={(v) => setParam("sev", v || null)}
-          options={AUDIT_SEVERITIES.map((s) => ({ value: s, label: s }))}
-          emptyLabel="All severities"
+          options={AUDIT_SEVERITIES.map((s) => ({ value: s, label: AUDIT_SEVERITY_RU[s] ?? s }))}
+          emptyLabel="Все важности"
           className="min-w-[10rem]"
         />
         {canCrossTenant && (
@@ -189,8 +190,8 @@ export function AuditsListPage() {
             <Input
               value={tenantId}
               onChange={(e) => setParam("tenant", e.target.value || null)}
-              placeholder="Tenant id (cross-tenant)"
-              aria-label="Filter by tenant id"
+              placeholder="ID школы (кросс-тенант)"
+              aria-label="Фильтр по ID школы"
               className="h-8 font-mono text-xs"
             />
           </div>
@@ -200,7 +201,7 @@ export function AuditsListPage() {
             value={correlationId}
             onChange={(e) => setParam("corr", e.target.value || null)}
             placeholder="Correlation id"
-            aria-label="Filter by correlation id"
+            aria-label="Фильтр по correlation id"
             className="h-8 font-mono text-xs"
           />
         </div>
@@ -211,27 +212,27 @@ export function AuditsListPage() {
           message={
             query.error instanceof ApiRequestError
               ? query.error.problem?.detail ?? query.error.message
-              : "Failed to load audit events."
+              : "Не удалось загрузить события аудита."
           }
         />
       )}
 
-      {query.isLoading && <LoadingRow label="Loading events" />}
+      {query.isLoading && <LoadingRow label="Загрузка событий" />}
 
       {!query.isLoading && items.length === 0 && !query.isError && (
         <EmptyState
           icon={ScrollText}
-          kicker="// no events"
-          title="No audit events match your filters."
+          kicker="// событий нет"
+          title="Под фильтры событий аудита нет."
           description={
             activeFilters > 0
-              ? "Try clearing or relaxing a filter — the trail is broad by default."
-              : "The audit pipeline hasn't recorded anything for this tenant yet."
+              ? "Сбросьте или ослабьте фильтр — журнал по умолчанию широкий."
+              : "Конвейер аудита пока ничего не записал для этой школы."
           }
           action={
             activeFilters > 0 ? (
               <Button variant="outline" onClick={clearAll}>
-                Clear filters
+                Сбросить фильтры
               </Button>
             ) : undefined
           }
@@ -257,7 +258,7 @@ export function AuditsListPage() {
           hasNext={data.hasNext}
           onPrev={() => setPage(Math.max(1, pageNumber - 1))}
           onNext={() => setPage(pageNumber + 1)}
-          noun="events"
+          noun="события"
         />
       )}
 
@@ -283,7 +284,7 @@ function AuditRow({ event, onClick }: { event: AuditSummaryDto; onClick: () => v
           variant={eventTypeVariant(event.eventType)}
           className="justify-self-start font-mono uppercase tracking-[0.14em]"
         >
-          {event.eventType}
+          {AUDIT_TYPE_RU[event.eventType] ?? event.eventType}
         </Badge>
         <div className="min-w-0">
           <div className="flex flex-wrap items-baseline gap-2">

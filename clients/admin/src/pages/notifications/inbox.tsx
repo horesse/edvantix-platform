@@ -25,8 +25,8 @@ import { cn } from "@/lib/cn";
 type Filter = "all" | "unread";
 
 const FILTER_OPTIONS = [
-  { value: "unread", label: "Unread" },
-  { value: "all", label: "All" },
+  { value: "unread", label: "Непрочитанные" },
+  { value: "all", label: "Все" },
 ];
 
 export function NotificationsInboxPage() {
@@ -48,16 +48,16 @@ export function NotificationsInboxPage() {
   const markOne = useMutation({
     mutationFn: (id: string) => markNotificationRead(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
-    onError: (err) => toast.error("Mark read failed", { description: describe(err) }),
+    onError: (err) => toast.error("Не удалось отметить прочитанным", { description: describe(err) }),
   });
 
   const markAll = useMutation({
     mutationFn: markAllNotificationsRead,
     onSuccess: (data) => {
-      toast.success(`${data.updated} ${data.updated === 1 ? "notification" : "notifications"} marked read`);
+      toast.success(`Отмечено прочитанными: ${data.updated}`);
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
-    onError: (err) => toast.error("Mark all failed", { description: describe(err) }),
+    onError: (err) => toast.error("Не удалось отметить все", { description: describe(err) }),
   });
 
   const items = query.data ?? [];
@@ -66,10 +66,10 @@ export function NotificationsInboxPage() {
     <div className="space-y-8">
       <EntityPageHeader
         icon={Bell}
-        title="Notifications"
+        title="Уведомления"
         total={items.length}
-        unit="item"
-        description="Events the system has surfaced for you. Live-updates as new notifications arrive — no refresh needed."
+        unit="шт."
+        description="События, которые система вынесла для вас. Обновляется вживую при новых уведомлениях — обновлять страницу не нужно."
       >
         <Button
           variant="outline"
@@ -79,7 +79,7 @@ export function NotificationsInboxPage() {
           className="flex-1 sm:flex-none"
         >
           <RefreshCw className={cn("mr-1.5 h-3.5 w-3.5", query.isFetching && "animate-spin")} />
-          Refresh
+          Обновить
         </Button>
         <Button
           variant="signal"
@@ -89,7 +89,7 @@ export function NotificationsInboxPage() {
           className="flex-1 sm:flex-none"
         >
           <CheckCheck className="mr-1.5 h-3.5 w-3.5" />
-          {markAll.isPending ? "Marking…" : "Mark all read"}
+          {markAll.isPending ? "Отмечаем…" : "Отметить все прочитанными"}
         </Button>
       </EntityPageHeader>
 
@@ -107,22 +107,22 @@ export function NotificationsInboxPage() {
           message={
             query.error instanceof ApiRequestError
               ? query.error.problem?.detail ?? query.error.message
-              : "Failed to load notifications."
+              : "Не удалось загрузить уведомления."
           }
         />
       )}
 
-      {query.isLoading && <LoadingRow label="Loading notifications" />}
+      {query.isLoading && <LoadingRow label="Загрузка уведомлений" />}
 
       {!query.isLoading && items.length === 0 && !query.isError && (
         <EmptyState
           icon={Bell}
-          kicker="// inbox zero"
-          title={filter === "unread" ? "Nothing unread." : "No notifications yet."}
+          kicker="// входящих ноль"
+          title={filter === "unread" ? "Непрочитанных нет." : "Уведомлений пока нет."}
           description={
             filter === "unread"
-              ? "You're all caught up. Live updates will pop in here as they fire."
-              : "Notifications from the system will appear here as they're generated."
+              ? "Всё прочитано. Новые уведомления появятся здесь сразу же."
+              : "Уведомления системы будут появляться здесь по мере генерации."
           }
         />
       )}
@@ -168,7 +168,7 @@ function Row({
           <span className="font-medium">{notif.title}</span>
           <code className="code-chip">{notif.type}</code>
           <span className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-[var(--color-muted-foreground)]">
-            {new Date(notif.createdAtUtc).toLocaleString()}
+            {new Date(notif.createdAtUtc).toLocaleString("ru-RU")}
           </span>
         </div>
         {notif.body && (
@@ -184,13 +184,13 @@ function Row({
             className="mt-1 inline-flex items-center gap-1 font-mono text-[10.5px] uppercase tracking-[0.14em] text-[var(--color-foreground)] hover:underline"
           >
             <ExternalLink className="h-3 w-3" />
-            Open
+            Открыть
           </a>
         )}
       </div>
       {unread && (
         <Button variant="ghost" size="sm" onClick={onMarkRead}>
-          <CheckCheck className="mr-1 h-3.5 w-3.5" /> Mark read
+          <CheckCheck className="mr-1 h-3.5 w-3.5" /> Прочитано
         </Button>
       )}
     </li>
