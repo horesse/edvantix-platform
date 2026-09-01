@@ -493,7 +493,9 @@ Playwright с моками маршрутов. Обязательное покр
 - [x] подтверждение оплаты (`tests/payments/payment-confirm.spec.ts` — гейт
       `StudentPayments.Confirm`, переплата не блокируется; `payment-reverse.spec.ts` —
       сторно с обязательной причиной, отрицательная строка + `reversesId`)
-- [ ] зачисление и перевод между группами
+- [x] зачисление и перевод между группами — `clients/dashboard/tests/study-groups/
+      enrollments.spec.ts` (тест зачисления через `POST … studentIds` + тест
+      `transfer posts targetStudyGroupId via mutate(arg)`)
 - [x] перенос и отмена занятия
 - [x] удалить спеки каталога ([[Задачи · Удаление Catalog]]) — `tests/catalog/` удалён;
       `tests/system/trash.spec.ts` переписан под `Courses`/`Tickets`/`Files`;
