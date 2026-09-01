@@ -280,7 +280,7 @@ test.describe("user detail page", () => {
     await expect(
       main.getByRole("heading", { name: "Назначение ролей", exact: true }),
     ).toBeVisible();
-    await expect(main.getByRole("heading", { name: "Сессии", exact: true }).first()).toBeVisible();
+    await expect(main.getByText(/\\ Сессии/i).first()).toBeVisible();
 
     // Role chips rendered from the roles endpoint.
     await expect(main.getByText("Admin", { exact: true })).toBeVisible();

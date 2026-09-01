@@ -192,7 +192,7 @@ export function ForgotPasswordPage() {
                       htmlFor="reset-email"
                       className="block text-[11.5px] font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]"
                     >
-                      Email
+                      E-mail
                     </Label>
                     <div className="relative">
                       <Mail className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-[oklch(from_var(--color-muted-foreground)_l_c_h_/_0.6)]" />

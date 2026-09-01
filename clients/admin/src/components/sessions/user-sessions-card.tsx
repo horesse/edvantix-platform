@@ -91,11 +91,11 @@ export function UserSessionsCard({ userId }: { userId: string }) {
           />
         ) : query.isLoading ? (
           <p className="meta text-[var(--color-muted-foreground)]">
-            Loading<span className="caret text-[var(--color-accent-signal)]" />
+            Загрузка<span className="caret text-[var(--color-accent-signal)]" />
           </p>
         ) : sessions.length === 0 ? (
           <p className="text-sm text-[var(--color-muted-foreground)]">
-            No sessions on record for this user.
+            У этого пользователя нет сессий.
           </p>
         ) : (
           <>
@@ -158,16 +158,16 @@ function SessionRow({
         <div className="truncate text-sm font-medium">{describeDevice(session)}</div>
         <div className="mt-0.5 flex flex-wrap items-baseline gap-x-3 gap-y-0.5 font-mono text-[10.5px] text-[var(--color-muted-foreground)]">
           <span>{session.ipAddress ?? "IP неизвестен"}</span>
-          <span>· last seen {formatRelative(session.lastActivityAt)}</span>
+          <span>· активность {formatRelative(session.lastActivityAt)}</span>
         </div>
       </div>
       {session.isActive ? (
         <Badge variant="brand" className="font-mono uppercase tracking-[0.14em]">
-          Active
+          Активна
         </Badge>
       ) : (
         <Badge variant="muted" className="font-mono uppercase tracking-[0.14em]">
-          Revoked
+          Отозвана
         </Badge>
       )}
       {canRevoke ? (
@@ -186,7 +186,7 @@ function describeDevice(s: UserSessionDto): string {
   const browser = s.browser ?? "Неизвестный браузер";
   const version = s.browserVersion ? ` ${s.browserVersion}` : "";
   const os = s.operatingSystem ?? "неизвестная ОС";
-  return `${browser}${version} on ${os}`;
+  return `${browser}${version} · ${os}`;
 }
 
 function formatRelative(value?: string | null): string {
@@ -195,14 +195,14 @@ function formatRelative(value?: string | null): string {
   if (Number.isNaN(d.getTime())) return value;
   const diff = Date.now() - d.getTime();
   const sec = Math.round(diff / 1000);
-  if (sec < 60) return `${sec}s ago`;
+  if (sec < 60) return `${sec} с назад`;
   const min = Math.round(sec / 60);
-  if (min < 60) return `${min}m ago`;
+  if (min < 60) return `${min} мин назад`;
   const hr = Math.round(min / 60);
-  if (hr < 24) return `${hr}h ago`;
+  if (hr < 24) return `${hr} ч назад`;
   const day = Math.round(hr / 24);
-  if (day < 14) return `${day}d ago`;
-  return d.toLocaleDateString();
+  if (day < 14) return `${day} дн назад`;
+  return d.toLocaleDateString("ru-RU");
 }
 
 function describe(err: unknown): string {

@@ -14,11 +14,11 @@ test.describe("admin confirm-email", () => {
     await mockJsonResponse(
       page,
       "**/api/v1/identity/confirm-email**",
-      '"E-mail подтверждён."',
+      '"Адрес e-mail подтверждён и готов к работе."',
     );
     await page.goto(VALID_LINK);
 
-    await expect(page.getByText(/e-mail подтверждён/i)).toBeVisible();
+    await expect(page.getByText("Адрес e-mail подтверждён и готов к работе.", { exact: true })).toBeVisible();
     const cta = page.getByRole("link", { name: /перейти ко входу/i });
     await expect(cta).toBeVisible();
     await cta.click();
