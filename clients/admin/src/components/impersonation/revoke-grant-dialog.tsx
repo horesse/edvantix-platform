@@ -46,8 +46,8 @@ export function RevokeGrantDialog({ grant, onOpenChange, onRevoked }: Props) {
   const mutation = useMutation<ImpersonationGrantDto, Error, void>({
     mutationFn: () => revokeImpersonationGrant(grant!.id, reason.trim() || undefined),
     onSuccess: (updated) => {
-      toast.success("Impersonation revoked", {
-        description: `Token for ${updated.impersonatedUserName ?? updated.impersonatedUserId} will be rejected on the next request.`,
+      toast.success("Имперсонация отозвана", {
+        description: `Токен для ${updated.impersonatedUserName ?? updated.impersonatedUserId} будет отклонён на следующем запросе.`,
       });
       queryClient.invalidateQueries({ queryKey: ["impersonation-grants"] });
       onRevoked?.(updated);
@@ -58,7 +58,7 @@ export function RevokeGrantDialog({ grant, onOpenChange, onRevoked }: Props) {
         err instanceof ApiRequestError
           ? err.problem?.detail ?? err.problem?.title ?? err.message
           : err.message;
-      toast.error("Revoke failed", { description: detail });
+      toast.error("Не удалось отозвать", { description: detail });
     },
   });
 
@@ -73,11 +73,11 @@ export function RevokeGrantDialog({ grant, onOpenChange, onRevoked }: Props) {
             >
               <ShieldOff className="h-4 w-4" />
             </span>
-            <DialogTitle>Revoke impersonation grant</DialogTitle>
+            <DialogTitle>Отозвать разрешение имперсонации</DialogTitle>
           </div>
           <DialogDescription>
-            The issued token will be rejected on the next authenticated request (within ~1
-            second of cache TTL). The session in the dashboard tab is killed without warning.
+            Выданный токен будет отклонён на следующем авторизованном запросе (в пределах ~1
+            секунды TTL кэша). Сессия во вкладке дашборда завершится без предупреждения.
           </DialogDescription>
         </DialogHeader>
 
@@ -89,13 +89,13 @@ export function RevokeGrantDialog({ grant, onOpenChange, onRevoked }: Props) {
               htmlFor="revoke-reason"
               className="meta text-[var(--color-muted-foreground)]"
             >
-              Reason (optional)
+              Причина (необязательно)
             </label>
             <textarea
               id="revoke-reason"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="e.g. Operator left for lunch; ending session"
+              placeholder="напр.: оператор ушёл на обед; завершаю сессию"
               rows={3}
               maxLength={500}
               className={cn(
@@ -106,14 +106,14 @@ export function RevokeGrantDialog({ grant, onOpenChange, onRevoked }: Props) {
               )}
             />
             <p className="text-[11px] text-[var(--color-muted-foreground)]">
-              Recorded on the grant and in the security audit trail.
+              Записывается в разрешение и в журнал аудита безопасности.
             </p>
           </div>
         </DialogBody>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={mutation.isPending}>
-            Cancel
+            Отмена
           </Button>
           <Button
             variant="destructive"
@@ -121,7 +121,7 @@ export function RevokeGrantDialog({ grant, onOpenChange, onRevoked }: Props) {
             disabled={mutation.isPending}
           >
             <ShieldOff className="mr-1 h-3.5 w-3.5" />
-            {mutation.isPending ? "Revoking…" : "Revoke now"}
+            {mutation.isPending ? "Отзыв…" : "Отозвать сейчас"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -132,7 +132,7 @@ export function RevokeGrantDialog({ grant, onOpenChange, onRevoked }: Props) {
 function GrantSummary({ grant }: { grant: ImpersonationGrantDto }) {
   return (
     <div className="space-y-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-3">
-      <Row label="Impersonating">
+      <Row label="Имперсонируется">
         <span className="font-medium">
           {grant.impersonatedUserName ?? grant.impersonatedUserId}
         </span>{" "}
@@ -140,17 +140,17 @@ function GrantSummary({ grant }: { grant: ImpersonationGrantDto }) {
           {grant.impersonatedTenantId}
         </Badge>
       </Row>
-      <Row label="Started by">
+      <Row label="Начал">
         <span>{grant.actorUserName ?? grant.actorUserId}</span>{" "}
         <Badge variant="muted" className="ml-1 font-mono uppercase tracking-[0.14em]">
           {grant.actorTenantId}
         </Badge>
       </Row>
-      <Row label="Reason">
+      <Row label="Причина">
         <span className="text-[var(--color-muted-foreground)]">{grant.reason || "—"}</span>
       </Row>
-      <Row label="Expires">
-        <code className="code-chip">{new Date(grant.expiresAtUtc).toLocaleString()}</code>
+      <Row label="Истекает">
+        <code className="code-chip">{new Date(grant.expiresAtUtc).toLocaleString("ru-RU")}</code>
       </Row>
     </div>
   );

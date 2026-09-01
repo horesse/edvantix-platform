@@ -63,7 +63,7 @@ export function Select<T extends string = string>({
     allOptions.find((o) => o.value === value) ??
     (placeholder ? { value: "", label: placeholder } : allOptions[0]);
 
-  const displayLabel = current?.label ?? placeholder ?? "Select…";
+  const displayLabel = current?.label ?? placeholder ?? "Выбрать…";
   const hasSelection = value !== "";
 
   return (

@@ -78,7 +78,7 @@ export function NotificationBell() {
   const markAll = useMutation({
     mutationFn: markAllNotificationsRead,
     onSuccess: (data) => {
-      toast.success(`${data.updated} ${data.updated === 1 ? "notification" : "notifications"} marked read`);
+      toast.success(`Отмечено прочитанными: ${data.updated}`);
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
   });
@@ -93,7 +93,7 @@ export function NotificationBell() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        aria-label={count > 0 ? `${count} unread notifications` : "Notifications"}
+        aria-label={count > 0 ? `Непрочитанных уведомлений: ${count}` : "Уведомления"}
         aria-haspopup="true"
         aria-expanded={open}
         className={cn(
@@ -124,7 +124,7 @@ export function NotificationBell() {
             className="fixed inset-0 z-40 cursor-default bg-transparent"
           />
           <div
-            aria-label="Notifications"
+            aria-label="Уведомления"
             className="absolute right-0 z-50 mt-2 w-[22rem] overflow-hidden rounded-xl card-shell shadow-[0_24px_64px_-24px_oklch(0_0_0/0.30)]"
           >
             <div className="flex items-center justify-between border-b border-[var(--color-border)] px-3 py-2.5">
@@ -242,7 +242,7 @@ function Row({
             e.stopPropagation();
             onMarkRead();
           }}
-          aria-label="Mark as read"
+          aria-label="Отметить прочитанным"
           className="invisible mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)] group-hover/notif:visible"
         >
           <CheckCheck className="h-3 w-3" />

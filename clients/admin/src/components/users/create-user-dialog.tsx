@@ -26,20 +26,20 @@ const USERNAME_RE = /^[a-zA-Z][a-zA-Z0-9._-]{2,31}$/;
 
 const schema = z
   .object({
-    firstName: z.string().trim().min(1, "Required.").max(64),
-    lastName: z.string().trim().min(1, "Required.").max(64),
+    firstName: z.string().trim().min(1, "Обязательное поле.").max(64),
+    lastName: z.string().trim().min(1, "Обязательное поле.").max(64),
     userName: z
       .string()
       .trim()
-      .regex(USERNAME_RE, "3–32 chars. Letters, digits, dot, dash, underscore. Start with a letter."),
-    email: z.string().trim().email("Enter a valid email."),
+      .regex(USERNAME_RE, "3–32 символа. Буквы, цифры, точка, дефис, подчёркивание. Начинается с буквы."),
+    email: z.string().trim().email("Введите корректный e-mail."),
     phoneNumber: z.string().trim().max(32).optional(),
-    password: z.string().min(8, "At least 8 characters."),
+    password: z.string().min(8, "Не меньше 8 символов."),
     confirmPassword: z.string().min(8),
   })
   .refine((d) => d.password === d.confirmPassword, {
     path: ["confirmPassword"],
-    message: "Passwords don't match.",
+    message: "Пароли не совпадают.",
   });
 
 type FormValues = z.infer<typeof schema>;
@@ -116,8 +116,8 @@ export function CreateUserDialog({
         phoneNumber: values.phoneNumber?.trim() || undefined,
       }),
     onSuccess: (result) => {
-      toast.success("User created", {
-        description: result.message ?? "Confirmation email queued.",
+      toast.success("Пользователь создан", {
+        description: result.message ?? "Письмо с подтверждением поставлено в очередь.",
       });
       queryClient.invalidateQueries({ queryKey: ["users"] });
       handleClose();
@@ -128,7 +128,7 @@ export function CreateUserDialog({
         err instanceof ApiRequestError
           ? err.problem?.detail ?? err.problem?.title ?? err.message
           : (err as Error).message;
-      toast.error("Create failed", { description: detail });
+      toast.error("Не удалось создать", { description: detail });
     },
   });
 
@@ -162,12 +162,12 @@ export function CreateUserDialog({
               <Users className="h-[18px] w-[18px]" />
             </span>
             <div className="min-w-0">
-              <DialogTitle className="text-[16px]">New account</DialogTitle>
+              <DialogTitle className="text-[16px]">Новая учётка</DialogTitle>
             </div>
           </div>
           <DialogDescription className="mt-1">
-            The new user is created in the current tenant and emailed a confirmation link. Roles can
-            be assigned from the detail page after creation.
+            Пользователь создаётся в текущей школе, ему уходит письмо со ссылкой подтверждения.
+            Роли назначаются на карточке после создания.
           </DialogDescription>
         </DialogHeader>
 
@@ -178,15 +178,15 @@ export function CreateUserDialog({
             <div className="space-y-3">
               <SectionLabel
                 icon={UserIcon}
-                title="Identity"
-                description="Personal details and the username they'll use to sign in."
+                title="Идентификация"
+                description="Личные данные и логин для входа."
               />
               <div className="h-px bg-[var(--color-border)] opacity-60" />
               <div className="space-y-4">
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field
                     id="cu-firstName"
-                    label="First name"
+                    label="Имя"
                     required
                     error={errors.firstName?.message}
                   >
@@ -199,7 +199,7 @@ export function CreateUserDialog({
                   </Field>
                   <Field
                     id="cu-lastName"
-                    label="Last name"
+                    label="Фамилия"
                     required
                     error={errors.lastName?.message}
                   >
@@ -214,9 +214,9 @@ export function CreateUserDialog({
 
                 <Field
                   id="cu-userName"
-                  label="Username"
+                  label="Логин"
                   required
-                  hint="Letters, digits, dot, dash or underscore. 3–32 characters."
+                  hint="Буквы, цифры, точка, дефис или подчёркивание. 3–32 символа."
                   error={errors.userName?.message}
                 >
                   <Input
@@ -231,7 +231,7 @@ export function CreateUserDialog({
 
                 <Field
                   id="cu-email"
-                  label="Email"
+                  label="E-mail"
                   required
                   error={errors.email?.message}
                 >
@@ -248,7 +248,7 @@ export function CreateUserDialog({
 
                 <Field
                   id="cu-phoneNumber"
-                  label="Phone (optional)"
+                  label="Телефон (необязательно)"
                   error={errors.phoneNumber?.message}
                 >
                   <Input
@@ -267,14 +267,14 @@ export function CreateUserDialog({
             <div className="space-y-3">
               <SectionLabel
                 icon={KeyRound}
-                title="Credentials"
-                description="Initial password. The user is encouraged to change it on first sign-in."
+                title="Учётные данные"
+                description="Начальный пароль. Пользователю стоит сменить его при первом входе."
               />
               <div className="h-px bg-[var(--color-border)] opacity-60" />
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field
                   id="cu-password"
-                  label="Password"
+                  label="Пароль"
                   required
                   error={errors.password?.message}
                 >
@@ -289,7 +289,7 @@ export function CreateUserDialog({
                 </Field>
                 <Field
                   id="cu-confirmPassword"
-                  label="Confirm password"
+                  label="Повтор пароля"
                   required
                   error={errors.confirmPassword?.message}
                 >
@@ -314,10 +314,10 @@ export function CreateUserDialog({
               onClick={handleClose}
               disabled={submitting}
             >
-              Cancel
+              Отмена
             </Button>
             <Button type="submit" disabled={submitting}>
-              {submitting ? "Creating…" : "Create account"}
+              {submitting ? "Создание…" : "Создать учётку"}
             </Button>
           </DialogFooter>
         </form>

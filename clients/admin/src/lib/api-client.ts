@@ -105,7 +105,7 @@ export async function apiFetch<T = unknown>(
       throw new ApiRequestError(401, "Not signed in", {
         status: 401,
         title: "Unauthorized",
-        detail: "Your session is no longer available. Please sign in again.",
+        detail: "Сессия больше недоступна. Войдите заново.",
       });
     }
   }

@@ -52,14 +52,14 @@ import { cn } from "@/lib/cn";
 export function SecuritySettings() {
   const profile = useQuery({ queryKey: ["identity", "profile"], queryFn: getMyProfile });
 
-  if (profile.isLoading) return <LoadingRow label="Loading security state" />;
+  if (profile.isLoading) return <LoadingRow label="Загрузка настроек безопасности" />;
   if (profile.isError) {
     return (
       <ErrorBand
         message={
           profile.error instanceof ApiRequestError
             ? (profile.error.problem?.detail ?? profile.error.message)
-            : "Failed to load security state."
+            : "Не удалось загрузить настройки безопасности."
         }
       />
     );
@@ -79,17 +79,17 @@ export function SecuritySettings() {
 
 const passwordSchema = z
   .object({
-    current: z.string().min(1, "Required."),
-    next: z.string().min(8, "At least 8 characters."),
+    current: z.string().min(1, "Обязательное поле."),
+    next: z.string().min(8, "Не меньше 8 символов."),
     confirm: z.string().min(8),
   })
   .refine((v) => v.next === v.confirm, {
     path: ["confirm"],
-    message: "Passwords don't match.",
+    message: "Пароли не совпадают.",
   })
   .refine((v) => v.next !== v.current, {
     path: ["next"],
-    message: "New password must differ from the current one.",
+    message: "Новый пароль должен отличаться от текущего.",
   });
 
 type PasswordValues = z.infer<typeof passwordSchema>;
@@ -114,7 +114,7 @@ const RevealInput = forwardRef<HTMLInputElement, InputProps>(
           type="button"
           tabIndex={-1}
           onClick={() => setShow((s) => !s)}
-          aria-label={show ? "Hide password" : "Show password"}
+          aria-label={show ? "Скрыть пароль" : "Показать пароль"}
           className="absolute right-1.5 top-1/2 grid size-6 -translate-y-1/2 place-items-center rounded-md text-[var(--color-muted-foreground)] outline-none transition-colors hover:text-[var(--color-foreground)] focus-visible:ring-2 focus-visible:ring-[oklch(from_var(--color-ring)_l_c_h_/_0.5)]"
         >
           {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
@@ -131,17 +131,16 @@ function PasswordSection() {
   return (
     <>
       <SettingsSection
-        title="Password"
+        title="Пароль"
         icon={KeyRound}
-        description="Used to sign in to this console. Choose a strong, unique passphrase of 16+ characters."
+        description="Используется для входа в консоль. Выберите надёжную уникальную фразу от 16 символов."
       >
         <div className="flex items-center justify-between gap-4">
           <p className="text-sm text-[var(--color-muted-foreground)]">
-            Changing your password does not revoke other sessions automatically — visit the Sessions
-            tab to sign out other devices.
+            Смена пароля не отзывает другие сессии автоматически — завершите их на вкладке «Сессии».
           </p>
           <Button variant="outline" size="sm" onClick={() => setDialogOpen(true)}>
-            Change password
+            Сменить пароль
           </Button>
         </div>
       </SettingsSection>
@@ -181,8 +180,8 @@ function ChangePasswordDialog({
         confirmNewPassword: v.confirm,
       }),
     onSuccess: () => {
-      toast.success("Password changed", {
-        description: "Other active sessions remain valid until you revoke them.",
+      toast.success("Пароль изменён", {
+        description: "Другие активные сессии остаются действительными, пока вы их не отзовёте.",
       });
       onOpenChange(false);
     },
@@ -191,7 +190,7 @@ function ChangePasswordDialog({
         err instanceof ApiRequestError
           ? (err.problem?.detail ?? err.problem?.title ?? err.message)
           : (err as Error).message;
-      toast.error("Change failed", { description: detail });
+      toast.error("Не удалось изменить", { description: detail });
     },
   });
 
@@ -206,17 +205,16 @@ function ChangePasswordDialog({
             <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-[oklch(from_var(--color-primary)_l_c_h_/_0.10)] ring-1 ring-inset ring-[oklch(from_var(--color-primary)_l_c_h_/_0.20)]">
               <KeyRound className="size-4 text-[var(--color-primary)]" />
             </span>
-            <DialogTitle>Change password</DialogTitle>
+            <DialogTitle>Смена пароля</DialogTitle>
           </div>
           <DialogDescription>
-            Sign-out events for other devices aren't fired automatically — visit the Sessions tab
-            below to end them after rotating your password.
+            Выход на других устройствах не происходит автоматически — завершите их на вкладке «Сессии» после смены пароля.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={onSubmit} className="contents" noValidate>
           <DialogBody className="space-y-4">
-            <Field id="pw-current" label="Current password" required error={errors.current?.message}>
+            <Field id="pw-current" label="Текущий пароль" required error={errors.current?.message}>
               <RevealInput
                 id="pw-current"
                 autoComplete="current-password"
@@ -228,9 +226,9 @@ function ChangePasswordDialog({
             </Field>
             <Field
               id="pw-next"
-              label="New password"
+              label="Новый пароль"
               required
-              hint="At least 8 characters."
+              hint="Не меньше 8 символов."
               error={errors.next?.message}
             >
               <RevealInput
@@ -243,7 +241,7 @@ function ChangePasswordDialog({
             </Field>
             <Field
               id="pw-confirm"
-              label="Confirm new password"
+              label="Повтор нового пароля"
               required
               error={errors.confirm?.message}
             >
@@ -264,11 +262,11 @@ function ChangePasswordDialog({
               onClick={() => onOpenChange(false)}
               disabled={submitting}
             >
-              Cancel
+              Отмена
             </Button>
             <Button type="submit" disabled={submitting}>
               <KeyRound className="mr-1 h-3.5 w-3.5" />
-              {submitting ? "Updating…" : "Update password"}
+              {submitting ? "Обновление…" : "Обновить пароль"}
             </Button>
           </DialogFooter>
         </form>
@@ -299,7 +297,7 @@ function TwoFactorEnroll() {
         err instanceof ApiRequestError
           ? (err.problem?.detail ?? err.problem?.title ?? err.message)
           : (err as Error).message;
-      toast.error("Enrollment failed", { description: detail });
+      toast.error("Не удалось начать подключение", { description: detail });
     },
   });
 
@@ -307,15 +305,15 @@ function TwoFactorEnroll() {
     mutationFn: (otp: string) => verifyEnrollTwoFactor(otp),
     onSuccess: (data) => {
       if (data.success) {
-        toast.success("Two-factor enabled", {
-          description: "Future logins require a 6-digit code from your authenticator.",
+        toast.success("Двухфакторная включена", {
+          description: "Дальнейшие входы требуют 6-значный код из приложения-аутентификатора.",
         });
         setEnrollment(null);
         setCode("");
         setQrSvg(null);
         void queryClient.invalidateQueries({ queryKey: ["identity", "profile"] });
       } else {
-        toast.error("Verification failed", { description: "That code didn't match. Try again." });
+        toast.error("Проверка не прошла", { description: "Код не совпал. Попробуйте ещё раз." });
       }
     },
     onError: (err: unknown) => {
@@ -323,7 +321,7 @@ function TwoFactorEnroll() {
         err instanceof ApiRequestError
           ? (err.problem?.detail ?? err.problem?.title ?? err.message)
           : (err as Error).message;
-      toast.error("Verification failed", { description: detail });
+      toast.error("Проверка не прошла", { description: detail });
     },
   });
 
@@ -374,14 +372,14 @@ function TwoFactorEnroll() {
 
   return (
     <SettingsSection
-      title="Two-factor authentication"
+      title="Двухфакторная аутентификация"
       icon={ShieldCheck}
       description={
         <span className="flex flex-wrap items-center gap-2">
-          Adds an authenticator app code on top of your password. Recommended for every operator
-          account.
+          Добавляет код из приложения-аутентификатора поверх пароля. Рекомендуется для каждого
+          операторского аккаунта.
           <Badge variant="outline" className="font-mono uppercase tracking-[0.14em]">
-            off
+            выкл
           </Badge>
         </span>
       }
@@ -393,10 +391,10 @@ function TwoFactorEnroll() {
             disabled={beginMutation.isPending}
           >
             <ShieldCheck className="mr-1.5 h-3.5 w-3.5" />
-            {beginMutation.isPending ? "Generating…" : "Enable two-factor"}
+            {beginMutation.isPending ? "Генерация…" : "Включить двухфакторную"}
           </Button>
           <span className="text-xs text-[var(--color-muted-foreground)]">
-            You'll scan a QR code in your authenticator app (1Password, Google Authenticator, Authy…).
+            Отсканируйте QR-код в приложении-аутентификаторе (1Password, Google Authenticator, Authy…).
           </span>
         </div>
       ) : (
@@ -405,7 +403,7 @@ function TwoFactorEnroll() {
             <div className="grid h-52 w-52 place-items-center rounded-md border border-[var(--color-border)] bg-[var(--color-muted)] p-2 text-[var(--color-foreground)]">
               {qrSvg ? (
                 <div
-                  aria-label="Two-factor QR code"
+                  aria-label="QR-код двухфакторной"
                   role="img"
                   className="h-full w-full [&_svg]:h-full [&_svg]:w-full"
                   // qrSvg is locally generated by the qrcode lib from the
@@ -414,14 +412,14 @@ function TwoFactorEnroll() {
                 />
               ) : (
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
-                  Rendering…
+                  Отрисовка…
                 </span>
               )}
             </div>
             <div className="space-y-3">
               <div>
                 <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
-                  Can't scan? Enter manually
+                  Не сканируется? Введите вручную
                 </div>
                 <div className="mt-1 flex items-center gap-2">
                   <code className="break-all rounded-md border border-[var(--color-border)] bg-[var(--color-muted)] px-2 py-1 font-mono text-[11px]">
@@ -434,11 +432,11 @@ function TwoFactorEnroll() {
                   >
                     {copiedKey ? (
                       <>
-                        <ClipboardCheck className="h-3 w-3" /> copied
+                        <ClipboardCheck className="h-3 w-3" /> скопировано
                       </>
                     ) : (
                       <>
-                        <Copy className="h-3 w-3" /> copy
+                        <Copy className="h-3 w-3" /> копировать
                       </>
                     )}
                   </button>
@@ -446,7 +444,7 @@ function TwoFactorEnroll() {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="totp-code">6-digit code from your app</Label>
+                <Label htmlFor="totp-code">6-значный код из приложения</Label>
                 <Input
                   id="totp-code"
                   inputMode="numeric"
@@ -468,7 +466,7 @@ function TwoFactorEnroll() {
                   disabled={code.length < 6 || verifyMutation.isPending}
                   variant="signal"
                 >
-                  {verifyMutation.isPending ? "Verifying…" : "Confirm & enable"}
+                  {verifyMutation.isPending ? "Проверка…" : "Подтвердить и включить"}
                 </Button>
                 <Button
                   variant="ghost"
@@ -478,7 +476,7 @@ function TwoFactorEnroll() {
                   }}
                   disabled={verifyMutation.isPending}
                 >
-                  Cancel
+                  Отмена
                 </Button>
               </div>
             </div>
@@ -497,11 +495,11 @@ function TwoFactorDisable() {
     mutationFn: (pw: string) => disableTwoFactor(pw),
     onSuccess: (data) => {
       if (data.success) {
-        toast.success("Two-factor disabled");
+        toast.success("Двухфакторная отключена");
         setPassword("");
         void queryClient.invalidateQueries({ queryKey: ["identity", "profile"] });
       } else {
-        toast.error("Disable failed", { description: "Password verification failed." });
+        toast.error("Не удалось отключить", { description: "Пароль не подтверждён." });
       }
     },
     onError: (err: unknown) => {
@@ -509,20 +507,20 @@ function TwoFactorDisable() {
         err instanceof ApiRequestError
           ? (err.problem?.detail ?? err.problem?.title ?? err.message)
           : (err as Error).message;
-      toast.error("Disable failed", { description: detail });
+      toast.error("Не удалось отключить", { description: detail });
     },
   });
 
   return (
     <SettingsSection
-      title="Two-factor authentication"
+      title="Двухфакторная аутентификация"
       icon={ShieldOff}
       description={
         <span className="flex flex-wrap items-center gap-2">
-          Two-factor is currently enabled on your account. Confirm your password to disable — this
-          rotates the authenticator secret, so a fresh enroll will generate a new QR.
+          Двухфакторная сейчас включена. Подтвердите пароль, чтобы отключить — секрет аутентификатора
+          сменится, при повторном подключении будет новый QR.
           <Badge variant="success" className="font-mono uppercase tracking-[0.14em]">
-            enabled
+            вкл
           </Badge>
         </span>
       }
@@ -535,14 +533,14 @@ function TwoFactorDisable() {
             disabled={password.length === 0 || mutation.isPending}
           >
             <ShieldOff className="mr-1 h-3.5 w-3.5" />
-            {mutation.isPending ? "Disabling…" : "Disable two-factor"}
+            {mutation.isPending ? "Отключение…" : "Отключить двухфакторную"}
           </Button>
         </div>
       }
     >
       <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
         <div className="space-y-1.5">
-          <Label htmlFor="disable-pw">Current password</Label>
+          <Label htmlFor="disable-pw">Текущий пароль</Label>
           <Input
             id="disable-pw"
             type="password"
@@ -563,7 +561,7 @@ function TwoFactorDisable() {
             disabled={password.length === 0 || mutation.isPending}
           >
             <ShieldOff className="mr-1 h-3.5 w-3.5" />
-            {mutation.isPending ? "Disabling…" : "Disable"}
+            {mutation.isPending ? "Отключение…" : "Отключить"}
           </Button>
         </div>
       </div>

@@ -25,26 +25,26 @@ export function ProfileSettings() {
   const imageMutation = useMutation({
     mutationFn: (url: string | null) => setProfileImage(url),
     onSuccess: () => {
-      toast.success("Profile image updated");
+      toast.success("Фото профиля обновлено");
       void queryClient.invalidateQueries({ queryKey: ["identity", "profile"] });
     },
     onError: (err: unknown) => {
       const message =
         err instanceof ApiRequestError
           ? (err.problem?.detail ?? err.problem?.title ?? err.message)
-          : "Failed to update profile image";
+          : "Не удалось обновить фото профиля";
       toast.error(message);
     },
   });
 
-  if (profile.isLoading) return <LoadingRow label="Loading profile" />;
+  if (profile.isLoading) return <LoadingRow label="Загрузка профиля" />;
   if (profile.isError) {
     return (
       <ErrorBand
         message={
           profile.error instanceof ApiRequestError
             ? (profile.error.problem?.detail ?? profile.error.message)
-            : "Failed to load profile."
+            : "Не удалось загрузить профиль."
         }
       />
     );
@@ -55,15 +55,15 @@ export function ProfileSettings() {
     [user.firstName, user.lastName].filter(Boolean).join(" ").trim() ||
     user.userName ||
     user.email ||
-    "Account";
+    "Аккаунт";
 
   return (
     <div className="space-y-5 fsh-enter">
       {/* Avatar — presigned upload via ImageInput, no base64 data: URLs */}
       <SettingsSection
-        title="Avatar"
+        title="Аватар"
         icon={UserRound}
-        description="Shown in the topbar and on your activity. Square crops work best — JPG, PNG, or WebP."
+        description="Показывается в шапке и в вашей активности. Лучше квадратное изображение — JPG, PNG или WebP."
       >
         <ImageInput
           value={user.imageUrl ?? ""}
@@ -76,12 +76,12 @@ export function ProfileSettings() {
 
       {/* Identity — read-only; admin must update these server-side */}
       <SettingsSection
-        title="Identity"
+        title="Идентификация"
         icon={Fingerprint}
-        description="Your account details. These are managed by an administrator — contact one if changes are needed."
+        description="Данные вашей учётки. Их меняет администратор — обратитесь к нему при необходимости."
       >
         <div className="grid gap-5 sm:grid-cols-2">
-          <SettingsField id="profile-username" label="Username">
+          <SettingsField id="profile-username" label="Логин">
             <Input
               id="profile-username"
               value={user.userName ?? ""}
@@ -89,7 +89,7 @@ export function ProfileSettings() {
               className="font-mono bg-[var(--color-muted)] cursor-not-allowed"
             />
           </SettingsField>
-          <SettingsField id="profile-display" label="Display name">
+          <SettingsField id="profile-display" label="Отображаемое имя">
             <Input
               id="profile-display"
               value={displayName}
@@ -97,7 +97,7 @@ export function ProfileSettings() {
               className="bg-[var(--color-muted)] cursor-not-allowed"
             />
           </SettingsField>
-          <SettingsField id="profile-email" label="Email">
+          <SettingsField id="profile-email" label="E-mail">
             <Input
               id="profile-email"
               type="email"
@@ -107,11 +107,11 @@ export function ProfileSettings() {
             />
             {user.emailConfirmed !== undefined && (
               <p className="mt-1 text-[11px] text-[var(--color-muted-foreground)]">
-                {user.emailConfirmed ? "Address verified" : "Not yet verified"}
+                {user.emailConfirmed ? "Адрес подтверждён" : "Ещё не подтверждён"}
               </p>
             )}
           </SettingsField>
-          <SettingsField id="profile-phone" label="Phone">
+          <SettingsField id="profile-phone" label="Телефон">
             <Input
               id="profile-phone"
               value={user.phoneNumber ?? "—"}
@@ -124,28 +124,28 @@ export function ProfileSettings() {
 
       {/* Status badges */}
       <SettingsSection
-        title="Account status"
+        title="Состояние аккаунта"
         icon={ShieldCheck}
-        description="Runtime flags on this account. Contact an operator to change them."
+        description="Флаги этой учётки. Их меняет оператор."
       >
         <div className="flex flex-wrap items-center gap-2">
           <Badge
             variant={user.isActive ? "success" : "muted"}
             className="font-mono uppercase tracking-[0.14em]"
           >
-            {user.isActive ? "Active" : "Disabled"}
+            {user.isActive ? "Активна" : "Отключена"}
           </Badge>
           <Badge
             variant={user.emailConfirmed ? "info" : "warning"}
             className="font-mono uppercase tracking-[0.14em]"
           >
-            {user.emailConfirmed ? "Email confirmed" : "Email pending"}
+            {user.emailConfirmed ? "E-mail подтверждён" : "E-mail ожидает"}
           </Badge>
           <Badge
             variant={user.twoFactorEnabled ? "success" : "outline"}
             className="font-mono uppercase tracking-[0.14em]"
           >
-            {user.twoFactorEnabled ? "2FA enabled" : "2FA off"}
+            {user.twoFactorEnabled ? "2FA включена" : "2FA выкл"}
           </Badge>
         </div>
       </SettingsSection>

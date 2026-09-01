@@ -22,8 +22,8 @@ export function ConfirmDialog({
   onOpenChange,
   title,
   description,
-  confirmLabel = "Confirm",
-  cancelLabel = "Cancel",
+  confirmLabel = "Подтвердить",
+  cancelLabel = "Отмена",
   onConfirm,
   destructive = false,
   pending = false,
@@ -72,7 +72,7 @@ export function ConfirmDialog({
             onClick={onConfirm}
             disabled={pending}
           >
-            {pending ? "Working…" : confirmLabel}
+            {pending ? "Выполнение…" : confirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

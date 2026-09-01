@@ -66,9 +66,9 @@ export function ActiveGrantsCard({ tenantId }: { tenantId: string }) {
   return (
     <>
       <SettingsSection
-        title="Active impersonations"
+        title="Активные имперсонации"
         icon={UserCog}
-        description="Operators currently signed in as users in this tenant. Revoking immediately invalidates the issued token; the dashboard tab will 401 on its next request."
+        description="Операторы, вошедшие как пользователи этой школы. Отзыв немедленно аннулирует токен; вкладка дашборда получит 401 на следующем запросе."
       >
         <ul className="divide-y divide-[var(--color-border)]">
           {items.map((g) => (
@@ -127,7 +127,7 @@ function GrantRow({
       <span
         aria-hidden
         className="pulse-dot"
-        title="Active session"
+        title="Активная сессия"
       />
 
       {/* Session detail */}
@@ -143,12 +143,12 @@ function GrantRow({
             </span>
           </span>
           <Badge variant="brand" className="font-mono uppercase tracking-[0.14em]">
-            Active
+            Активна
           </Badge>
         </div>
         <div className="mt-0.5 truncate font-mono text-[10.5px] text-[var(--color-muted-foreground)]">
-          started {new Date(g.startedAtUtc).toLocaleTimeString()} · expires{" "}
-          {new Date(g.expiresAtUtc).toLocaleTimeString()}
+          начата {new Date(g.startedAtUtc).toLocaleTimeString("ru-RU")} · истекает{" "}
+          {new Date(g.expiresAtUtc).toLocaleTimeString("ru-RU")}
           {g.reason && <> · {truncate(g.reason, 80)}</>}
         </div>
       </div>
@@ -181,7 +181,7 @@ function RowActions({
   if (!canRevoke && !canReopen) {
     return (
       <Badge variant="muted" className="font-mono uppercase tracking-[0.14em]">
-        <UserCog className="h-3 w-3" /> view-only
+        <UserCog className="h-3 w-3" /> только просмотр
       </Badge>
     );
   }
@@ -192,14 +192,14 @@ function RowActions({
           variant="outline"
           size="sm"
           onClick={onReopen}
-          title="Issue a fresh impersonation token — use when you lost the original dashboard tab."
+          title="Выдать новый токен имперсонации — если потеряна исходная вкладка дашборда."
         >
-          <UserCog className="mr-1 h-3.5 w-3.5" /> Re-open
+          <UserCog className="mr-1 h-3.5 w-3.5" /> Открыть заново
         </Button>
       )}
       {canRevoke && (
         <Button variant="outline" size="sm" onClick={onRevoke}>
-          <ShieldOff className="mr-1 h-3.5 w-3.5" /> Revoke
+          <ShieldOff className="mr-1 h-3.5 w-3.5" /> Отозвать
         </Button>
       )}
     </div>

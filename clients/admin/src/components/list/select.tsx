@@ -54,7 +54,7 @@ export function Select<T extends string = string>({
     ? current.hint
       ? `${current.label} — ${current.hint}`
       : current.label
-    : emptyLabel ?? allOptions[0]?.label ?? "Select…";
+    : emptyLabel ?? allOptions[0]?.label ?? "Выбрать…";
   const hasSelection = value !== "";
 
   return (

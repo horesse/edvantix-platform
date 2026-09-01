@@ -14,15 +14,15 @@ const MODES: {
 }[] = [
   {
     value: "light",
-    label: "Light",
+    label: "Светлая",
     icon: Sun,
-    blurb: "Paper-white surfaces, magazine-print mood.",
+    blurb: "Бумажно-белые поверхности, журнальный настрой.",
   },
   {
     value: "dark",
-    label: "Dark",
+    label: "Тёмная",
     icon: Moon,
-    blurb: "Console-default. Lower glare for long sessions.",
+    blurb: "По умолчанию. Меньше бликов при долгой работе.",
   },
 ];
 
@@ -38,9 +38,9 @@ export function AppearanceSettings() {
     <div className="space-y-5 fsh-enter">
       {/* Theme */}
       <SettingsSection
-        title="Theme"
+        title="Тема"
         icon={Palette}
-        description="Console looks good in both modes — the editorial-terminal language is built around tone-neutral surfaces with a single chartreuse accent that reads identically on either."
+        description="Консоль хорошо смотрится в обеих темах — язык интерфейса построен на нейтральных поверхностях с единым акцентом-chartreuse, который читается одинаково."
       >
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {MODES.map(({ value, label, icon: Icon, blurb }) => {
@@ -73,7 +73,7 @@ export function AppearanceSettings() {
                   </span>
                   {active && (
                     <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-accent-signal)]">
-                      Active
+                      Активна
                     </span>
                   )}
                 </div>
@@ -96,12 +96,12 @@ export function AppearanceSettings() {
 
       {/* Density — placeholder for a future compact toggle */}
       <SettingsSection
-        title="Density"
+        title="Плотность"
         icon={Palette}
-        description="Compact mode will reduce card padding and row height for data-dense screens — similar to the dashboard's density toggle."
+        description="Компактный режим уменьшит отступы карточек и высоту строк для плотных экранов — как переключатель плотности в дашборде."
       >
         <Button variant="outline" size="sm" disabled>
-          Compact rows · coming soon
+          Компактные строки · скоро
         </Button>
       </SettingsSection>
     </div>
