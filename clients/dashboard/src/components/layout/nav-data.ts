@@ -78,6 +78,34 @@ export const topNavBottom: NavSpec[] = [
 // Section accordion. Single-select — only one section open at a time.
 export const sections: NavSection[] = [
   {
+    // Личный кабинет — «свои» экраны для преподавателя / ученика / представителя.
+    // Каждый пункт гейтится правом *.ViewOwn: у менеджера их нет (у него полный
+    // *.View), поэтому весь раздел скрыт для сотрудников школы.
+    id: "cabinet",
+    caption: "Кабинет",
+    icon: LayoutDashboard,
+    items: [
+      {
+        to: "/my/schedule",
+        label: "Моё расписание",
+        icon: CalendarRange,
+        perm: "Permissions.Scheduling.Sessions.ViewOwn",
+      },
+      {
+        to: "/my/groups",
+        label: "Мои группы",
+        icon: UsersRound,
+        perm: "Permissions.StudyGroups.StudyGroups.ViewOwn",
+      },
+      {
+        to: "/my/invoices",
+        label: "Мои счета",
+        icon: Receipt,
+        perm: "Permissions.Payments.StudentInvoices.ViewOwn",
+      },
+    ],
+  },
+  {
     id: "operations",
     caption: "Operations",
     icon: Activity,
@@ -145,12 +173,6 @@ export const sections: NavSection[] = [
         label: "Посещаемость",
         icon: ClipboardCheck,
         perm: "Permissions.Scheduling.Attendance.View",
-      },
-      {
-        to: "/sessions/my",
-        label: "Моё расписание",
-        icon: CalendarRange,
-        perm: "Permissions.Scheduling.Sessions.ViewOwn",
       },
       {
         to: "/settings/rooms",

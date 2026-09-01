@@ -2,6 +2,8 @@ import { lazy, Suspense, type ComponentType } from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import { AppShell } from "@/components/layout/app-shell";
 import { ProtectedRoute } from "@/auth/protected-route";
+import { WardProvider } from "@/cabinet/ward-context";
+import { useCabinetRole, isCabinetRole } from "@/cabinet/use-cabinet-role";
 import { RouteError } from "@/components/route-error";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/cn";
@@ -36,6 +38,10 @@ const ForgotPasswordPage = lazyNamed(
 const ResetPasswordPage = lazyNamed(
   () => import("@/pages/auth/reset-password"),
   "ResetPasswordPage",
+);
+const AcceptInvitePage = lazyNamed(
+  () => import("@/pages/auth/accept-invite"),
+  "AcceptInvitePage",
 );
 const ConfirmEmailPage = lazyNamed(
   () => import("@/pages/auth/confirm-email"),
@@ -140,9 +146,21 @@ const StudyGroupsPage = lazyNamed(
   () => import("@/pages/study-groups/study-groups-list"),
   "StudyGroupsPage",
 );
-const MyStudyGroupsPage = lazyNamed(
-  () => import("@/pages/study-groups/my-study-groups"),
-  "MyStudyGroupsPage",
+const CabinetLandingPage = lazyNamed(
+  () => import("@/pages/cabinet/cabinet-landing"),
+  "CabinetLandingPage",
+);
+const CabinetSchedulePage = lazyNamed(
+  () => import("@/pages/cabinet/my-schedule"),
+  "CabinetSchedulePage",
+);
+const CabinetGroupsPage = lazyNamed(
+  () => import("@/pages/cabinet/my-groups"),
+  "CabinetGroupsPage",
+);
+const CabinetInvoicesPage = lazyNamed(
+  () => import("@/pages/cabinet/my-invoices"),
+  "CabinetInvoicesPage",
 );
 const StudyGroupBuilderPage = lazyNamed(
   () => import("@/pages/study-groups/study-group-detail"),
@@ -155,10 +173,6 @@ const ScheduleCalendarPage = lazyNamed(
 const SessionDetailPage = lazyNamed(
   () => import("@/pages/scheduling/session-detail"),
   "SessionDetailPage",
-);
-const MySchedulePage = lazyNamed(
-  () => import("@/pages/scheduling/my-schedule"),
-  "MySchedulePage",
 );
 const AttendanceGridPage = lazyNamed(
   () => import("@/pages/scheduling/attendance-grid"),
@@ -195,10 +209,6 @@ const DebtorsPage = lazyNamed(
 const RevenuePage = lazyNamed(
   () => import("@/pages/payments/revenue"),
   "RevenuePage",
-);
-const MyInvoicesPage = lazyNamed(
-  () => import("@/pages/payments/my-invoices"),
-  "MyInvoicesPage",
 );
 const MyFilesPage = lazyNamed(() => import("@/pages/files/my-files"), "MyFilesPage");
 const ChatPage = lazyNamed(() => import("@/pages/chat/chat-page"), "ChatPage");
@@ -238,6 +248,20 @@ function withSuspense(node: React.ReactNode) {
   return <Suspense fallback={<RouteFallback />}>{node}</Suspense>;
 }
 
+/**
+ * Index route (`/`) — sends the user to the surface that fits their role.
+ * Manager / admin (and an unrecognised subject) stay on the school Overview;
+ * a teacher / student / guardian is redirected into their cabinet (`/my`).
+ * See `useCabinetRole` for how the role is derived (permissions + People
+ * scope — the dashboard JWT carries no role claim).
+ */
+function RoleLanding() {
+  const { role, isLoading } = useCabinetRole();
+  if (isLoading) return <RouteFallback />;
+  if (isCabinetRole(role)) return <Navigate to="/my" replace />;
+  return withSuspense(<OverviewPage />);
+}
+
 export const router = createBrowserRouter([
   {
     path: "/login",
@@ -252,6 +276,13 @@ export const router = createBrowserRouter([
   {
     path: "/reset-password",
     element: withSuspense(<ResetPasswordPage />),
+    errorElement: <RouteError />,
+  },
+  {
+    // Приём приглашения по e-mail — публичный маршрут (вне ProtectedRoute),
+    // рядом с /reset-password: тот же POST /identity/reset-password.
+    path: "/accept-invite",
+    element: withSuspense(<AcceptInvitePage />),
     errorElement: <RouteError />,
   },
   {
@@ -283,10 +314,28 @@ export const router = createBrowserRouter([
     errorElement: <RouteError />,
     children: [
       {
-        element: <AppShell />,
+        // WardProvider — общий контекст переключателя подопечных
+        // представителя для всех экранов кабинета (см. cabinet/ward-context).
+        element: (
+          <WardProvider>
+            <AppShell />
+          </WardProvider>
+        ),
         errorElement: <RouteError />,
         children: [
-          { index: true, element: withSuspense(<OverviewPage />) },
+          { index: true, element: <RoleLanding /> },
+          { path: "overview", element: withSuspense(<OverviewPage />) },
+          { path: "my", element: withSuspense(<CabinetLandingPage />) },
+          { path: "my/schedule", element: withSuspense(<CabinetSchedulePage />) },
+          { path: "my/groups", element: withSuspense(<CabinetGroupsPage />) },
+          { path: "my/invoices", element: withSuspense(<CabinetInvoicesPage />) },
+          // Совместимость со ссылками этапов 3–5 — «свои» экраны переехали в /my/*.
+          { path: "sessions/my", element: <Navigate to="/my/schedule" replace /> },
+          { path: "study-groups/my", element: <Navigate to="/my/groups" replace /> },
+          {
+            path: "student-invoices/my",
+            element: <Navigate to="/my/invoices" replace />,
+          },
           { path: "activity", element: withSuspense(<ActivityPage />) },
           { path: "subscription", element: withSuspense(<SubscriptionPage />) },
           { path: "invoices", element: withSuspense(<InvoicesPage />) },
@@ -312,7 +361,6 @@ export const router = createBrowserRouter([
           { path: "courses/trash", element: withSuspense(<CoursesTrashPage />) },
           { path: "courses/:courseId", element: withSuspense(<CourseBuilderPage />) },
           { path: "study-groups", element: withSuspense(<StudyGroupsPage />) },
-          { path: "study-groups/my", element: withSuspense(<MyStudyGroupsPage />) },
           {
             path: "study-groups/:studyGroupId/schedule",
             element: withSuspense(<GroupScheduleTemplatesPage />),
@@ -322,7 +370,6 @@ export const router = createBrowserRouter([
             element: withSuspense(<StudyGroupBuilderPage />),
           },
           { path: "schedule", element: withSuspense(<ScheduleCalendarPage />) },
-          { path: "sessions/my", element: withSuspense(<MySchedulePage />) },
           { path: "sessions/:sessionId", element: withSuspense(<SessionDetailPage />) },
           { path: "attendance", element: withSuspense(<AttendanceGridPage />) },
           { path: "payments/tariffs", element: withSuspense(<TariffsPage />) },
@@ -333,10 +380,6 @@ export const router = createBrowserRouter([
           },
           { path: "payments/debtors", element: withSuspense(<DebtorsPage />) },
           { path: "payments/revenue", element: withSuspense(<RevenuePage />) },
-          {
-            path: "student-invoices/my",
-            element: withSuspense(<MyInvoicesPage />),
-          },
           { path: "settings/rooms", element: withSuspense(<RoomsSettingsPage />) },
           {
             path: "settings/non-working-days",

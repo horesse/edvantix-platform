@@ -340,17 +340,39 @@ tags: [задачи, frontend]
 
 ### Этап 6 · Кабинеты
 
-- [ ] `/my/schedule` — преподаватель, ученик, представитель
-- [ ] `/my/invoices` — ученик и представитель
-- [ ] Стартовые страницы по ролям (разные маршруты, не разные приложения)
-- [ ] Переключатель подопечных для представителя
-- [ ] `/accept-invite` — форма установки пароля по ссылке из письма-приглашения
-      (`email`, `token`, `tenant` в query). Отправляет `POST /reset-password`, тот же
-      запрос, что и `/reset-password` — backend уже реализован, см. [[Identity]] →
-      «Приглашение по e-mail» и [[Задачи · Доработки каркаса]]
-- [ ] Убрать/не строить экран самостоятельной регистрации — приглашение стало
-      единственным путём получить доступ представителю/ученику на практике;
-      backend `/self-register` не удаляется, просто на него больше не ссылается UI
+> [!success] Этап 6 сделан
+> Тонкие экраны поверх «своих» эндпоинтов этапов 3–5 + разрешение личности через
+> `GET /people/me/scope`. Нового бэкенд-модуля нет.
+
+- [x] `/my/schedule` — преподаватель, ученик, представитель. `GET /sessions/my?from=&to=`
+      (`Sessions.ViewOwn`), диапазон 7/14/30 дней. Для представителя — с учётом
+      переключателя подопечного (в запрос уходит `studentId=<ward>` как forward-compat
+      подсказка; сервер пока отдаёт объединение групп всех подопечных). `pages/cabinet/my-schedule.tsx`
+- [x] `/my/invoices` — ученик и представитель. `GET /student-invoices/my` (опц. `status`,
+      `StudentInvoices.ViewOwn`); сервер сам резолвит через `PeopleScope`, отдельного
+      параметра подопечного нет. Для представителя — столбец «Ученик» + клиентский фильтр
+      по выбранному подопечному. `pages/cabinet/my-invoices.tsx`
+- [x] `/my/groups` — `GET /study-groups/my` (`StudyGroups.ViewOwn`), список без создания/
+      редактирования. `pages/cabinet/my-groups.tsx`
+- [x] Стартовые страницы по ролям (разные маршруты, не разные приложения). Индексный
+      маршрут `/` = `RoleLanding`: по `GET /people/me/scope` + правам из `useAuth().user`
+      определяем роль (`use-cabinet-role.ts`). Менеджер/админ/неопознанный → обзор школы
+      на `/`; преподаватель/ученик/представитель → редирект на `/my` (лендинг кабинета
+      `pages/cabinet/cabinet-landing.tsx`, разный для преподавателя и ученика/представителя).
+      В меню — отдельный раздел «Кабинет» (`nav-data.ts`), гейт по `*.ViewOwn`
+- [x] Переключатель подопечных для представителя. `WardProvider`/`useWard`
+      (`src/cabinet/ward-context.tsx`) — общий контекст из `PeopleScope.wardStudentIds`,
+      ФИО через `GET /students/{id}` (`retry:false` → запасная подпись «Подопечный N»,
+      если у представителя нет `Students.View`). Выбор в `localStorage` на тенант, влияет
+      на `/my/schedule` и `/my/invoices`. Для ученика без подопечных не показывается
+- [x] `/accept-invite` — публичный маршрут (вне `ProtectedRoute`, рядом с `/reset-password`
+      в `routes.tsx`). Читает `email`/`token`/`tenant` из query, сабмит →
+      `POST /identity/reset-password` (тот же `resetPassword()` из `api/identity.ts`),
+      успех → тост + редирект на `/login`, ошибки RFC 9457 через `describe()`.
+      `pages/auth/accept-invite.tsx`
+- [x] Экран самостоятельной регистрации в dashboard UI отсутствует и не строился;
+      ссылок на `/self-register` в `clients/dashboard/src` нет (проверено grep'ом).
+      Backend `/self-register` не тронут
 
 ### Этап 7 · Настройки и уборка
 

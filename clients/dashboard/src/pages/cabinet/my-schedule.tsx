@@ -6,6 +6,8 @@ import { getMySchedule } from "@/api/scheduling";
 import { searchStudyGroups } from "@/api/study-groups";
 import { getTenantSettings } from "@/api/tenant-settings";
 import { useAuth } from "@/auth/use-auth";
+import { WardSwitcher } from "@/cabinet/ward-switcher";
+import { useWard } from "@/cabinet/use-ward";
 import { Button } from "@/components/ui/button";
 import {
   EntityEmpty,
@@ -19,7 +21,7 @@ import { formatZonedDateTime, formatZonedTime } from "@/lib/tz";
 import {
   SESSION_STATUS_LABEL,
   SESSION_STATUS_TONE,
-} from "./scheduling-ui";
+} from "@/pages/scheduling/scheduling-ui";
 
 const RANGES = [
   { key: "7", label: "7 дней", days: 7 },
@@ -27,10 +29,11 @@ const RANGES = [
   { key: "30", label: "Месяц", days: 30 },
 ] as const;
 
-export function MySchedulePage() {
+export function CabinetSchedulePage() {
   const perms = useAuth().user?.permissions ?? [];
   const canViewOwn = perms.includes("Permissions.Scheduling.Sessions.ViewOwn");
   const [rangeKey, setRangeKey] = useState<(typeof RANGES)[number]["key"]>("14");
+  const { selectedWardId, selectedWard } = useWard();
 
   const days = RANGES.find((r) => r.key === rangeKey)!.days;
   const { from, to } = useMemo(() => {
@@ -49,8 +52,8 @@ export function MySchedulePage() {
   const tz = settingsQuery.data?.timeZoneId || "UTC";
 
   const query = useQuery({
-    queryKey: ["sessions", "my", { from, to }],
-    queryFn: () => getMySchedule(from, to),
+    queryKey: ["sessions", "my", { from, to, ward: selectedWardId }],
+    queryFn: () => getMySchedule(from, to, selectedWardId),
     enabled: canViewOwn,
   });
 
@@ -73,7 +76,7 @@ export function MySchedulePage() {
   if (!canViewOwn) {
     return (
       <div className="space-y-6">
-        <PageHero eyebrow="Расписание" title="Моё расписание" />
+        <PageHero eyebrow="Кабинет" title="Моё расписание" />
         <EntityEmpty
           icon={CalendarRange}
           title="Нет доступа"
@@ -86,10 +89,16 @@ export function MySchedulePage() {
   return (
     <div className="space-y-4">
       <PageHero
-        eyebrow="Расписание"
+        eyebrow="Кабинет"
         title="Моё расписание"
-        subtitle={`Ближайшие занятия — ваши как преподавателя или занятия ваших групп. Часовой пояс школы: ${tz}.`}
+        subtitle={
+          selectedWard
+            ? `Занятия групп подопечного «${selectedWard.name}». Часовой пояс школы: ${tz}.`
+            : `Ближайшие занятия — ваши как преподавателя, ваших групп или групп подопечных. Часовой пояс школы: ${tz}.`
+        }
       />
+
+      <WardSwitcher />
 
       <div className="flex items-center gap-1">
         {RANGES.map((r) => (
