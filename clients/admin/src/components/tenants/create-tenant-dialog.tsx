@@ -42,15 +42,15 @@ const schema = z.object({
     .trim()
     .regex(
       TENANT_ID_RE,
-      "Lowercase letters, digits, hyphens. 3–64 chars. No leading/trailing hyphen.",
+      "Строчные буквы, цифры, дефис. 3–64 символа. Без дефиса по краям.",
     ),
-  name: z.string().trim().min(2, "At least 2 characters.").max(128),
-  adminEmail: z.string().trim().email("Enter a valid email."),
+  name: z.string().trim().min(2, "Не меньше 2 символов.").max(128),
+  adminEmail: z.string().trim().email("Введите корректный e-mail."),
   adminPassword: z
     .string()
-    .min(8, "At least 8 characters.")
-    .max(128, "Maximum 128 characters."),
-  issuer: z.string().trim().min(2, "Required.").max(256),
+    .min(8, "Не меньше 8 символов.")
+    .max(128, "Не больше 128 символов."),
+  issuer: z.string().trim().min(2, "Обязательное поле.").max(256),
   connectionString: z.string().trim().max(2048).optional(),
   // Optional: preselected to the default plan when plans load; if left empty the
   // server falls back to the configured trial plan.
@@ -129,8 +129,8 @@ function PreviewRail({
   planLabel: string | null;
   email: string;
 }) {
-  const displayName = name.trim() || "New tenant";
-  const displaySlug = slug || "tenant-id";
+  const displayName = name.trim() || "Новая школа";
+  const displaySlug = slug || "school-id";
 
   return (
     <aside
@@ -173,7 +173,7 @@ function PreviewRail({
               className="size-1.5 rounded-full bg-[var(--color-primary)] ring-2 ring-[oklch(from_var(--color-primary)_l_c_h_/_0.18)]"
             />
             <span className="text-[12px] text-[var(--color-muted-foreground)]">
-              {planLabel ?? "Default plan"}
+              {planLabel ?? "Тариф по умолчанию"}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -182,14 +182,14 @@ function PreviewRail({
               className="size-1.5 rounded-full bg-[var(--color-success)] ring-2 ring-[oklch(from_var(--color-success)_l_c_h_/_0.18)]"
             />
             <span className="text-[12px] text-[var(--color-muted-foreground)]">
-              Active on creation
+              Активна сразу после создания
             </span>
           </div>
         </dl>
       </div>
 
       <p className="relative mt-auto hidden pt-6 text-[11px] leading-relaxed text-[var(--color-muted-foreground)]/75 sm:block">
-        Provisioning runs in the background. You can track progress on the tenant&apos;s detail page.
+        Провижининг идёт в фоне. Прогресс виден на странице школы.
       </p>
     </aside>
   );
@@ -297,9 +297,9 @@ export function CreateTenantDialog({
         planKey: values.planKey?.trim() ? values.planKey : null,
       }),
     onSuccess: (result) => {
-      toast.success(`Tenant ${result.id} created`, {
+      toast.success(`Школа ${result.id} создана`, {
         description:
-          "Provisioning runs in the background. Track progress on the detail page.",
+          "Провижининг идёт в фоне. Прогресс — на странице школы.",
       });
       // Fire-and-forget refresh — don't block navigation on the list refetch.
       void queryClient.invalidateQueries({ queryKey: ["tenants"] });
@@ -311,7 +311,7 @@ export function CreateTenantDialog({
         err instanceof ApiRequestError
           ? err.problem?.detail ?? err.problem?.title ?? err.message
           : (err as Error).message;
-      toast.error("Create failed", { description: detail });
+      toast.error("Не удалось создать", { description: detail });
     },
   });
 
@@ -367,22 +367,22 @@ export function CreateTenantDialog({
             {/* Header (leave room for the close affordance, top-right) */}
             <div className="flex flex-col gap-1 px-6 pb-2 pt-6 pr-12">
               <div className="flex items-center gap-2">
-                <DialogTitle className="text-[16px]">New tenant</DialogTitle>
+                <DialogTitle className="text-[16px]">Новая школа</DialogTitle>
                 <Sparkles className="size-3.5 text-[var(--color-primary)] opacity-70" aria-hidden />
               </div>
               <DialogDescription>
-                Provision a tenant and its seed admin. The identifier is the URL-safe slug used in
-                routing and JWT claims.
+                Создайте школу и её первого администратора. Идентификатор — URL-безопасный слаг,
+                используемый в маршрутах и claim’ах JWT.
               </DialogDescription>
             </div>
 
             {/* Fields */}
             <div className="space-y-4 px-6 py-4">
-              <Field id="ct-name" label="Display name" required error={errors.name?.message}>
+              <Field id="ct-name" label="Название" required error={errors.name?.message}>
                 <Input
                   id="ct-name"
                   autoComplete="off"
-                  placeholder="Acme Corp"
+                  placeholder="Школа «Пример»"
                   {...register("name")}
                 />
               </Field>
@@ -390,16 +390,16 @@ export function CreateTenantDialog({
               {/* Identifier — auto-derived, unlock to edit */}
               <Field
                 id="ct-id"
-                label="Identifier"
+                label="Идентификатор"
                 required
                 hint={
                   idTouched && idValid ? (
                     <span className="inline-flex items-center gap-1 text-[var(--color-success)]">
                       <CircleCheck className="size-3.5" aria-hidden />
-                      Valid format — availability is confirmed when you create.
+                      Формат корректен — доступность проверится при создании.
                     </span>
                   ) : (
-                    "Lowercase letters, digits, and hyphens. 3–64 characters."
+                    "Строчные буквы, цифры и дефис. 3–64 символа."
                   )
                 }
                 error={errors.id?.message}
@@ -426,7 +426,7 @@ export function CreateTenantDialog({
                           hover:text-[var(--color-foreground)] cursor-pointer outline-none
                           focus-visible:ring-2 focus-visible:ring-[oklch(from_var(--color-ring)_l_c_h_/_0.5)]"
                       >
-                        <Pencil className="size-3" aria-hidden /> Edit
+                        <Pencil className="size-3" aria-hidden /> Правка
                       </button>
                     ) : (
                       <button
@@ -437,7 +437,7 @@ export function CreateTenantDialog({
                           hover:text-[var(--color-foreground)] cursor-pointer outline-none
                           focus-visible:ring-2 focus-visible:ring-[oklch(from_var(--color-ring)_l_c_h_/_0.5)]"
                       >
-                        <Lock className="size-3" aria-hidden /> Auto
+                        <Lock className="size-3" aria-hidden /> Авто
                       </button>
                     )}
                   </div>
@@ -446,7 +446,7 @@ export function CreateTenantDialog({
 
               <Field
                 id="ct-adminEmail"
-                label="Admin email"
+                label="E-mail администратора"
                 required
                 error={errors.adminEmail?.message}
               >
@@ -463,9 +463,9 @@ export function CreateTenantDialog({
               {/* Password — generate + show/hide */}
               <Field
                 id="ct-adminPassword"
-                label="Initial admin password"
+                label="Начальный пароль администратора"
                 required
-                hint="The first admin signs in with this and can rotate it after first login."
+                hint="Первый администратор войдёт с этим паролем и сможет сменить его после первого входа."
                 error={errors.adminPassword?.message}
               >
                 <div className="relative">
@@ -473,16 +473,16 @@ export function CreateTenantDialog({
                     id="ct-adminPassword"
                     type={showPassword ? "text" : "password"}
                     autoComplete="new-password"
-                    placeholder="Min 8 characters"
+                    placeholder="Минимум 8 символов"
                     className="pr-16 font-mono"
                     {...register("adminPassword")}
                   />
                   <div className="absolute inset-y-0 right-1.5 flex items-center gap-0.5">
-                    <AdornButton label="Generate strong password" onClick={fillGeneratedPassword}>
+                    <AdornButton label="Сгенерировать надёжный пароль" onClick={fillGeneratedPassword}>
                       <Wand2 aria-hidden />
                     </AdornButton>
                     <AdornButton
-                      label={showPassword ? "Hide password" : "Show password"}
+                      label={showPassword ? "Скрыть пароль" : "Показать пароль"}
                       onClick={() => setShowPassword((s) => !s)}
                     >
                       {showPassword ? <EyeOff aria-hidden /> : <Eye aria-hidden />}
@@ -494,11 +494,11 @@ export function CreateTenantDialog({
               {/* Plan */}
               <Field
                 id="ct-plan"
-                label="Billing plan"
+                label="Тариф"
                 hint={
                   plansQuery.isError
-                    ? "Could not load plans — the tenant will fall back to the default plan."
-                    : "Sets the first invoice and how long the tenant stays valid. Defaults to the trial plan."
+                    ? "Не удалось загрузить тарифы — школа будет создана на тарифе по умолчанию."
+                    : "Задаёт первый счёт и срок действия школы. По умолчанию — пробный тариф."
                 }
                 error={errors.planKey?.message}
               >
@@ -513,9 +513,9 @@ export function CreateTenantDialog({
                       options={planOptions}
                       emptyLabel={
                         plansQuery.isLoading
-                          ? "Loading plans…"
+                          ? "Загрузка тарифов…"
                           : planOptions.length === 0
-                            ? "No active plans"
+                            ? "Нет активных тарифов"
                             : undefined
                       }
                       disabled={plansQuery.isLoading || planOptions.length === 0}
@@ -535,9 +535,9 @@ export function CreateTenantDialog({
                     focus-visible:ring-2 focus-visible:ring-[oklch(from_var(--color-ring)_l_c_h_/_0.5)]"
                 >
                   <span className="text-[12.5px] font-medium text-[var(--color-foreground)]">
-                    Advanced
+                    Дополнительно
                     <span className="ml-1.5 font-normal text-[var(--color-muted-foreground)]">
-                      issuer, dedicated database
+                      издатель, отдельная БД
                     </span>
                   </span>
                   <ChevronDown
@@ -553,9 +553,9 @@ export function CreateTenantDialog({
                   <div className="space-y-4 border-t border-[var(--color-border)] px-3 py-3.5">
                     <Field
                       id="ct-issuer"
-                      label="JWT issuer"
+                      label="Издатель JWT"
                       required
-                      hint="Mirrors the identifier by default. Issued in tokens to scope sessions."
+                      hint="По умолчанию совпадает с идентификатором. Пишется в токены для ограничения сессий."
                       error={errors.issuer?.message}
                     >
                       <Input
@@ -572,8 +572,8 @@ export function CreateTenantDialog({
 
                     <Field
                       id="ct-connectionString"
-                      label="Connection string"
-                      hint="Optional. Leave blank to use the shared catalog database."
+                      label="Строка подключения"
+                      hint="Необязательно. Пусто — общая БД каталога."
                       error={errors.connectionString?.message}
                     >
                       <Input
@@ -591,16 +591,16 @@ export function CreateTenantDialog({
             {/* Footer */}
             <DialogFooter className="px-6">
               <Button type="button" variant="outline" onClick={handleClose} disabled={submitting}>
-                Cancel
+                Отмена
               </Button>
               <Button type="submit" disabled={submitting} className="min-w-[8.5rem]">
                 {submitting ? (
                   <>
                     <Loader2 className="size-4 animate-spin" aria-hidden />
-                    <span>Provisioning…</span>
+                    <span>Создание…</span>
                   </>
                 ) : (
-                  "Create tenant"
+                  "Создать школу"
                 )}
               </Button>
             </DialogFooter>

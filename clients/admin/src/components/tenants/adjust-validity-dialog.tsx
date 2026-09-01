@@ -25,8 +25,8 @@ import { ApiRequestError } from "@/lib/api-client";
 const schema = z.object({
   validUpto: z
     .string()
-    .min(1, "Pick a date.")
-    .refine((v) => !Number.isNaN(new Date(v).getTime()), "Enter a valid date."),
+    .min(1, "Выберите дату.")
+    .refine((v) => !Number.isNaN(new Date(v).getTime()), "Введите корректную дату."),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -40,7 +40,7 @@ function describe(err: unknown, fallback: string): string {
 function formatDate(value?: string | null): string {
   if (!value) return "—";
   const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? value : d.toLocaleDateString();
+  return Number.isNaN(d.getTime()) ? value : d.toLocaleDateString("ru-RU");
 }
 
 /** `YYYY-MM-DD` (the native date input value) for an ISO/date string, for prefill. */
@@ -88,14 +88,14 @@ export function AdjustValidityDialog({
     // Pass the date via mutate(arg) — never close over form state at submit time.
     mutationFn: (value: string) => adjustTenantValidity(tenantId, new Date(value).toISOString()),
     onSuccess: (result) => {
-      toast.success("Validity adjusted", {
-        description: `Valid until ${formatDate(result.validUpto)}. No invoice was issued.`,
+      toast.success("Срок скорректирован", {
+        description: `Действует до ${formatDate(result.validUpto)}. Счёт не выставлялся.`,
       });
       queryClient.invalidateQueries({ queryKey: ["tenant", tenantId] });
       queryClient.invalidateQueries({ queryKey: ["tenants"] });
       handleClose();
     },
-    onError: (err) => toast.error("Adjust failed", { description: describe(err, "Could not adjust validity.") }),
+    onError: (err) => toast.error("Не удалось скорректировать", { description: describe(err, "Не удалось изменить срок.") }),
   });
 
   function handleClose() {
@@ -125,12 +125,12 @@ export function AdjustValidityDialog({
             >
               <CalendarCog className="h-[18px] w-[18px]" />
             </span>
-            <DialogTitle className="text-[16px]">Adjust validity</DialogTitle>
+            <DialogTitle className="text-[16px]">Корректировка срока</DialogTitle>
           </div>
           <DialogDescription className="mt-1">
-            Set this tenant's expiry date directly — an operator override with{" "}
-            <strong className="text-[var(--color-foreground)]">no invoice</strong>. Use for comps or
-            corrections; renewals that should bill belong in Renew. Currently valid until{" "}
+            Задать дату окончания школы напрямую — операторская правка{" "}
+            <strong className="text-[var(--color-foreground)]">без счёта</strong>. Для компенсаций и
+            исправлений; продления со счётом — в «Продлить». Сейчас действует до{" "}
             {formatDate(validUpto)}.
           </DialogDescription>
         </DialogHeader>
@@ -139,9 +139,9 @@ export function AdjustValidityDialog({
           <DialogBody className="space-y-4">
             <Field
               id="av-validUpto"
-              label="Valid until"
+              label="Действует до"
               required
-              hint="Backdating is allowed. No invoice is issued for an adjustment."
+              hint="Задним числом можно. За корректировку счёт не выставляется."
               error={errors.validUpto?.message}
             >
               <Input id="av-validUpto" type="date" {...register("validUpto")} />
@@ -150,10 +150,10 @@ export function AdjustValidityDialog({
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={handleClose} disabled={submitting}>
-              Cancel
+              Отмена
             </Button>
             <Button type="submit" disabled={submitting}>
-              {submitting ? "Saving…" : "Adjust validity"}
+              {submitting ? "Сохранение…" : "Скорректировать срок"}
             </Button>
           </DialogFooter>
         </form>

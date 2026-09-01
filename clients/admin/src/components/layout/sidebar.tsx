@@ -66,7 +66,7 @@ export function Sidebar() {
   return (
     <aside
       data-collapsed={collapsed || undefined}
-      aria-label="Primary navigation"
+      aria-label="Основная навигация"
       className={cn(
         "hidden shrink-0 flex-col border-r border-[var(--color-border)]",
         "bg-[oklch(from_var(--color-card)_l_c_h_/_0.85)] backdrop-blur-xl backdrop-saturate-150 md:flex",
@@ -89,15 +89,15 @@ export function Sidebar() {
               "font-display text-[12px] font-bold text-[var(--color-primary-foreground)]",
             )}
           >
-            F
+            E
           </span>
           {!collapsed && (
             <div className="flex flex-col">
               <span className="whitespace-nowrap font-display text-[15px] font-bold leading-none tracking-tight text-[var(--color-foreground)]">
-                fullstack<span className="text-[var(--color-primary)]">hero</span>
+                Edvantix
               </span>
               <span className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-[oklch(from_var(--color-muted-foreground)_l_c_h_/_0.7)]">
-                Admin
+                Оператор
               </span>
             </div>
           )}
@@ -107,9 +107,9 @@ export function Sidebar() {
           <button
             type="button"
             onClick={toggle}
-            aria-label="Collapse sidebar"
+            aria-label="Свернуть боковую панель"
             aria-expanded={!collapsed}
-            title="Collapse sidebar"
+            title="Свернуть боковую панель"
             className={cn(
               "grid h-7 w-7 shrink-0 cursor-pointer place-items-center rounded-md",
               "text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)] hover:text-[var(--color-foreground)]",
@@ -140,9 +140,9 @@ export function Sidebar() {
           <button
             type="button"
             onClick={toggle}
-            aria-label="Expand sidebar"
+            aria-label="Развернуть боковую панель"
             aria-expanded={false}
-            title="Expand sidebar"
+            title="Развернуть боковую панель"
             className={cn(
               "grid h-7 w-7 shrink-0 cursor-pointer place-items-center rounded-md",
               "text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)] hover:text-[var(--color-foreground)]",
@@ -184,7 +184,7 @@ export function SidebarNavBody({
   return (
     <nav
       className="flex-1 space-y-1.5 overflow-y-auto overflow-x-clip px-2.5 py-3.5"
-      aria-label="Primary"
+      aria-label="Основная"
     >
       {/* Top-level singletons: Overview */}
       <div className="space-y-0.5">

@@ -24,10 +24,11 @@ import { useAuth } from "@/auth/use-auth";
 import { ImpersonateDialog } from "@/components/impersonation/impersonate-dialog";
 import { ActiveGrantsCard } from "@/components/impersonation/active-grants-card";
 import { TenantBrandingCard } from "@/components/tenants/tenant-branding-card";
+import { SchoolMetricsCard } from "@/components/tenants/school-metrics-card";
 import { RenewTenantDialog } from "@/components/tenants/renew-tenant-dialog";
 import { AdjustValidityDialog } from "@/components/tenants/adjust-validity-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { IdentityPermissions, MultitenancyPermissions } from "@/lib/permissions";
+import { BillingPermissions, IdentityPermissions, MultitenancyPermissions } from "@/lib/permissions";
 import {
   changeTenantActivation,
   getTenantProvisioningStatus,
@@ -47,6 +48,16 @@ import {
 import { ApiRequestError } from "@/lib/api-client";
 import { cn } from "@/lib/cn";
 
+// API provisioning status/step values → Russian labels for the timeline badges.
+const STATUS_RU: Record<string, string> = {
+  Completed: "Готово",
+  Failed: "Сбой",
+  Running: "Выполняется",
+  Pending: "Ожидает",
+  NotStarted: "Не начато",
+};
+const statusRu = (s?: string) => (s ? STATUS_RU[s] ?? s : "");
+
 export function TenantDetailPage() {
   const { id = "" } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -64,6 +75,7 @@ export function TenantDetailPage() {
   );
   // Activation toggle + retry-provisioning are tenant-update operations.
   const canUpdateTenant = permissions.includes(MultitenancyPermissions.Tenants.Update);
+  const canViewMetrics = permissions.includes(BillingPermissions.View);
 
   const tenantQuery = useQuery({
     queryKey: ["tenant", id],
@@ -94,21 +106,21 @@ export function TenantDetailPage() {
   const activationMutation = useMutation({
     mutationFn: (isActive: boolean) => changeTenantActivation(id, isActive),
     onSuccess: (result) => {
-      toast.success(result.isActive ? "Tenant activated" : "Tenant deactivated");
+      toast.success(result.isActive ? "Школа активирована" : "Школа деактивирована");
       setActivationConfirmOpen(false);
       queryClient.invalidateQueries({ queryKey: ["tenant", id] });
       queryClient.invalidateQueries({ queryKey: ["tenants"] });
     },
-    onError: (err) => toast.error("Activation change failed", { description: describe(err) }),
+    onError: (err) => toast.error("Не удалось изменить активацию", { description: describe(err) }),
   });
 
   const retryMutation = useMutation({
     mutationFn: () => retryTenantProvisioning(id),
     onSuccess: () => {
-      toast.success("Provisioning re-queued");
+      toast.success("Провижининг поставлен в очередь");
       queryClient.invalidateQueries({ queryKey: ["tenant", id, "provisioning"] });
     },
-    onError: (err) => toast.error("Retry failed", { description: describe(err) }),
+    onError: (err) => toast.error("Не удалось повторить", { description: describe(err) }),
   });
 
   const tenant = tenantQuery.data;
@@ -121,12 +133,12 @@ export function TenantDetailPage() {
     <div className="space-y-8">
       <EntityPageHeader
         icon={Building2}
-        title={tenant?.name ?? "Tenant"}
+        title={tenant?.name ?? "Школа"}
         tone="info"
         description={tenant?.adminEmail}
       >
         <Button variant="ghost" size="sm" onClick={() => navigate("/tenants")}>
-          <ArrowLeft className="mr-1 h-3.5 w-3.5" /> Registry
+          <ArrowLeft className="mr-1 h-3.5 w-3.5" /> К списку школ
         </Button>
       </EntityPageHeader>
 
@@ -134,12 +146,12 @@ export function TenantDetailPage() {
         <ErrorBand message={describe(tenantQuery.error)} />
       )}
 
-      {tenantQuery.isLoading && !tenant && <LoadingRow label="Loading tenant" />}
+      {tenantQuery.isLoading && !tenant && <LoadingRow label="Загрузка школы" />}
 
       {tenant && (
         <>
           {/* ── Hero identity card ─────────────────────────────────────── */}
-          <SettingsSection title="Overview" icon={Building2}>
+          <SettingsSection title="Обзор" icon={Building2}>
             <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
               {/* Left: monogram + name + meta + badges */}
               <div className="flex items-start gap-4">
@@ -160,11 +172,11 @@ export function TenantDetailPage() {
                   </div>
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     <Badge variant={tenant.isActive ? "success" : "muted"}>
-                      {tenant.isActive ? "Active" : "Inactive"}
+                      {tenant.isActive ? "Активна" : "Неактивна"}
                     </Badge>
                     {tenant.expiryState && tenant.expiryState !== "Active" && (
                       <Badge variant={expiryVariant(tenant.expiryState)}>
-                        {tenant.expiryState === "InGrace" ? "In grace" : "Expired"}
+                        {tenant.expiryState === "InGrace" ? "Льготный период" : "Срок истёк"}
                       </Badge>
                     )}
                     {tenant.plan && (
@@ -175,7 +187,7 @@ export function TenantDetailPage() {
                     )}
                     <Badge variant="outline">
                       <CalendarClock className="h-3 w-3" />
-                      Valid until {formatDate(tenant.validUpto)}
+                      Действует до {formatDate(tenant.validUpto)}
                     </Badge>
                     {tenant.issuer && (
                       <Badge variant="outline" className="font-mono text-[10.5px]">
@@ -193,10 +205,10 @@ export function TenantDetailPage() {
                     variant="signal"
                     onClick={() => setImpersonateOpen(true)}
                     className="shrink-0"
-                    title="Sign in as a user inside this tenant"
+                    title="Войти под пользователем этой школы"
                   >
                     <UserCog className="mr-1.5 h-3.5 w-3.5" />
-                    Impersonate user
+                    Войти как пользователь
                   </Button>
                 )}
                 {canManageSubscription && (
@@ -204,10 +216,10 @@ export function TenantDetailPage() {
                     variant="outline"
                     onClick={() => setRenewOpen(true)}
                     className="shrink-0"
-                    title="Extend validity by one plan term, or switch plans"
+                    title="Продлить срок на один период тарифа или сменить тариф"
                   >
                     <CalendarClock className="mr-1.5 h-3.5 w-3.5" />
-                    Renew / change plan
+                    Продлить / сменить тариф
                   </Button>
                 )}
                 {canManageSubscription && (
@@ -215,10 +227,10 @@ export function TenantDetailPage() {
                     variant="outline"
                     onClick={() => setAdjustOpen(true)}
                     className="shrink-0"
-                    title="Set the expiry date directly with no invoice (operator override)"
+                    title="Задать дату окончания напрямую, без счёта (операторская правка)"
                   >
                     <CalendarCog className="mr-1.5 h-3.5 w-3.5" />
-                    Adjust validity
+                    Скорректировать срок
                   </Button>
                 )}
                 {canUpdateTenant && (
@@ -229,15 +241,17 @@ export function TenantDetailPage() {
                     className="shrink-0"
                   >
                     {activationMutation.isPending
-                      ? "Updating…"
+                      ? "Обновление…"
                       : tenant.isActive
-                        ? "Deactivate tenant"
-                        : "Activate tenant"}
+                        ? "Деактивировать школу"
+                        : "Активировать школу"}
                   </Button>
                 )}
               </div>
             </div>
           </SettingsSection>
+
+          <SchoolMetricsCard tenantId={tenant.id} canView={canViewMetrics} />
 
           <ImpersonateDialog
             open={impersonateOpen}
@@ -270,22 +284,22 @@ export function TenantDetailPage() {
             open={activationConfirmOpen}
             onOpenChange={setActivationConfirmOpen}
             destructive={tenant.isActive}
-            title={tenant.isActive ? "Deactivate tenant?" : "Activate tenant?"}
+            title={tenant.isActive ? "Деактивировать школу?" : "Активировать школу?"}
             description={
               tenant.isActive ? (
                 <>
-                  Users of <strong className="text-[var(--color-foreground)]">{tenant.name}</strong> will
-                  be blocked from signing in and all their API requests will be rejected until you
-                  reactivate the tenant.
+                  Пользователи школы <strong className="text-[var(--color-foreground)]">{tenant.name}</strong> не
+                  смогут войти, а все их запросы к API будут отклоняться, пока школа не будет
+                  активирована снова.
                 </>
               ) : (
                 <>
-                  <strong className="text-[var(--color-foreground)]">{tenant.name}</strong>&apos;s users
-                  will be able to sign in and use the platform again.
+                  Пользователи школы <strong className="text-[var(--color-foreground)]">{tenant.name}</strong> снова
+                  смогут входить и работать в платформе.
                 </>
               )
             }
-            confirmLabel={tenant.isActive ? "Deactivate" : "Activate"}
+            confirmLabel={tenant.isActive ? "Деактивировать" : "Активировать"}
             pending={activationMutation.isPending}
             onConfirm={() => activationMutation.mutate(!tenant.isActive)}
           />
@@ -297,30 +311,30 @@ export function TenantDetailPage() {
 
           {/* ── Details section ────────────────────────────────────────── */}
           <SettingsSection
-            title="Details"
+            title="Реквизиты"
             icon={Info}
-            description="The tenant's identity, contact, and subscription window. Identifiers are immutable; the issuer scopes JWTs to this tenant."
+            description="Идентификация школы, контакт и срок подписки. Идентификаторы неизменяемы; издатель ограничивает JWT этой школой."
           >
             <div className="space-y-0">
-              <InfoRow label="Identifier" mono>{tenant.id}</InfoRow>
-              <InfoRow label="Name">{tenant.name}</InfoRow>
-              <InfoRow label="Admin email" mono>{tenant.adminEmail}</InfoRow>
-              <InfoRow label="JWT issuer" mono>{tenant.issuer ?? "—"}</InfoRow>
-              <InfoRow label="Plan">{tenant.plan ?? "—"}</InfoRow>
-              <InfoRow label="Valid until">
+              <InfoRow label="Идентификатор" mono>{tenant.id}</InfoRow>
+              <InfoRow label="Название">{tenant.name}</InfoRow>
+              <InfoRow label="E-mail администратора" mono>{tenant.adminEmail}</InfoRow>
+              <InfoRow label="Издатель JWT" mono>{tenant.issuer ?? "—"}</InfoRow>
+              <InfoRow label="Тариф">{tenant.plan ?? "—"}</InfoRow>
+              <InfoRow label="Действует до">
                 <span className="flex items-center gap-1.5">
                   <CalendarClock className="h-3.5 w-3.5 text-[var(--color-muted-foreground)]" />
                   {formatDate(tenant.validUpto)}
                   {tenant.expiryState && tenant.expiryState !== "Active" && (
                     <Badge variant={expiryVariant(tenant.expiryState)}>
-                      {tenant.expiryState === "InGrace" ? "In grace" : "Expired"}
+                      {tenant.expiryState === "InGrace" ? "Льготный период" : "Срок истёк"}
                     </Badge>
                   )}
                 </span>
               </InfoRow>
-              <InfoRow label="Status" isLast>
+              <InfoRow label="Статус" isLast>
                 <Badge variant={tenant.isActive ? "success" : "muted"}>
-                  {tenant.isActive ? "Active" : "Inactive"}
+                  {tenant.isActive ? "Активна" : "Неактивна"}
                 </Badge>
               </InfoRow>
             </div>
@@ -328,9 +342,9 @@ export function TenantDetailPage() {
 
           {/* ── Provisioning section ───────────────────────────────────── */}
           <SettingsSection
-            title="Provisioning"
+            title="Провижининг"
             icon={ClipboardList}
-            description="Live status of the background pipeline that seeds the tenant database, default roles, and admin user. Polls every 2 seconds while running."
+            description="Живой статус фонового конвейера, который создаёт БД школы, роли по умолчанию и учётку администратора. Опрос каждые 2 секунды во время выполнения."
           >
             <ProvisioningPanel
               steps={provisioning?.steps ?? []}
@@ -357,9 +371,6 @@ export function TenantDetailPage() {
 
 /**
  * InfoRow — a single key/value row inside the Details card.
- * Matches the `ProfileRow` pattern from the dashboard's user-detail page:
- * label on the left (muted, small), value on the right (foreground, readable).
- * Separated by a subtle half-opacity border.
  */
 function InfoRow({
   label,
@@ -397,11 +408,6 @@ function InfoRow({
 
 /**
  * ProvisioningPanel — live pipeline status.
- * Renders a status badge + retry action, then either:
- *  - a "not tracked" neutral state (provisioningNotTracked)
- *  - a timeline-style step list
- *  - loading / empty / error states
- * The 404/notTracked logic is intentionally preserved verbatim.
  */
 function ProvisioningPanel({
   steps,
@@ -426,7 +432,9 @@ function ProvisioningPanel({
   retryPending: boolean;
   canRetry?: boolean;
 }) {
-  const overall = notTracked ? "Not tracked" : status ?? (loading ? "Loading" : "Unknown");
+  const overall = notTracked
+    ? "Не отслеживается"
+    : statusRu(status) || (loading ? "Загрузка" : "Неизвестно");
 
   const overallVariant =
     status === "Completed"
@@ -445,7 +453,7 @@ function ProvisioningPanel({
           <OverallStatusDot status={notTracked ? "NotTracked" : (status ?? "Unknown")} />
           <Badge variant={overallVariant}>
             {status === "Failed"
-              ? `Failed at ${currentStep ?? "unknown step"}`
+              ? `Сбой на шаге «${currentStep ?? "неизвестно"}»`
               : currentStep
                 ? `${overall} · ${currentStep}`
                 : overall}
@@ -454,7 +462,7 @@ function ProvisioningPanel({
         {status === "Failed" && canRetry && (
           <Button size="sm" variant="outline" onClick={onRetry} disabled={retryPending}>
             <RefreshCw className={cn("mr-1.5 h-3.5 w-3.5", retryPending && "animate-spin")} />
-            {retryPending ? "Re-queuing…" : "Retry provisioning"}
+            {retryPending ? "Постановка в очередь…" : "Повторить провижининг"}
           </Button>
         )}
       </div>
@@ -463,7 +471,7 @@ function ProvisioningPanel({
       {error ? (
         <ErrorBand message={describe(error)} />
       ) : loading && steps.length === 0 ? (
-        <p className="text-[13px] text-[var(--color-muted-foreground)]">Loading…</p>
+        <p className="text-[13px] text-[var(--color-muted-foreground)]">Загрузка…</p>
       ) : notTracked ? (
         <div className="flex items-start gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-muted)] px-4 py-3.5">
           <ServerCrash
@@ -471,13 +479,13 @@ function ProvisioningPanel({
             className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-muted-foreground)]"
           />
           <p className="text-[13px] leading-relaxed text-[var(--color-muted-foreground)]">
-            This tenant wasn't created through the provisioning pipeline, so there's no run
-            history to show. Tenants created via the console report their seed/migrate steps here.
+            Эта школа создана не через конвейер провижининга, поэтому истории запусков нет.
+            Школы, созданные из операторской консоли, показывают здесь шаги миграции и наполнения.
           </p>
         </div>
       ) : steps.length === 0 ? (
         <p className="text-[13px] text-[var(--color-muted-foreground)]">
-          No provisioning runs recorded.
+          Запусков провижининга не зафиксировано.
         </p>
       ) : (
         <StepTimeline steps={steps} />
@@ -493,10 +501,6 @@ function ProvisioningPanel({
   );
 }
 
-/**
- * OverallStatusDot — an animated pulsing dot that conveys overall
- * pipeline status at a glance alongside the badge text.
- */
 function OverallStatusDot({ status }: { status: string }) {
   const color =
     status === "Completed"
@@ -524,11 +528,6 @@ function OverallStatusDot({ status }: { status: string }) {
   );
 }
 
-/**
- * StepTimeline — renders provisioning steps as a connected vertical
- * timeline instead of a flat `<ol>` with dividers.
- * Each step has: a status icon track, step name, duration, and status label.
- */
 function StepTimeline({ steps }: { steps: TenantProvisioningStep[] }) {
   return (
     <ol className="space-y-0">
@@ -589,7 +588,7 @@ function StepRow({
     step.startedUtc && step.completedUtc
       ? formatDuration(step.startedUtc, step.completedUtc)
       : step.startedUtc
-        ? "in flight"
+        ? "в процессе"
         : null;
 
   return (
@@ -649,7 +648,7 @@ function StepRow({
             </span>
           )}
           <Badge variant={statusVariant} className="font-mono uppercase tracking-[0.12em]">
-            {step.status}
+            {statusRu(step.status)}
           </Badge>
         </div>
       </div>
@@ -662,7 +661,7 @@ function StepRow({
 function formatDate(value: string | undefined): string {
   if (!value) return "—";
   const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? value : d.toLocaleDateString();
+  return Number.isNaN(d.getTime()) ? value : d.toLocaleDateString("ru-RU");
 }
 
 function expiryVariant(state: string): React.ComponentProps<typeof Badge>["variant"] {
@@ -674,12 +673,12 @@ function formatDuration(start: string, end: string): string {
   const b = new Date(end).getTime();
   if (Number.isNaN(a) || Number.isNaN(b)) return "—";
   const ms = Math.max(0, b - a);
-  if (ms < 1000) return `${ms}ms`;
+  if (ms < 1000) return `${ms} мс`;
   const s = ms / 1000;
-  if (s < 60) return `${s.toFixed(1)}s`;
+  if (s < 60) return `${s.toFixed(1)} с`;
   const m = Math.floor(s / 60);
   const rem = Math.round(s - m * 60);
-  return `${m}m ${rem}s`;
+  return `${m} м ${rem} с`;
 }
 
 function describe(err: unknown): string {
