@@ -66,33 +66,33 @@ export function WebhookDetailPage() {
     mutationFn: () => testWebhookSubscription(id),
     onSuccess: (data) => {
       toast[data.success ? "success" : "warning"](
-        data.success ? "Test event delivered" : "Endpoint rejected the test event",
+        data.success ? "Тестовое событие доставлено" : "Endpoint отклонил тестовое событие",
       );
       deliveries.refetch();
     },
-    onError: (err) => toast.error("Test failed", { description: describe(err) }),
+    onError: (err) => toast.error("Тест не прошёл", { description: describe(err) }),
   });
 
   const remove = useMutation({
     mutationFn: () => deleteWebhookSubscription(id),
     onSuccess: () => {
-      toast.success("Subscription deleted");
+      toast.success("Подписка удалена");
       queryClient.invalidateQueries({ queryKey: ["webhooks", "subscriptions"] });
       navigate("/webhooks");
     },
-    onError: (err) => toast.error("Delete failed", { description: describe(err) }),
+    onError: (err) => toast.error("Не удалось удалить", { description: describe(err) }),
   });
 
   return (
     <div className="space-y-8">
       <PageHeader
-        crumbs={[{ label: "\\ Webhooks" }, { label: sub?.url ?? "…", muted: true }]}
-        trailing={sub ? (sub.isActive ? "ACTIVE" : "INACTIVE") : "—"}
-        title={sub?.url ?? "Subscription"}
-        description={sub ? `Subscribed to ${sub.events.length} ${sub.events.length === 1 ? "event" : "events"}.` : "Loading subscription…"}
+        crumbs={[{ label: "\\ Вебхуки" }, { label: sub?.url ?? "…", muted: true }]}
+        trailing={sub ? (sub.isActive ? "АКТИВНА" : "НЕАКТИВНА") : "—"}
+        title={sub?.url ?? "Подписка"}
+        description={sub ? `Событий в подписке: ${sub.events.length}.` : "Загрузка подписки…"}
         actions={
           <Button variant="ghost" size="sm" onClick={() => navigate("/webhooks")}>
-            <ArrowLeft className="mr-1 h-3.5 w-3.5" /> Subscriptions
+            <ArrowLeft className="mr-1 h-3.5 w-3.5" /> Подписки
           </Button>
         }
       />
@@ -102,15 +102,15 @@ export function WebhookDetailPage() {
           message={
             subsQuery.error instanceof ApiRequestError
               ? subsQuery.error.problem?.detail ?? subsQuery.error.message
-              : "Failed to load subscription."
+              : "Не удалось загрузить подписку."
           }
         />
       )}
 
-      {subsQuery.isLoading && <LoadingRow label="Loading subscription" />}
+      {subsQuery.isLoading && <LoadingRow label="Загрузка подписки" />}
 
       {!subsQuery.isLoading && !sub && !subsQuery.isError && (
-        <ErrorBand message="Subscription not found. It may have been deleted." />
+        <ErrorBand message="Подписка не найдена. Возможно, она удалена." />
       )}
 
       {sub && (
@@ -118,18 +118,18 @@ export function WebhookDetailPage() {
           <SettingsSection
             icon={Link2}
             title="Endpoint"
-            description="Where we POST event payloads."
+            description="Куда мы шлём POST с телами событий."
             footer={
               <div className="flex flex-wrap items-center gap-2">
                 <Button variant="outline" size="sm" onClick={() => test.mutate()} disabled={test.isPending}>
                   <Send className="mr-1.5 h-3.5 w-3.5" />
-                  {test.isPending ? "Sending…" : "Send test event"}
+                  {test.isPending ? "Отправка…" : "Отправить тестовое событие"}
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => {
-                    if (window.confirm(`Delete subscription to ${sub.url}?`)) {
+                    if (window.confirm(`Удалить подписку на ${sub.url}?`)) {
                       remove.mutate();
                     }
                   }}
@@ -137,45 +137,45 @@ export function WebhookDetailPage() {
                   className="text-[var(--color-destructive)] hover:bg-[oklch(from_var(--color-destructive)_l_c_h_/_0.08)]"
                 >
                   <Trash2 className="mr-1.5 h-3.5 w-3.5" />
-                  {remove.isPending ? "Deleting…" : "Delete subscription"}
+                  {remove.isPending ? "Удаление…" : "Удалить подписку"}
                 </Button>
               </div>
             }
           >
             <dl className="grid grid-cols-1 gap-y-3 sm:grid-cols-2">
               <FieldRow label="URL" mono value={sub.url} />
-              <FieldRow label="Status" value={
+              <FieldRow label="Статус" value={
                 <Badge variant={sub.isActive ? "success" : "muted"} className="font-mono uppercase tracking-[0.14em]">
-                  {sub.isActive ? "Active" : "Inactive"}
+                  {sub.isActive ? "Активна" : "Неактивна"}
                 </Badge>
               } />
-              <FieldRow label="Subscription id" mono value={sub.id} />
-              <FieldRow label="Created" mono value={new Date(sub.createdAtUtc).toLocaleString()} />
+              <FieldRow label="ID подписки" mono value={sub.id} />
+              <FieldRow label="Создана" mono value={new Date(sub.createdAtUtc).toLocaleString("ru-RU")} />
             </dl>
           </SettingsSection>
 
           <SettingsSection
             icon={List}
-            title="Events"
-            description="Event types this endpoint subscribes to."
+            title="События"
+            description="Типы событий, на которые подписан этот endpoint."
           >
             <div className="flex flex-wrap gap-1.5">
               {sub.events.map((e) => (
                 <code key={e} className="code-chip">{e}</code>
               ))}
               {sub.events.length === 0 && (
-                <span className="text-sm text-[var(--color-muted-foreground)]">— no events; subscription would never fire</span>
+                <span className="text-sm text-[var(--color-muted-foreground)]">— событий нет; подписка никогда не сработает</span>
               )}
             </div>
           </SettingsSection>
 
           <SettingsSection
-            title="Deliveries"
-            description="Recent attempts to POST events to this endpoint. Auto-refreshes every 10s."
+            title="Доставки"
+            description="Недавние попытки POST'ов на этот endpoint. Автообновление каждые 10 с."
             footer={
               <div className="flex items-center justify-between gap-2">
                 <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-[var(--color-muted-foreground)]">
-                  {deliveries.data ? `${deliveries.data.totalCount} attempts` : "—"}
+                  {deliveries.data ? `попыток: ${deliveries.data.totalCount}` : "—"}
                 </span>
                 <Button
                   variant="outline"
@@ -184,7 +184,7 @@ export function WebhookDetailPage() {
                   disabled={deliveries.isFetching}
                 >
                   <RefreshCw className={cn("mr-1.5 h-3.5 w-3.5", deliveries.isFetching && "animate-spin")} />
-                  Refresh
+                  Обновить
                 </Button>
               </div>
             }
@@ -192,10 +192,10 @@ export function WebhookDetailPage() {
             {deliveries.isError ? (
               <ErrorBand message={describe(deliveries.error)} />
             ) : deliveries.isLoading ? (
-              <LoadingRow label="Loading deliveries" />
+              <LoadingRow label="Загрузка доставок" />
             ) : (deliveries.data?.items.length ?? 0) === 0 ? (
               <p className="text-sm text-[var(--color-muted-foreground)]">
-                No deliveries yet. Try the test button above, or wait for matching events to fire.
+                Доставок пока нет. Нажмите «Отправить тестовое событие» выше или дождитесь события.
               </p>
             ) : (
               <>
@@ -216,7 +216,7 @@ export function WebhookDetailPage() {
                       hasNext={deliveries.data!.hasNext}
                       onPrev={() => setDeliveryPage((p) => Math.max(1, p - 1))}
                       onNext={() => setDeliveryPage((p) => p + 1)}
-                      noun="deliveries"
+                      noun="доставки"
                     />
                   </div>
                 )}
@@ -240,7 +240,7 @@ function DeliveryRow({ delivery }: { delivery: WebhookDeliveryDto }) {
       </span>
       <code className="code-chip">{delivery.eventType}</code>
       <span className="truncate text-[11.5px] text-[var(--color-muted-foreground)]">
-        {delivery.errorMessage ?? (delivery.success ? "OK" : "Failed")}
+        {delivery.errorMessage ?? (delivery.success ? "OK" : "Ошибка")}
       </span>
       <Badge
         variant={delivery.success ? "success" : "danger"}
@@ -249,7 +249,7 @@ function DeliveryRow({ delivery }: { delivery: WebhookDeliveryDto }) {
         HTTP {delivery.httpStatusCode || "—"}
       </Badge>
       <span className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-[var(--color-muted-foreground)]">
-        try {delivery.attemptCount}
+        попытка {delivery.attemptCount}
       </span>
     </li>
   );

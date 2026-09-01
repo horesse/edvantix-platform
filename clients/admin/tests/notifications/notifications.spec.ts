@@ -28,10 +28,10 @@ test.describe("notifications inbox", () => {
 
     const main = page.getByRole("main");
     await expect(
-      main.getByRole("heading", { name: "Notifications", exact: true }),
+      main.getByRole("heading", { name: "Уведомления", exact: true }),
     ).toBeVisible({ timeout: 10_000 });
 
-    await expect(main.getByText("Nothing unread.", { exact: true })).toBeVisible();
+    await expect(main.getByText("Непрочитанных нет.", { exact: true })).toBeVisible();
   });
 
   test("renders a notification row when the inbox is populated", async ({ page }) => {
@@ -44,14 +44,14 @@ test.describe("notifications inbox", () => {
 
     const main = page.getByRole("main");
     await expect(
-      main.getByRole("heading", { name: "Notifications", exact: true }),
+      main.getByRole("heading", { name: "Уведомления", exact: true }),
     ).toBeVisible({ timeout: 10_000 });
 
     // Row content from our mock.
     await expect(main.getByText("New tenant provisioned", { exact: true })).toBeVisible();
     await expect(main.getByText("Acme Corp finished provisioning.", { exact: true })).toBeVisible();
-    // Unread → Mark read button.
-    await expect(main.getByRole("button", { name: /mark read/i }).first()).toBeVisible();
+    // Unread → Прочитано button.
+    await expect(main.getByRole("button", { name: /прочитано/i }).first()).toBeVisible();
   });
 
   test("has the unread/all filter and a Mark all read action", async ({ page }) => {
@@ -59,14 +59,14 @@ test.describe("notifications inbox", () => {
 
     const main = page.getByRole("main");
     await expect(
-      main.getByRole("heading", { name: "Notifications", exact: true }),
+      main.getByRole("heading", { name: "Уведомления", exact: true }),
     ).toBeVisible({ timeout: 10_000 });
 
-    await expect(main.getByRole("button", { name: /mark all read/i })).toBeVisible();
+    await expect(main.getByRole("button", { name: /отметить все прочитанными/i })).toBeVisible();
     // The filter is a dropdown trigger (Radix button-based select); its default
-    // value is "unread", so assert the trigger shows the "Unread" label.
+    // value is "unread", so assert the trigger shows the "Непрочитанные" label.
     await expect(
-      main.getByRole("button", { name: "Unread", exact: true }),
+      main.getByRole("button", { name: "Непрочитанные", exact: true }),
     ).toBeVisible();
   });
 });

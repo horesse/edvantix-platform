@@ -10,7 +10,7 @@ type ErrorBandProps = {
  * ErrorBand — inline failure surface used between toolbar and content.
  * Mono-caps eyebrow + destructive tint, matched to the rest of Console.
  */
-export function ErrorBand({ message, kind = "failure" }: ErrorBandProps) {
+export function ErrorBand({ message, kind = "ошибка" }: ErrorBandProps) {
   return (
     <div
       role="alert"

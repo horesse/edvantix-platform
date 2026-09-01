@@ -22,6 +22,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/list";
+import { INVOICE_STATUS_RU } from "@/lib/billing-labels";
 import { KpiTile } from "@/components/kpi-tile";
 import { ApiRequestError } from "@/lib/api-client";
 import { cn } from "@/lib/cn";
@@ -40,7 +41,7 @@ function formatMoney(amount: number, currency: string) {
   }
 }
 
-const dateShort = new Intl.DateTimeFormat(undefined, {
+const dateShort = new Intl.DateTimeFormat("ru-RU", {
   month: "short",
   day: "2-digit",
   year: "numeric",
@@ -74,7 +75,7 @@ function statusVariant(status: InvoiceStatus): React.ComponentProps<typeof Badge
 function describe(err: unknown): string {
   if (err instanceof ApiRequestError) return err.problem?.detail ?? err.problem?.title ?? err.message;
   if (err instanceof Error) return err.message;
-  return "Failed to load invoices.";
+  return "Не удалось загрузить счета.";
 }
 
 // ─── component ───────────────────────────────────────────────────────
@@ -143,12 +144,12 @@ export function InvoicesListPage() {
       {/* KPI strip — page-scope (current page, not all-time) */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <KpiTile
-          label="Page invoices"
+          label="Счетов на странице"
           value={query.isLoading ? <Skeleton className="h-7 w-16" /> : data?.items.length ?? 0}
-          subtitle={data ? `${data.totalCount.toLocaleString()} total` : "loading…"}
+          subtitle={data ? `всего: ${data.totalCount.toLocaleString("ru-RU")}` : "загрузка…"}
         />
         <KpiTile
-          label="Billed"
+          label="Начислено"
           value={
             query.isLoading ? (
               <Skeleton className="h-7 w-24" />
@@ -156,10 +157,10 @@ export function InvoicesListPage() {
               formatMoney(totals.totalBilled, totals.currency)
             )
           }
-          subtitle="this page"
+          subtitle="на этой странице"
         />
         <KpiTile
-          label="Outstanding"
+          label="К оплате"
           value={
             query.isLoading ? (
               <Skeleton className="h-7 w-24" />
@@ -167,10 +168,10 @@ export function InvoicesListPage() {
               formatMoney(totals.outstanding, totals.currency)
             )
           }
-          subtitle="issued, awaiting payment"
+          subtitle="выставлено, ждёт оплаты"
         />
         <KpiTile
-          label="Paid"
+          label="Оплачено"
           value={
             query.isLoading ? (
               <Skeleton className="h-7 w-24" />
@@ -178,7 +179,7 @@ export function InvoicesListPage() {
               formatMoney(totals.paid, totals.currency)
             )
           }
-          subtitle={`${totals.paidCount} invoice${totals.paidCount === 1 ? "" : "s"}`}
+          subtitle={`счетов: ${totals.paidCount}`}
         />
       </div>
 
@@ -188,24 +189,24 @@ export function InvoicesListPage() {
           <div>
             <CardTitle className="flex items-center gap-2">
               <Filter className="h-4 w-4 text-[var(--color-muted-foreground)]" />
-              <span>Filters</span>
+              <span>Фильтры</span>
             </CardTitle>
             <CardDescription>
-              All filters are AND-combined. Period is matched exactly (year + month).
+              Все фильтры объединяются по «И». Период сверяется точно (год + месяц).
             </CardDescription>
           </div>
           {filtersDirty && (
             <Button variant="ghost" size="sm" onClick={clearFilters}>
-              <X className="mr-1 h-3.5 w-3.5" /> Clear
+              <X className="mr-1 h-3.5 w-3.5" /> Сбросить
             </Button>
           )}
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-1.5">
-            <Label htmlFor="filter-tenant">Tenant</Label>
+            <Label htmlFor="filter-tenant">Школа</Label>
             <Input
               id="filter-tenant"
-              placeholder="tenant identifier"
+              placeholder="идентификатор школы"
               value={tenantFilter}
               onChange={(e) => {
                 setTenantFilter(e.target.value);
@@ -215,7 +216,7 @@ export function InvoicesListPage() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="filter-status">Status</Label>
+            <Label htmlFor="filter-status">Статус</Label>
             <Select
               id="filter-status"
               value={statusFilter}
@@ -223,12 +224,12 @@ export function InvoicesListPage() {
                 setStatusFilter(v as InvoiceStatus | "");
                 setPageNumber(1);
               }}
-              options={STATUSES.map((s) => ({ value: s, label: s }))}
-              emptyLabel="All"
+              options={STATUSES.map((s) => ({ value: s, label: INVOICE_STATUS_RU[s] ?? s }))}
+              emptyLabel="Все"
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="filter-year">Year</Label>
+            <Label htmlFor="filter-year">Год</Label>
             <Input
               id="filter-year"
               inputMode="numeric"
@@ -241,7 +242,7 @@ export function InvoicesListPage() {
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="filter-month">Month</Label>
+            <Label htmlFor="filter-month">Месяц</Label>
             <Input
               id="filter-month"
               inputMode="numeric"
@@ -259,16 +260,16 @@ export function InvoicesListPage() {
       {/* List */}
       <Card>
         <CardHeader>
-          <CardTitle>Invoices</CardTitle>
+          <CardTitle>Счета</CardTitle>
           <CardDescription>
             {data ? (
               <>
-                Page <span className="tabular-nums">{data.pageNumber}</span> of{" "}
+                Стр. <span className="tabular-nums">{data.pageNumber}</span> из{" "}
                 <span className="tabular-nums">{Math.max(data.totalPages, 1)}</span> ·{" "}
-                <span className="tabular-nums">{data.totalCount.toLocaleString()}</span> total
+                всего <span className="tabular-nums">{data.totalCount.toLocaleString("ru-RU")}</span>
               </>
             ) : (
-              "Loading…"
+              "Загрузка…"
             )}
           </CardDescription>
         </CardHeader>
@@ -295,7 +296,7 @@ export function InvoicesListPage() {
             </ul>
           ) : items.length === 0 ? (
             <div className="px-6 py-10 text-center text-sm text-[var(--color-muted-foreground)]">
-              No invoices match the current filters.
+              Под текущие фильтры счетов нет.
             </div>
           ) : (
             <ul>
@@ -322,22 +323,22 @@ export function InvoicesListPage() {
                         <code className="rounded bg-[var(--color-surface-2)] px-1.5 py-0.5 font-mono text-[11px] font-medium tracking-tight">
                           {inv.invoiceNumber}
                         </code>
-                        <Badge variant={statusVariant(inv.status)}>{inv.status}</Badge>
+                        <Badge variant={statusVariant(inv.status)}>{INVOICE_STATUS_RU[inv.status] ?? inv.status}</Badge>
                         {inv.purpose && (
                           <Badge variant="outline">
-                            {inv.purpose === "Subscription" ? "Subscription" : "Usage"}
+                            {inv.purpose === "Subscription" ? "Подписка" : "Использование"}
                           </Badge>
                         )}
                       </div>
                       <div className="mt-1 truncate font-mono text-[11px] tracking-tight text-[var(--color-muted-foreground)]">
-                        tenant <span className="text-[var(--color-foreground)]">{inv.tenantId}</span> ·
-                        period {formatPeriod(inv.periodYear, inv.periodMonth)} ·
-                        created {formatDate(inv.createdAtUtc)}
+                        школа <span className="text-[var(--color-foreground)]">{inv.tenantId}</span> ·
+                        период {formatPeriod(inv.periodYear, inv.periodMonth)} ·
+                        создан {formatDate(inv.createdAtUtc)}
                         {inv.paidAtUtc && (
                           <>
                             {" · "}
                             <span className="text-[var(--color-success)]">
-                              paid {formatDate(inv.paidAtUtc)}
+                              оплачен {formatDate(inv.paidAtUtc)}
                             </span>
                           </>
                         )}
@@ -345,7 +346,7 @@ export function InvoicesListPage() {
                           <>
                             {" · "}
                             <span className="text-[var(--color-destructive)]">
-                              voided {formatDate(inv.voidedAtUtc)}
+                              аннулирован {formatDate(inv.voidedAtUtc)}
                             </span>
                           </>
                         )}
@@ -360,7 +361,7 @@ export function InvoicesListPage() {
                     </div>
                     {inv.dueAtUtc && inv.status === "Issued" && (
                       <div className="font-mono text-[11px] text-[var(--color-warning)]">
-                        due {formatDate(inv.dueAtUtc)}
+                        срок {formatDate(inv.dueAtUtc)}
                       </div>
                     )}
                   </div>
@@ -375,7 +376,7 @@ export function InvoicesListPage() {
       {/* Pagination */}
       <div className="flex items-center justify-between text-sm">
         <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
-          {data ? `Page ${data.pageNumber} / ${Math.max(data.totalPages, 1)}` : ""}
+          {data ? `Стр. ${data.pageNumber} / ${Math.max(data.totalPages, 1)}` : ""}
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -384,7 +385,7 @@ export function InvoicesListPage() {
             disabled={!data?.hasPrevious || query.isFetching}
             onClick={() => setPageNumber((p) => Math.max(1, p - 1))}
           >
-            <ChevronLeft className="mr-1 h-4 w-4" /> Previous
+            <ChevronLeft className="mr-1 h-4 w-4" /> Назад
           </Button>
           <Button
             variant="outline"
@@ -392,7 +393,7 @@ export function InvoicesListPage() {
             disabled={!data?.hasNext || query.isFetching}
             onClick={() => setPageNumber((p) => p + 1)}
           >
-            Next <ChevronRight className="ml-1 h-4 w-4" />
+            Вперёд <ChevronRight className="ml-1 h-4 w-4" />
           </Button>
         </div>
       </div>

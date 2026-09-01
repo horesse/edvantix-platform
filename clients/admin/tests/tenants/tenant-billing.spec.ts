@@ -69,7 +69,7 @@ test.describe("create tenant — plan selector", () => {
     );
 
     await page.goto("/tenants");
-    await page.getByRole("button", { name: "New tenant", exact: true }).click();
+    await page.getByRole("button", { name: "Новая школа", exact: true }).click();
 
     const dialog = page.getByRole("dialog");
     const planSelect = dialog.locator("#ct-plan");
@@ -84,16 +84,16 @@ test.describe("create tenant — plan selector", () => {
 
     // Identifier (and JWT issuer) auto-derive from the display name — no need to
     // type the slug by hand.
-    await dialog.getByLabel(/^Display name/).fill("Acme Corp");
-    await expect(dialog.getByLabel(/^Identifier/)).toHaveValue("acme-corp");
-    await dialog.getByLabel(/^Admin email/).fill("admin@acme.example");
-    await dialog.getByLabel(/^Initial admin password/).fill("Sup3rSecret!");
+    await dialog.getByLabel(/^Название/).fill("Acme Corp");
+    await expect(dialog.getByLabel(/^Идентификатор/)).toHaveValue("acme-corp");
+    await dialog.getByLabel(/^E-mail администратора/).fill("admin@acme.example");
+    await dialog.getByLabel(/^Начальный пароль администратора/).fill("Sup3rSecret!");
 
     const reqPromise = page.waitForRequest(
       (r) => r.url().endsWith("/api/v1/tenants/") && r.method() === "POST",
       { timeout: 5_000 },
     );
-    await dialog.getByRole("button", { name: "Create tenant", exact: true }).click();
+    await dialog.getByRole("button", { name: "Создать школу", exact: true }).click();
     const req = await reqPromise;
 
     expect(JSON.parse(req.postData() ?? "{}")).toMatchObject({ id: "acme-corp", planKey: "pro" });
@@ -138,17 +138,17 @@ test.describe("tenant detail — renew", () => {
     await page.goto("/tenants/acme-corp");
 
     // Page + tenant loaded (the renew action is inside the tenant-loaded block).
-    const renewButton = page.getByRole("button", { name: /Renew \/ change plan/ });
+    const renewButton = page.getByRole("button", { name: /Продлить \/ сменить тариф/ });
     await expect(renewButton).toBeVisible({ timeout: 10_000 });
 
     // Plan + grace badges render in the hero.
-    await expect(page.getByText("In grace").first()).toBeVisible();
+    await expect(page.getByText("Льготный период").first()).toBeVisible();
     await expect(page.getByText("pro").first()).toBeVisible();
 
     // Open the renew dialog.
     await renewButton.click();
     const dialog = page.getByRole("dialog");
-    await expect(dialog.getByRole("heading", { name: "Renew subscription" })).toBeVisible();
+    await expect(dialog.getByRole("heading", { name: "Продление подписки" })).toBeVisible();
 
     // Renew the current plan.
     const renewReq = page.waitForRequest(
@@ -162,7 +162,7 @@ test.describe("tenant detail — renew", () => {
         body: JSON.stringify({ tenantId: "acme-corp", validUpto: "2026-06-01T00:00:00Z", planKey: "pro", planChanged: false }),
       }),
     );
-    await dialog.getByRole("button", { name: /^Renew$/ }).click();
+    await dialog.getByRole("button", { name: /^Продлить$/ }).click();
     const req = await renewReq;
     expect(JSON.parse(req.postData() ?? "{}")).toMatchObject({ tenantId: "acme-corp", planKey: "pro" });
   });
@@ -204,14 +204,14 @@ test.describe("tenant detail — adjust validity", () => {
     await page.goto("/tenants/acme-corp");
 
     // The adjust button is gated behind UpgradeSubscription (in ADMIN_PERMS).
-    const adjustButton = page.getByRole("main").getByRole("button", { name: /Adjust validity/ });
+    const adjustButton = page.getByRole("main").getByRole("button", { name: /Скорректировать срок/ });
     await expect(adjustButton).toBeVisible({ timeout: 10_000 });
     await adjustButton.click();
 
     const dialog = page.getByRole("dialog");
-    await expect(dialog.getByRole("heading", { name: "Adjust validity" })).toBeVisible();
+    await expect(dialog.getByRole("heading", { name: "Корректировка срока" })).toBeVisible();
 
-    await dialog.getByLabel(/^Valid until/).fill("2026-09-15");
+    await dialog.getByLabel(/^Действует до/).fill("2026-09-15");
 
     const adjustReq = page.waitForRequest(
       (r) => r.url().includes("/api/v1/tenants/acme-corp/adjust-validity") && r.method() === "POST",
@@ -224,7 +224,7 @@ test.describe("tenant detail — adjust validity", () => {
         body: JSON.stringify({ tenantId: "acme-corp", validUpto: "2026-09-15T00:00:00Z" }),
       }),
     );
-    await dialog.getByRole("button", { name: "Adjust validity", exact: true }).click();
+    await dialog.getByRole("button", { name: "Скорректировать срок", exact: true }).click();
     const req = await adjustReq;
 
     const body = JSON.parse(req.postData() ?? "{}");
@@ -247,28 +247,28 @@ test.describe("plan dialog — billing interval", () => {
     });
 
     await page.goto("/billing/plans");
-    await page.getByRole("button", { name: "New plan", exact: true }).click();
+    await page.getByRole("button", { name: "Новый тариф", exact: true }).click();
 
     const dialog = page.getByRole("dialog");
-    await expect(dialog.getByRole("heading", { name: "New plan", exact: true })).toBeVisible({ timeout: 10_000 });
+    await expect(dialog.getByRole("heading", { name: "Новый тариф", exact: true })).toBeVisible({ timeout: 10_000 });
     // Annual price is hidden for monthly plans.
-    await expect(dialog.getByLabel(/^Annual price/)).toBeHidden();
+    await expect(dialog.getByLabel(/^Цена за год/)).toBeHidden();
 
-    await dialog.getByRole("button", { name: "Billing interval" }).click();
-    await page.getByRole("menuitem", { name: "Yearly" }).click();
-    await expect(dialog.getByLabel(/^Annual price/)).toBeVisible();
+    await dialog.getByRole("button", { name: "Период списания" }).click();
+    await page.getByRole("menuitem", { name: "Ежегодно" }).click();
+    await expect(dialog.getByLabel(/^Цена за год/)).toBeVisible();
 
-    await dialog.getByLabel(/^Key/).fill("team-annual");
-    await dialog.getByLabel(/^Display name/).fill("Team Annual");
-    await dialog.getByLabel(/^Currency/).fill("USD");
-    await dialog.getByLabel(/^Monthly base price/).fill("50");
-    await dialog.getByLabel(/^Annual price/).fill("500");
+    await dialog.getByLabel(/^Ключ/).fill("team-annual");
+    await dialog.getByLabel(/^Отображаемое название/).fill("Team Annual");
+    await dialog.getByLabel(/^Валюта/).fill("USD");
+    await dialog.getByLabel(/^Базовая цена в месяц/).fill("50");
+    await dialog.getByLabel(/^Цена за год/).fill("500");
 
     const reqPromise = page.waitForRequest(
       (r) => r.url().endsWith("/api/v1/billing/plans") && r.method() === "POST",
       { timeout: 5_000 },
     );
-    await dialog.getByRole("button", { name: "Create plan", exact: true }).click();
+    await dialog.getByRole("button", { name: "Создать тариф", exact: true }).click();
     const req = await reqPromise;
 
     expect(JSON.parse(req.postData() ?? "{}")).toMatchObject({
@@ -291,20 +291,20 @@ test.describe("plan dialog — billing interval", () => {
     });
 
     await page.goto("/billing/plans");
-    await page.getByRole("button", { name: "New plan", exact: true }).click();
+    await page.getByRole("button", { name: "Новый тариф", exact: true }).click();
 
     const dialog = page.getByRole("dialog");
-    await expect(dialog.getByRole("heading", { name: "New plan", exact: true })).toBeVisible({ timeout: 10_000 });
+    await expect(dialog.getByRole("heading", { name: "Новый тариф", exact: true })).toBeVisible({ timeout: 10_000 });
 
-    await dialog.getByLabel(/^Key/).fill("cheap");
-    await dialog.getByLabel(/^Display name/).fill("Cheap");
-    await dialog.getByLabel(/^Currency/).fill("USD");
-    await dialog.getByLabel(/^Monthly base price/).fill("-5");
+    await dialog.getByLabel(/^Ключ/).fill("cheap");
+    await dialog.getByLabel(/^Отображаемое название/).fill("Cheap");
+    await dialog.getByLabel(/^Валюта/).fill("USD");
+    await dialog.getByLabel(/^Базовая цена в месяц/).fill("-5");
 
     // The client-side zod refinement surfaces the error and disables submit.
-    await expect(dialog.getByText("Must be a non-negative number.")).toBeVisible();
+    await expect(dialog.getByText("Должно быть неотрицательным числом.")).toBeVisible();
 
-    const submit = dialog.getByRole("button", { name: "Create plan", exact: true });
+    const submit = dialog.getByRole("button", { name: "Создать тариф", exact: true });
     await expect(submit).toBeDisabled();
     // Force a click even while disabled to prove the guard holds — no request fires.
     await submit.click({ force: true });
@@ -317,11 +317,11 @@ test.describe("plan dialog — billing interval", () => {
     await page.goto("/billing/plans");
 
     // Edit the seeded Pro plan via its row action.
-    await page.getByRole("button", { name: "Edit Pro", exact: true }).click();
+    await page.getByRole("button", { name: "Изменить тариф «Pro»", exact: true }).click();
     const dialog = page.getByRole("dialog");
-    await expect(dialog.getByRole("heading", { name: "Edit plan", exact: true })).toBeVisible({ timeout: 10_000 });
-    await expect(dialog.getByLabel(/^Display name/)).toHaveValue("Pro");
+    await expect(dialog.getByRole("heading", { name: "Изменить тариф", exact: true })).toBeVisible({ timeout: 10_000 });
+    await expect(dialog.getByLabel(/^Отображаемое название/)).toHaveValue("Pro");
     // Key is immutable when editing.
-    await expect(dialog.getByLabel(/^Key/)).toBeDisabled();
+    await expect(dialog.getByLabel(/^Ключ/)).toBeDisabled();
   });
 });

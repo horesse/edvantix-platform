@@ -54,16 +54,16 @@ export function WebhooksListPage() {
     onMutate: (id) => setBusyId(id),
     onSuccess: (data) => {
       if (data.success) {
-        toast.success("Test event delivered", {
-          description: "Your endpoint accepted the payload. Check Deliveries for details.",
+        toast.success("Тестовое событие доставлено", {
+          description: "Endpoint принял тело. Подробности — в разделе «Доставки».",
         });
       } else {
-        toast.warning("Test failed", {
-          description: "Endpoint rejected the test event. See Deliveries for the response code.",
+        toast.warning("Тест не прошёл", {
+          description: "Endpoint отклонил тестовое событие. Код ответа — в «Доставках».",
         });
       }
     },
-    onError: (err) => toast.error("Test failed", { description: describe(err) }),
+    onError: (err) => toast.error("Тест не прошёл", { description: describe(err) }),
     onSettled: () => setBusyId(null),
   });
 
@@ -71,10 +71,10 @@ export function WebhooksListPage() {
     mutationFn: (id: string) => deleteWebhookSubscription(id),
     onMutate: (id) => setBusyId(id),
     onSuccess: () => {
-      toast.success("Subscription deleted");
+      toast.success("Подписка удалена");
       queryClient.invalidateQueries({ queryKey: ["webhooks", "subscriptions"] });
     },
-    onError: (err) => toast.error("Delete failed", { description: describe(err) }),
+    onError: (err) => toast.error("Не удалось удалить", { description: describe(err) }),
     onSettled: () => setBusyId(null),
   });
 
@@ -85,10 +85,10 @@ export function WebhooksListPage() {
     <div className="space-y-8">
       <EntityPageHeader
         icon={Webhook}
-        title="Webhooks"
+        title="Вебхуки"
         total={data?.totalCount ?? null}
-        unit="subscription"
-        description="Subscribe HTTP endpoints to domain events. Payloads are signed with HMAC-SHA256 using the secret you provide — verify the X-FSH-Signature header on your side before trusting the body."
+        unit="подписка"
+        description="Подпишите HTTP-endpoint'ы на доменные события. Тело подписывается HMAC-SHA256 вашим секретом — проверяйте заголовок X-FSH-Signature до доверия телу."
       >
         <Button
           variant="outline"
@@ -98,10 +98,10 @@ export function WebhooksListPage() {
           className="flex-1 sm:flex-none"
         >
           <RefreshCw className={cn("mr-1.5 h-3.5 w-3.5", query.isFetching && "animate-spin")} />
-          Refresh
+          Обновить
         </Button>
         <Button onClick={() => setCreateOpen(true)} className="flex-1 sm:flex-none">
-          <Plus className="mr-1 h-4 w-4" /> New subscription
+          <Plus className="mr-1 h-4 w-4" /> Новая подписка
         </Button>
       </EntityPageHeader>
 
@@ -110,22 +110,22 @@ export function WebhooksListPage() {
           message={
             query.error instanceof ApiRequestError
               ? query.error.problem?.detail ?? query.error.message
-              : "Failed to load subscriptions."
+              : "Не удалось загрузить подписки."
           }
         />
       )}
 
-      {query.isLoading && <LoadingRow label="Loading subscriptions" />}
+      {query.isLoading && <LoadingRow label="Загрузка подписок" />}
 
       {!query.isLoading && items.length === 0 && !query.isError && (
         <EmptyState
           icon={Webhook}
-          kicker="// no subscriptions"
-          title="No webhook subscriptions yet."
-          description="Add an endpoint and pick which events should fire. We'll retry failed deliveries automatically."
+          kicker="// подписок нет"
+          title="Подписок вебхуков пока нет."
+          description="Добавьте endpoint и выберите события. Неудачные доставки повторяются автоматически."
           action={
             <Button onClick={() => setCreateOpen(true)}>
-              <Plus className="mr-1 h-4 w-4" /> New subscription
+              <Plus className="mr-1 h-4 w-4" /> Новая подписка
             </Button>
           }
         />
@@ -141,7 +141,7 @@ export function WebhooksListPage() {
               busy={busyId === sub.id}
               onTest={() => test.mutate(sub.id)}
               onDelete={() => {
-                if (window.confirm(`Delete subscription to ${sub.url}?`)) {
+                if (window.confirm(`Удалить подписку на ${sub.url}?`)) {
                   remove.mutate(sub.id);
                 }
               }}
@@ -162,7 +162,7 @@ export function WebhooksListPage() {
           hasNext={data.hasNext}
           onPrev={() => setPage((p) => Math.max(1, p - 1))}
           onNext={() => setPage((p) => p + 1)}
-          noun="subscriptions"
+          noun="подписки"
         />
       )}
 
@@ -203,7 +203,7 @@ function Row({
             sub.isActive ? "bg-[var(--color-accent-signal)]" : "bg-[var(--color-muted-foreground)]/50",
           )}
           aria-hidden
-          title={sub.isActive ? "Active" : "Inactive"}
+          title={sub.isActive ? "Активна" : "Неактивна"}
         />
         <button
           type="button"
@@ -217,11 +217,11 @@ function Row({
             ))}
             {sub.events.length > 4 && (
               <span className="font-mono text-[10.5px] text-[var(--color-muted-foreground)]">
-                +{sub.events.length - 4} more
+                ещё +{sub.events.length - 4}
               </span>
             )}
             <span className="font-mono text-[10.5px] uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
-              · since {new Date(sub.createdAtUtc).toLocaleDateString()}
+              · с {new Date(sub.createdAtUtc).toLocaleDateString("ru-RU")}
             </span>
           </div>
         </button>
@@ -229,17 +229,17 @@ function Row({
           variant={sub.isActive ? "success" : "muted"}
           className="font-mono uppercase tracking-[0.14em]"
         >
-          {sub.isActive ? "Active" : "Inactive"}
+          {sub.isActive ? "Активна" : "Неактивна"}
         </Badge>
         <Button variant="outline" size="sm" onClick={onTest} disabled={busy}>
-          <Send className="mr-1 h-3.5 w-3.5" /> Test
+          <Send className="mr-1 h-3.5 w-3.5" /> Тест
         </Button>
         <Button
           variant="ghost"
           size="sm"
           onClick={onDelete}
           disabled={busy}
-          aria-label={`Delete subscription to ${sub.url}`}
+          aria-label={`Удалить подписку на ${sub.url}`}
           className="text-[var(--color-destructive)] hover:bg-[oklch(from_var(--color-destructive)_l_c_h_/_0.08)]"
         >
           <Trash2 className="h-3.5 w-3.5" />

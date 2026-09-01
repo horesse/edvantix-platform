@@ -32,7 +32,7 @@ export function ConfirmEmailPage() {
       setStatus({
         kind: "error",
         message:
-          "This confirmation link is missing required parameters. It may have been clipped by your email client.",
+          "В ссылке подтверждения не хватает обязательных параметров. Возможно, её обрезал почтовый клиент.",
       });
       return;
     }
@@ -45,7 +45,7 @@ export function ConfirmEmailPage() {
           message:
             typeof message === "string" && message.length > 0
               ? message
-              : "Your email is confirmed. You can now sign in.",
+              : "E-mail подтверждён. Теперь можно войти.",
         });
       })
       .catch((err: unknown) => {
@@ -84,18 +84,19 @@ export function ConfirmEmailPage() {
         {/* Brand lockup */}
         <div className="mb-8 flex flex-col items-center">
           <div className="flex items-center gap-2.5">
-            <img
-              src="/logo-fullstackhero.png"
-              alt="fullstackhero"
-              className="size-9 object-contain"
-            />
+            <span
+              aria-hidden
+              className="brand-mark grid size-9 shrink-0 place-items-center rounded-xl font-display text-[13px] font-bold text-[var(--color-primary-foreground)]"
+            >
+              E
+            </span>
             <span className="font-display text-[26px] font-semibold tracking-tight text-[var(--color-foreground)]">
-              fullstack<span className="text-[var(--color-primary)]">hero</span>
+              Edvantix
             </span>
           </div>
           <div className="mt-3 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-[oklch(from_var(--color-muted-foreground)_l_c_h_/_0.7)]">
             <span aria-hidden className="h-px w-6 bg-[var(--color-border)]" />
-            <span>.NET 10 Starter Kit</span>
+            <span>Операторская консоль</span>
             <span aria-hidden className="h-px w-6 bg-[var(--color-border)]" />
           </div>
         </div>
@@ -115,11 +116,11 @@ export function ConfirmEmailPage() {
                 </div>
                 <div>
                   <h1 className="mb-1.5 font-display text-[22px] font-semibold tracking-tight text-[var(--color-foreground)]">
-                    Verifying your{" "}
-                    <span className="text-[var(--color-primary)]">email…</span>
+                    Проверяем{" "}
+                    <span className="text-[var(--color-primary)]">e-mail…</span>
                   </h1>
                   <p className="text-[13px] leading-relaxed text-[var(--color-muted-foreground)]">
-                    One moment — checking the confirmation token with the server.
+                    Секунду — проверяем токен подтверждения на сервере.
                   </p>
                 </div>
               </div>
@@ -137,8 +138,8 @@ export function ConfirmEmailPage() {
                 </div>
                 <div>
                   <h1 className="mb-1.5 font-display text-[22px] font-semibold tracking-tight text-[var(--color-foreground)]">
-                    Email{" "}
-                    <span className="text-[var(--color-primary)]">confirmed</span>
+                    E-mail{" "}
+                    <span className="text-[var(--color-primary)]">подтверждён</span>
                   </h1>
                   <p className="text-[13px] leading-relaxed text-[var(--color-muted-foreground)]">
                     {status.message}
@@ -146,7 +147,7 @@ export function ConfirmEmailPage() {
                 </div>
                 <Link to="/login" className="block">
                   <Button type="button" className="group h-11 w-full text-[14px] font-semibold">
-                    <span>Continue to sign in</span>
+                    <span>Перейти ко входу</span>
                     <ArrowRight className="size-[14px] opacity-60 transition-all duration-200 group-hover:translate-x-0.5 group-hover:opacity-100" />
                   </Button>
                 </Link>
@@ -165,27 +166,27 @@ export function ConfirmEmailPage() {
                 </div>
                 <div>
                   <h1 className="mb-1.5 font-display text-[22px] font-semibold tracking-tight text-[var(--color-foreground)]">
-                    Couldn't{" "}
-                    <span className="text-[var(--color-primary)]">confirm</span>{" "}
-                    your email
+                    Не удалось{" "}
+                    <span className="text-[var(--color-primary)]">подтвердить</span>{" "}
+                    e-mail
                   </h1>
                   <p className="text-[13px] leading-relaxed text-[var(--color-muted-foreground)]">
                     {status.message}
                   </p>
                   <p className="mt-2 text-[12px] leading-relaxed text-[var(--color-muted-foreground)]">
-                    The link may have expired or been used already. If you've signed in since
-                    this email was sent, you can ignore it.
+                    Возможно, ссылка истекла или уже использована. Если вы входили после отправки
+                    этого письма — его можно игнорировать.
                   </p>
                 </div>
                 <div className="flex items-center justify-center gap-2 pt-1">
                   <Link to="/login">
                     <Button type="button" variant="outline">
-                      Back to sign in
+                      К входу
                     </Button>
                   </Link>
                   <Link to="/forgot-password">
                     <Button type="button" variant="ghost">
-                      Reset password instead
+                      Сбросить пароль
                     </Button>
                   </Link>
                 </div>
@@ -199,7 +200,7 @@ export function ConfirmEmailPage() {
             to="/login"
             className="text-[12.5px] text-[var(--color-muted-foreground)] underline-offset-4 hover:text-[var(--color-foreground)] hover:underline"
           >
-            ← Back to sign in
+            ← К входу
           </Link>
         </div>
       </div>

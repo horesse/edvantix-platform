@@ -1,7 +1,12 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Pencil, Plus, Tag } from "lucide-react";
-import { getPlans, planTermPrice, type BillingPlanDto } from "@/api/billing";
+import {
+  getPlans,
+  planTermPrice,
+  type BillingPlanDto,
+  type QuotaResource,
+} from "@/api/billing";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,26 +18,42 @@ import { BillingPermissions } from "@/lib/permissions";
 
 // ─── helpers ──────────────────────────────────────────────────────────
 
+/** School-term labels for quota resources — "Ученики" not "ActiveStudents". */
+const RESOURCE_LABEL: Record<string, string> = {
+  ActiveStudents: "ученики",
+  ActiveTeachers: "преподаватели",
+  StudyGroups: "учебные группы",
+  MonthlySessions: "занятия/мес",
+  StorageBytes: "объём файлов",
+  ApiCalls: "вызовы API",
+  Users: "учётные записи",
+  ActiveFeatureFlags: "флаги функций",
+};
+
+function resourceLabel(resource: string): string {
+  return RESOURCE_LABEL[resource] ?? resource;
+}
+
 function formatMoney(amount: number, currency: string) {
   try {
-    return new Intl.NumberFormat(undefined, { style: "currency", currency }).format(amount);
+    return new Intl.NumberFormat("ru-RU", { style: "currency", currency }).format(amount);
   } catch {
     return `${amount.toFixed(2)} ${currency}`;
   }
 }
 
 function formatOverageRates(rates: BillingPlanDto["overageRates"], currency: string) {
-  const entries = Object.entries(rates).filter(([, v]) => v && v > 0);
+  const entries = Object.entries(rates).filter(([, v]) => v && v > 0) as [QuotaResource, number][];
   if (entries.length === 0) return "—";
   return entries
-    .map(([resource, rate]) => `${resource} ${formatMoney(rate ?? 0, currency)}`)
+    .map(([resource, rate]) => `${resourceLabel(resource)} ${formatMoney(rate ?? 0, currency)}`)
     .join(" · ");
 }
 
 function describe(err: unknown): string {
   if (err instanceof ApiRequestError) return err.problem?.detail ?? err.problem?.title ?? err.message;
   if (err instanceof Error) return err.message;
-  return "Failed to load plans.";
+  return "Не удалось загрузить тарифы.";
 }
 
 // ─── component ────────────────────────────────────────────────────────
@@ -78,17 +99,17 @@ export function PlansListPage() {
       {/* KPI strip */}
       <StatStrip cols={3}>
         <Stat
-          label="Plans"
+          label="Тарифы"
           value={query.isLoading ? <Skeleton className="h-7 w-16" /> : totals.count}
-          hint={`${totals.active} active`}
+          hint={`активных: ${totals.active}`}
         />
         <Stat
-          label="Active"
+          label="Активные"
           value={query.isLoading ? <Skeleton className="h-7 w-16" /> : totals.active}
-          hint={totals.count - totals.active > 0 ? `${totals.count - totals.active} inactive` : "all active"}
+          hint={totals.count - totals.active > 0 ? `неактивных: ${totals.count - totals.active}` : "все активны"}
         />
         <Stat
-          label="Average base"
+          label="Средняя база"
           value={
             query.isLoading ? (
               <Skeleton className="h-7 w-24" />
@@ -96,19 +117,19 @@ export function PlansListPage() {
               formatMoney(totals.averagePrice, totals.currency)
             )
           }
-          hint="monthly subscription fee"
+          hint="месячная плата за подписку"
         />
       </StatStrip>
 
       {/* Plans list */}
       <SettingsSection
         icon={Tag}
-        title="All plans"
-        description="Pricing schedule used by tenant subscriptions and invoice generation."
+        title="Все тарифы"
+        description="Прайс-лист для подписок школ и генерации счетов платформы. Лимиты — в учениках и преподавателях."
         footer={
           canManageBilling ? (
             <Button onClick={openCreate}>
-              <Plus className="mr-1 h-4 w-4" /> New plan
+              <Plus className="mr-1 h-4 w-4" /> Новый тариф
             </Button>
           ) : undefined
         }
@@ -130,7 +151,7 @@ export function PlansListPage() {
           </ul>
         ) : plans.length === 0 ? (
           <div className="py-10 text-center text-sm text-[var(--color-muted-foreground)]">
-            No plans yet. Create your first plan to start charging tenants.
+            Тарифов пока нет. Создайте первый, чтобы начать выставлять счета школам.
           </div>
         ) : (
           <ul className="-mx-5 border-t border-[var(--color-border)]">
@@ -147,16 +168,21 @@ export function PlansListPage() {
                       {plan.key}
                     </code>
                     <span className="font-display text-base font-semibold">{plan.name}</span>
-                    <Badge variant="outline">{plan.interval === "Yearly" ? "Yearly" : "Monthly"}</Badge>
+                    <Badge variant="outline">{plan.interval === "Yearly" ? "Год" : "Месяц"}</Badge>
                     {plan.isActive ? (
-                      <Badge variant="success">Active</Badge>
+                      <Badge variant="success">Активен</Badge>
                     ) : (
-                      <Badge variant="muted">Inactive</Badge>
+                      <Badge variant="muted">Неактивен</Badge>
                     )}
                   </div>
+                  {plan.description && (
+                    <p className="mt-1 text-[12px] leading-snug text-[var(--color-muted-foreground)]">
+                      {plan.description}
+                    </p>
+                  )}
                   <div className="mt-1 font-mono text-[11px] tracking-tight text-[var(--color-muted-foreground)]">
-                    currency {plan.currency} ·{" "}
-                    overage {formatOverageRates(plan.overageRates, plan.currency)}
+                    валюта {plan.currency} · превышение{" "}
+                    {formatOverageRates(plan.overageRates, plan.currency)}
                   </div>
                 </div>
 
@@ -167,14 +193,14 @@ export function PlansListPage() {
                       {formatMoney(planTermPrice(plan), plan.currency)}
                     </div>
                     <div className="mt-1 font-mono text-[10.5px] uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
-                      {plan.interval === "Yearly" ? "per year" : "per month"}
+                      {plan.interval === "Yearly" ? "за год" : "за месяц"}
                     </div>
                   </div>
                   {canManageBilling && (
                     <Button
                       variant="ghost"
                       size="icon"
-                      aria-label={`Edit ${plan.name}`}
+                      aria-label={`Изменить тариф «${plan.name}»`}
                       onClick={() => openEdit(plan)}
                     >
                       <Pencil className="h-4 w-4" />

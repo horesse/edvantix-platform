@@ -77,18 +77,19 @@ export function ForgotPasswordPage() {
         {/* Brand lockup */}
         <div className="mb-8 flex flex-col items-center">
           <div className="flex items-center gap-2.5">
-            <img
-              src="/logo-fullstackhero.png"
-              alt="fullstackhero"
-              className="size-9 object-contain"
-            />
+            <span
+              aria-hidden
+              className="brand-mark grid size-9 shrink-0 place-items-center rounded-xl font-display text-[13px] font-bold text-[var(--color-primary-foreground)]"
+            >
+              E
+            </span>
             <span className="font-display text-[26px] font-semibold tracking-tight text-[var(--color-foreground)]">
-              fullstack<span className="text-[var(--color-primary)]">hero</span>
+              Edvantix
             </span>
           </div>
           <div className="mt-3 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-[oklch(from_var(--color-muted-foreground)_l_c_h_/_0.7)]">
             <span aria-hidden className="h-px w-6 bg-[var(--color-border)]" />
-            <span>.NET 10 Starter Kit</span>
+            <span>Операторская консоль</span>
             <span aria-hidden className="h-px w-6 bg-[var(--color-border)]" />
           </div>
         </div>
@@ -108,24 +109,24 @@ export function ForgotPasswordPage() {
                 </div>
                 <div>
                   <h1 className="mb-1.5 font-display text-[22px] font-semibold tracking-tight text-[var(--color-foreground)]">
-                    Check your{" "}
-                    <span className="text-[var(--color-primary)]">inbox</span>
+                    Проверьте{" "}
+                    <span className="text-[var(--color-primary)]">почту</span>
                   </h1>
                   <p className="text-[13px] leading-relaxed text-[var(--color-muted-foreground)]">
-                    If an account exists for{" "}
-                    <span className="text-[var(--color-foreground)]">{email}</span> in tenant{" "}
-                    <span className="text-[var(--color-foreground)]">{tenant}</span>, a one-time
-                    reset link is on its way. The link expires in 30 minutes.
+                    Если для{" "}
+                    <span className="text-[var(--color-foreground)]">{email}</span> в школе{" "}
+                    <span className="text-[var(--color-foreground)]">{tenant}</span> есть учётка,
+                    одноразовая ссылка уже в пути. Ссылка действует 30 минут.
                   </p>
                 </div>
                 <ul className="space-y-1.5 text-left text-[12.5px] text-[var(--color-muted-foreground)]">
                   <li className="flex items-start gap-2">
                     <Check className="mt-0.5 size-3.5 shrink-0 text-[var(--color-success)]" />
-                    Didn't get it? Wait a minute, then check spam.
+                    Не пришло? Подождите минуту и проверьте «Спам».
                   </li>
                   <li className="flex items-start gap-2">
                     <Check className="mt-0.5 size-3.5 shrink-0 text-[var(--color-success)]" />
-                    Still nothing? Confirm the email + tenant and retry.
+                    Всё ещё нет? Сверьте e-mail и школу и повторите.
                   </li>
                 </ul>
                 <div className="flex items-center gap-2 pt-1">
@@ -137,11 +138,11 @@ export function ForgotPasswordPage() {
                       setError(null);
                     }}
                   >
-                    Try a different address
+                    Другой адрес
                   </Button>
                   <Link to="/login" className="ml-auto">
                     <Button type="button" variant="outline">
-                      Back to sign in
+                      К входу
                     </Button>
                   </Link>
                 </div>
@@ -150,11 +151,11 @@ export function ForgotPasswordPage() {
               <>
                 <div className="mb-6 sm:mb-8">
                   <h1 className="mb-1.5 font-display text-[22px] font-semibold tracking-tight text-[var(--color-foreground)]">
-                    Reset your{" "}
-                    <span className="text-[var(--color-primary)]">password</span>
+                    Сброс{" "}
+                    <span className="text-[var(--color-primary)]">пароля</span>
                   </h1>
                   <p className="text-[13px] text-[var(--color-muted-foreground)]">
-                    Enter the email + tenant you sign in with. We'll dispatch a one-time link.
+                    Укажите e-mail и школу, под которыми входите. Мы отправим одноразовую ссылку.
                   </p>
                 </div>
 
@@ -169,7 +170,7 @@ export function ForgotPasswordPage() {
                       htmlFor="reset-tenant"
                       className="block text-[11.5px] font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]"
                     >
-                      Tenant
+                      Школа
                     </Label>
                     <div className="relative">
                       <Building2 className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-[oklch(from_var(--color-muted-foreground)_l_c_h_/_0.6)]" />
@@ -191,7 +192,7 @@ export function ForgotPasswordPage() {
                       htmlFor="reset-email"
                       className="block text-[11.5px] font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]"
                     >
-                      Email
+                      E-mail
                     </Label>
                     <div className="relative">
                       <Mail className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-[oklch(from_var(--color-muted-foreground)_l_c_h_/_0.6)]" />
@@ -236,11 +237,11 @@ export function ForgotPasswordPage() {
                       {mutation.isPending ? (
                         <>
                           <Loader2 className="size-4 animate-spin" />
-                          <span>Dispatching link…</span>
+                          <span>Отправка ссылки…</span>
                         </>
                       ) : (
                         <>
-                          <span>Send reset link</span>
+                          <span>Отправить ссылку</span>
                           <ArrowRight className="size-[14px] opacity-60 transition-all duration-200 group-hover:translate-x-0.5 group-hover:opacity-100" />
                         </>
                       )}
@@ -253,18 +254,18 @@ export function ForgotPasswordPage() {
         </div>
 
         <div className="mt-6 text-center text-[12.5px] text-[var(--color-muted-foreground)]">
-          Remembered it?{" "}
+          Вспомнили?{" "}
           <Link
             to="/login"
             className="text-[var(--color-foreground)] underline-offset-4 hover:underline"
           >
-            Sign in
+            Войти
           </Link>
         </div>
 
         <div className="mt-4 flex items-center justify-center gap-1.5 text-[11px] text-[var(--color-muted-foreground)]">
           <ShieldCheck className="size-3" />
-          <span>Encrypted in transit · JWT-secured session</span>
+          <span>Шифрование при передаче · сессия на JWT</span>
         </div>
       </div>
     </div>

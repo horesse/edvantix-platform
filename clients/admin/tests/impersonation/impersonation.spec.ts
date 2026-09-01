@@ -48,15 +48,15 @@ test.describe("impersonation grants list", () => {
 
     const main = page.getByRole("main");
     await expect(
-      main.getByRole("heading", { name: "Impersonation", exact: true }),
+      main.getByRole("heading", { name: "Имперсонация", exact: true }),
     ).toBeVisible({ timeout: 10_000 });
 
     // KPI strip — assert via the unique per-Stat hint copy so we don't collide
-    // with the status filter option / row badge that also read "Active" etc.
-    await expect(main.getByText("in-flight tokens", { exact: true })).toBeVisible();
-    await expect(main.getByText("operator clicked End", { exact: true })).toBeVisible();
-    await expect(main.getByText("forcibly invalidated", { exact: true })).toBeVisible();
-    await expect(main.getByText("reached natural TTL", { exact: true })).toBeVisible();
+    // with the status filter option / row badge that also read "Активна" etc.
+    await expect(main.getByText("действующие токены", { exact: true })).toBeVisible();
+    await expect(main.getByText("оператор нажал «Завершить»", { exact: true })).toBeVisible();
+    await expect(main.getByText("принудительно аннулированы", { exact: true })).toBeVisible();
+    await expect(main.getByText("истёк естественный TTL", { exact: true })).toBeVisible();
 
     // Active grant row — actor → impersonated. Default filter is Active, so
     // only the active grant appears in the list.
@@ -70,7 +70,7 @@ test.describe("impersonation grants list", () => {
 
     const main = page.getByRole("main");
     await expect(
-      main.getByText("No active impersonations.", { exact: true }),
+      main.getByText("Активных имперсонаций нет.", { exact: true }),
     ).toBeVisible({ timeout: 10_000 });
   });
 
@@ -85,10 +85,10 @@ test.describe("impersonation grants list", () => {
 
     const main = page.getByRole("main");
     await expect(
-      main.getByRole("heading", { name: "Impersonation", exact: true }),
+      main.getByRole("heading", { name: "Имперсонация", exact: true }),
     ).toBeVisible({ timeout: 10_000 });
 
     // canRevoke needs Impersonation.Revoke (granted) + status Active.
-    await expect(main.getByRole("button", { name: /revoke/i }).first()).toBeVisible();
+    await expect(main.getByRole("button", { name: /отозвать/i }).first()).toBeVisible();
   });
 });

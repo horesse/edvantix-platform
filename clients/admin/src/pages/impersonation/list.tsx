@@ -29,11 +29,18 @@ import { cn } from "@/lib/cn";
 const REFRESH_INTERVAL_MS = 5_000;
 
 const STATUS_OPTIONS: { value: ImpersonationGrantStatus; label: string }[] = [
-  { value: "Active", label: "Active" },
-  { value: "Ended", label: "Ended" },
-  { value: "Revoked", label: "Revoked" },
-  { value: "Expired", label: "Expired" },
+  { value: "Active", label: "Активна" },
+  { value: "Ended", label: "Завершена" },
+  { value: "Revoked", label: "Отозвана" },
+  { value: "Expired", label: "Истекла" },
 ];
+
+const STATUS_RU: Record<string, string> = {
+  Active: "Активна",
+  Ended: "Завершена",
+  Revoked: "Отозвана",
+  Expired: "Истекла",
+};
 
 export function ImpersonationListPage() {
   const { user } = useAuth();
@@ -77,8 +84,8 @@ export function ImpersonationListPage() {
       <EntityPageHeader
         icon={UserCog}
         tone="warning"
-        title="Impersonation"
-        description="Every impersonation token issued by the server is tracked here. Active grants can be revoked — the token is rejected by the JWT validation hook within seconds."
+        title="Имперсонация"
+        description="Все выданные сервером токены имперсонации отслеживаются здесь. Активные разрешения можно отозвать — токен отклоняется валидацией JWT за секунды."
       >
         <Button
           variant="outline"
@@ -88,15 +95,15 @@ export function ImpersonationListPage() {
           className="flex-1 sm:flex-none"
         >
           <RefreshCw className={cn("mr-1.5 h-3.5 w-3.5", grants.isFetching && "animate-spin")} />
-          Refresh
+          Обновить
         </Button>
       </EntityPageHeader>
 
       <StatStrip cols={4}>
-        <Stat label="Active" value={grants.isLoading ? "—" : counts.active.toString()} hint="in-flight tokens" tone={counts.active > 0 ? "signal" : "default"} />
-        <Stat label="Ended" value={grants.isLoading ? "—" : counts.ended.toString()} hint="operator clicked End" />
-        <Stat label="Revoked" value={grants.isLoading ? "—" : counts.revoked.toString()} hint="forcibly invalidated" tone={counts.revoked > 0 ? "danger" : "default"} />
-        <Stat label="Expired" value={grants.isLoading ? "—" : counts.expired.toString()} hint="reached natural TTL" />
+        <Stat label="Активные" value={grants.isLoading ? "—" : counts.active.toString()} hint="действующие токены" tone={counts.active > 0 ? "signal" : "default"} />
+        <Stat label="Завершены" value={grants.isLoading ? "—" : counts.ended.toString()} hint="оператор нажал «Завершить»" />
+        <Stat label="Отозваны" value={grants.isLoading ? "—" : counts.revoked.toString()} hint="принудительно аннулированы" tone={counts.revoked > 0 ? "danger" : "default"} />
+        <Stat label="Истекли" value={grants.isLoading ? "—" : counts.expired.toString()} hint="истёк естественный TTL" />
       </StatStrip>
 
       <FilterBar>
@@ -104,7 +111,7 @@ export function ImpersonationListPage() {
           value={status}
           onChange={(v) => setStatus(v as ImpersonationGrantStatus | "")}
           options={STATUS_OPTIONS}
-          placeholder="All statuses"
+          placeholder="Все статусы"
           minWidth="12rem"
         />
       </FilterBar>
@@ -114,22 +121,22 @@ export function ImpersonationListPage() {
           message={
             grants.error instanceof ApiRequestError
               ? grants.error.problem?.detail ?? grants.error.message
-              : "Failed to load impersonation grants."
+              : "Не удалось загрузить разрешения имперсонации."
           }
         />
       )}
 
-      {grants.isLoading && <LoadingRow label="Loading grants" />}
+      {grants.isLoading && <LoadingRow label="Загрузка разрешений" />}
 
       {!grants.isLoading && items.length === 0 && !grants.isError && (
         <EmptyState
           icon={UserCog}
-          kicker="// nothing here"
-          title={status === "Active" ? "No active impersonations." : "No grants match this filter."}
+          kicker="// здесь пусто"
+          title={status === "Active" ? "Активных имперсонаций нет." : "Под этот фильтр разрешений нет."}
           description={
             status === "Active"
-              ? "When an operator starts impersonating a tenant user, the session appears here in real time."
-              : "Try a different status filter to see the rest of the grant history."
+              ? "Когда оператор начнёт имперсонацию пользователя школы, сессия появится здесь в реальном времени."
+              : "Выберите другой статус, чтобы увидеть остальную историю разрешений."
           }
         />
       )}
@@ -254,15 +261,15 @@ function GrantRow({
               <Clock className="-mt-0.5 mr-1 inline h-3 w-3" aria-hidden />
               {formatTimestamp(grant.startedAtUtc)}
             </span>
-            <span>· expires {formatTimestamp(grant.expiresAtUtc)}</span>
+            <span>· истекает {formatTimestamp(grant.expiresAtUtc)}</span>
             <button
               type="button"
               onClick={() => setOpen((v) => !v)}
               aria-expanded={open}
-              aria-label={open ? "Hide grant details" : "Show grant details"}
+              aria-label={open ? "Скрыть детали разрешения" : "Показать детали разрешения"}
               className="ml-1 inline-flex items-center gap-0.5 underline-offset-2 hover:text-[var(--color-foreground)] hover:underline"
             >
-              {open ? "hide" : "details"}
+              {open ? "скрыть" : "детали"}
               <ChevronDown className={cn("h-3 w-3 transition-transform", open && "rotate-180")} />
             </button>
           </div>
@@ -274,14 +281,14 @@ function GrantRow({
               variant="outline"
               size="sm"
               onClick={onReopen}
-              title="Issue a fresh impersonation token for this user — use when you've lost the original browser tab."
+              title="Выдать новый токен имперсонации для этого пользователя — если потеряна исходная вкладка браузера."
             >
-              <UserCog className="mr-1 h-3.5 w-3.5" /> Re-open
+              <UserCog className="mr-1 h-3.5 w-3.5" /> Открыть заново
             </Button>
           )}
           {canRevoke ? (
             <Button variant="outline" size="sm" onClick={onRevoke}>
-              <ShieldOff className="mr-1 h-3.5 w-3.5" /> Revoke
+              <ShieldOff className="mr-1 h-3.5 w-3.5" /> Отозвать
             </Button>
           ) : (
             !canReopen && <span aria-hidden />
@@ -296,21 +303,21 @@ function GrantRow({
 function Details({ grant }: { grant: ImpersonationGrantDto }) {
   return (
     <dl className="ml-7 grid grid-cols-1 gap-y-1 border-l-2 border-[var(--color-accent-signal)] py-2 pl-4 text-[12px] sm:grid-cols-2 sm:gap-x-6">
-      <DRow label="Reason">
+      <DRow label="Причина">
         <span className="text-[var(--color-muted-foreground)]">{grant.reason || "—"}</span>
       </DRow>
-      <DRow label="Grant id"><code className="code-chip">{grant.id}</code></DRow>
-      <DRow label="JWT id"><code className="code-chip">{grant.jti}</code></DRow>
-      <DRow label="Actor"><code className="code-chip">{grant.actorUserId}</code> @ {grant.actorTenantId}</DRow>
-      <DRow label="Impersonated"><code className="code-chip">{grant.impersonatedUserId}</code></DRow>
+      <DRow label="ID разрешения"><code className="code-chip">{grant.id}</code></DRow>
+      <DRow label="ID JWT"><code className="code-chip">{grant.jti}</code></DRow>
+      <DRow label="Инициатор"><code className="code-chip">{grant.actorUserId}</code> @ {grant.actorTenantId}</DRow>
+      <DRow label="Кого имперсонируют"><code className="code-chip">{grant.impersonatedUserId}</code></DRow>
       {grant.endedAtUtc && (
-        <DRow label="Ended at">{new Date(grant.endedAtUtc).toLocaleString()}</DRow>
+        <DRow label="Завершена">{new Date(grant.endedAtUtc).toLocaleString("ru-RU")}</DRow>
       )}
       {grant.revokedAtUtc && (
         <>
-          <DRow label="Revoked at">{new Date(grant.revokedAtUtc).toLocaleString()}</DRow>
-          <DRow label="Revoked by">{grant.revokedByUserName ?? grant.revokedByUserId ?? "—"}</DRow>
-          <DRow label="Revoke reason" wide>
+          <DRow label="Отозвана">{new Date(grant.revokedAtUtc).toLocaleString("ru-RU")}</DRow>
+          <DRow label="Кем отозвана">{grant.revokedByUserName ?? grant.revokedByUserId ?? "—"}</DRow>
+          <DRow label="Причина отзыва" wide>
             <span className="text-[var(--color-muted-foreground)]">{grant.revokeReason || "—"}</span>
           </DRow>
         </>
@@ -348,7 +355,7 @@ function StatusBadge({ status }: { status: ImpersonationGrantStatus }) {
     "muted";
   return (
     <Badge variant={variant} className="font-mono uppercase tracking-[0.14em]">
-      {status}
+      {STATUS_RU[status] ?? status}
     </Badge>
   );
 }
@@ -359,3 +366,4 @@ function formatTimestamp(value: string): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
+

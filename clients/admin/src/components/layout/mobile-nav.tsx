@@ -93,9 +93,9 @@ export function MobileNavRoot() {
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetContent side="left" className="flex flex-col p-0">
         {/* Radix Dialog requires a Title for the accessible tree. */}
-        <DialogTitle className="sr-only">Primary navigation</DialogTitle>
+        <DialogTitle className="sr-only">Основная навигация</DialogTitle>
         <DialogDescription className="sr-only">
-          Admin sections and account links.
+          Разделы операторской консоли и ссылки аккаунта.
         </DialogDescription>
 
         {/* Brand row — matches Topbar height */}
@@ -108,14 +108,14 @@ export function MobileNavRoot() {
               "shadow-[0_1px_0_oklch(1_0_0_/_0.18)_inset,0_4px_14px_-4px_oklch(from_var(--color-primary)_l_c_h_/_0.45)]",
             )}
           >
-            F
+            E
           </span>
           <div className="flex flex-col">
             <span className="whitespace-nowrap font-display text-[15px] font-bold leading-none tracking-tight text-[var(--color-foreground)]">
-              fullstack<span className="text-[var(--color-primary)]">hero</span>
+              Edvantix
             </span>
             <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-[oklch(from_var(--color-muted-foreground)_l_c_h_/_0.7)]">
-              Admin
+              Оператор
             </span>
           </div>
         </div>
@@ -130,7 +130,7 @@ export function MobileNavRoot() {
 
         <div className="border-t border-[var(--color-border)] px-5 py-3">
           <p className="font-mono text-[10.5px] uppercase tracking-[0.12em] text-[var(--color-muted-foreground)]">
-            v0.1 · admin
+            v0.1 · оператор
           </p>
         </div>
       </SheetContent>
@@ -147,7 +147,7 @@ export function MobileNavTrigger({ className }: { className?: string }) {
   return (
     <button
       type="button"
-      aria-label="Open navigation menu"
+      aria-label="Открыть меню навигации"
       onClick={onClick}
       className={cn(
         "grid h-9 w-9 cursor-pointer place-items-center rounded-md md:hidden",

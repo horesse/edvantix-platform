@@ -100,7 +100,7 @@ export function useFileUpload(options: UploadOptions): UseFileUploadResult {
         const dot = file.name.lastIndexOf(".");
         const ext = dot >= 0 ? file.name.slice(dot).toLowerCase() : "";
         if (!opts.allowedExtensions.includes(ext)) {
-          const message = `Extension ${ext || "(none)"} is not allowed.`;
+          const message = `Расширение ${ext || "(нет)"} не разрешено.`;
           setProgress({
             fileName: file.name,
             totalBytes: file.size,
@@ -156,7 +156,7 @@ export function useFileUpload(options: UploadOptions): UseFileUploadResult {
         );
         throw e;
       }
-      if (cancelledRef.current) throw new Error("Upload cancelled.");
+      if (cancelledRef.current) throw new Error("Загрузка отменена.");
 
       setProgress((p) =>
         p ? { ...p, status: "uploading", fileAssetId: presigned.fileAssetId } : null,
@@ -184,7 +184,7 @@ export function useFileUpload(options: UploadOptions): UseFileUploadResult {
         setProgress((p) => (p ? { ...p, status: "error", error: message } : null));
         throw e instanceof Error ? e : new Error(message);
       }
-      if (cancelledRef.current) throw new Error("Upload cancelled.");
+      if (cancelledRef.current) throw new Error("Загрузка отменена.");
 
       setProgress((p) => (p ? { ...p, status: "finalizing", percent: 99 } : null));
 
@@ -239,8 +239,8 @@ function xhrPut(
       if (xhr.status >= 200 && xhr.status < 300) resolve();
       else reject(new Error(`PUT failed: ${xhr.status} ${xhr.statusText || ""}`.trim()));
     };
-    xhr.onerror = () => reject(new Error("Network error during upload."));
-    xhr.onabort = () => reject(new Error("Upload cancelled."));
+    xhr.onerror = () => reject(new Error("Ошибка сети при загрузке."));
+    xhr.onabort = () => reject(new Error("Загрузка отменена."));
     xhr.send(body);
   });
 }
@@ -250,7 +250,7 @@ function describeError(e: unknown): string {
     return e.problem?.detail ?? e.problem?.title ?? e.message;
   }
   if (e instanceof Error) return e.message;
-  return "Unknown error";
+  return "Неизвестная ошибка";
 }
 
 export function formatBytes(bytes: number): string {

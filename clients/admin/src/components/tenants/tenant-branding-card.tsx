@@ -62,38 +62,38 @@ export function TenantBrandingCard({ tenantId }: { tenantId: string }) {
   const saveMutation = useMutation({
     mutationFn: (theme: TenantThemeDto) => updateTenantTheme(tenantId, theme),
     onSuccess: () => {
-      toast.success("Branding saved");
+      toast.success("Брендирование сохранено");
       void queryClient.invalidateQueries({ queryKey: themeQueryKey });
     },
     onError: (err) =>
-      toast.error("Save failed", { description: apiErr(err) }),
+      toast.error("Не удалось сохранить", { description: apiErr(err) }),
   });
 
   const resetMutation = useMutation({
     mutationFn: () => resetTenantTheme(tenantId),
     onSuccess: () => {
-      toast.success("Branding reset to defaults");
+      toast.success("Брендирование сброшено к умолчаниям");
       void queryClient.invalidateQueries({ queryKey: themeQueryKey });
     },
     onError: (err) =>
-      toast.error("Reset failed", { description: apiErr(err) }),
+      toast.error("Не удалось сбросить", { description: apiErr(err) }),
   });
 
   if (themeQuery.isLoading) {
     return (
       <SettingsSection
-        title="Branding"
+        title="Брендирование"
         icon={Palette}
-        description="Operator-controlled colors + brand assets that drive this tenant's UI."
+        description="Управляемые оператором цвета и брендовые ассеты, которые задают интерфейс этой школы."
       >
-        <LoadingRow label="Loading branding" />
+        <LoadingRow label="Загрузка брендирования" />
       </SettingsSection>
     );
   }
 
   if (themeQuery.isError) {
     return (
-      <SettingsSection title="Branding" icon={Palette}>
+      <SettingsSection title="Брендирование" icon={Palette}>
         <ErrorBand message={apiErr(themeQuery.error)} />
       </SettingsSection>
     );
@@ -116,12 +116,12 @@ export function TenantBrandingCard({ tenantId }: { tenantId: string }) {
       <div className="flex items-center gap-2">
         {draft.isDefault && !dirty && (
           <Badge variant="outline" className="font-mono uppercase tracking-[0.14em]">
-            default
+            по умолчанию
           </Badge>
         )}
         {dirty && (
           <Badge variant="warning" className="font-mono uppercase tracking-[0.14em]">
-            unsaved
+            не сохранено
           </Badge>
         )}
       </div>
@@ -131,10 +131,10 @@ export function TenantBrandingCard({ tenantId }: { tenantId: string }) {
           variant="ghost"
           onClick={() => resetMutation.mutate()}
           disabled={resetMutation.isPending || saveMutation.isPending}
-          aria-label="Reset branding to defaults"
+          aria-label="Сбросить брендирование к значениям по умолчанию"
         >
           <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
-          {resetMutation.isPending ? "Resetting…" : "Reset to defaults"}
+          {resetMutation.isPending ? "Сброс…" : "Сбросить к умолчаниям"}
         </Button>
         <Button
           type="button"
@@ -147,7 +147,7 @@ export function TenantBrandingCard({ tenantId }: { tenantId: string }) {
           ) : (
             <Save className="mr-1.5 h-3.5 w-3.5" />
           )}
-          {saveMutation.isPending ? "Saving…" : "Save branding"}
+          {saveMutation.isPending ? "Сохранение…" : "Сохранить брендирование"}
         </Button>
       </div>
     </div>
@@ -155,23 +155,23 @@ export function TenantBrandingCard({ tenantId }: { tenantId: string }) {
 
   return (
     <SettingsSection
-      title="Branding"
+      title="Брендирование"
       icon={Palette}
-      description="Theme tokens consumed by this tenant's apps on sign-in. Live preview reflects the primary action with the chosen palette."
+      description="Токены темы, которые приложения школы берут при входе. Предпросмотр показывает основное действие с выбранной палитрой."
       footer={footer}
     >
       <div className="space-y-6">
-        <ThemePreview palette={draft.lightPalette} label="Light preview" />
+        <ThemePreview palette={draft.lightPalette} label="Светлый предпросмотр" />
 
         <div className="grid gap-5 lg:grid-cols-2">
           <PaletteEditor
-            title="Light palette"
+            title="Светлая палитра"
             palette={draft.lightPalette}
             onChange={onLight}
             defaults={DEFAULT_LIGHT_PALETTE}
           />
           <PaletteEditor
-            title="Dark palette"
+            title="Тёмная палитра"
             palette={draft.darkPalette}
             onChange={onDark}
             defaults={DEFAULT_DARK_PALETTE}
@@ -189,15 +189,15 @@ export function TenantBrandingCard({ tenantId }: { tenantId: string }) {
 // ─────────────────────────────────────────────────────────────────────────
 
 const PALETTE_FIELDS: ReadonlyArray<{ key: keyof PaletteDto; label: string }> = [
-  { key: "primary", label: "Primary" },
-  { key: "secondary", label: "Secondary" },
-  { key: "tertiary", label: "Tertiary" },
-  { key: "background", label: "Background" },
-  { key: "surface", label: "Surface" },
-  { key: "error", label: "Error" },
-  { key: "warning", label: "Warning" },
-  { key: "success", label: "Success" },
-  { key: "info", label: "Info" },
+  { key: "primary", label: "Основной" },
+  { key: "secondary", label: "Вторичный" },
+  { key: "tertiary", label: "Третичный" },
+  { key: "background", label: "Фон" },
+  { key: "surface", label: "Поверхность" },
+  { key: "error", label: "Ошибка" },
+  { key: "warning", label: "Предупреждение" },
+  { key: "success", label: "Успех" },
+  { key: "info", label: "Инфо" },
 ];
 
 function PaletteEditor({
@@ -311,7 +311,7 @@ function BrandAssetsEditor({
       <div className="space-y-4 p-4">
         <AssetField
           id="logo-url"
-          label="Logo URL"
+          label="URL логотипа"
           value={assets.logoUrl ?? ""}
           onChange={(v) =>
             onChange({ logoUrl: v || null, deleteLogo: v.length === 0 })
@@ -319,7 +319,7 @@ function BrandAssetsEditor({
         />
         <AssetField
           id="logo-dark-url"
-          label="Logo URL (dark mode)"
+          label="URL логотипа (тёмная тема)"
           value={assets.logoDarkUrl ?? ""}
           onChange={(v) =>
             onChange({ logoDarkUrl: v || null, deleteLogoDark: v.length === 0 })
@@ -327,7 +327,7 @@ function BrandAssetsEditor({
         />
         <AssetField
           id="favicon-url"
-          label="Favicon URL"
+          label="URL favicon"
           value={assets.faviconUrl ?? ""}
           onChange={(v) =>
             onChange({ faviconUrl: v || null, deleteFavicon: v.length === 0 })

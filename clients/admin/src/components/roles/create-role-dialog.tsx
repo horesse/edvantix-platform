@@ -26,9 +26,9 @@ const schema = z.object({
   name: z
     .string()
     .trim()
-    .min(2, "At least 2 characters.")
-    .max(64, "Keep under 64 characters."),
-  description: z.string().trim().max(256, "Keep under 256 characters.").optional(),
+    .min(2, "Не меньше 2 символов.")
+    .max(64, "Не больше 64 символов."),
+  description: z.string().trim().max(256, "Не больше 256 символов.").optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -64,7 +64,7 @@ export function CreateRoleDialog({
         description: values.description?.trim() ? values.description : null,
       }),
     onSuccess: (result) => {
-      toast.success(`Role ${result.name} created`);
+      toast.success(`Роль ${result.name} создана`);
       queryClient.invalidateQueries({ queryKey: ["roles"] });
       handleClose();
       navigate(`/roles/${result.id}`);
@@ -74,7 +74,7 @@ export function CreateRoleDialog({
         err instanceof ApiRequestError
           ? err.problem?.detail ?? err.problem?.title ?? err.message
           : err.message;
-      toast.error("Create failed", { description: detail });
+      toast.error("Не удалось создать", { description: detail });
     },
   });
 
@@ -108,22 +108,22 @@ export function CreateRoleDialog({
               <Shield className="h-[18px] w-[18px]" />
             </span>
             <div className="min-w-0">
-              <DialogTitle className="text-[16px]">New role</DialogTitle>
+              <DialogTitle className="text-[16px]">Новая роль</DialogTitle>
             </div>
           </div>
           <DialogDescription className="mt-1">
-            Create a role, then grant it permissions on its detail page. The role name is what shows
-            up in user role assignments — choose something descriptive.
+            Создайте роль, затем выдайте ей права на карточке. Название роли видно при назначении
+            ролей пользователям — выбирайте понятное.
           </DialogDescription>
         </DialogHeader>
 
         {/* ── Form ── */}
         <form onSubmit={onSubmit}>
           <DialogBody className="space-y-4">
-            <Field id="cr-name" label="Name" required error={errors.name?.message}>
+            <Field id="cr-name" label="Название" required error={errors.name?.message}>
               <Input
                 id="cr-name"
-                placeholder="Support agent"
+                placeholder="Агент поддержки"
                 autoComplete="off"
                 aria-invalid={errors.name ? true : undefined}
                 {...register("name")}
@@ -131,13 +131,13 @@ export function CreateRoleDialog({
             </Field>
             <Field
               id="cr-description"
-              label="Description"
-              hint="Optional. Plain English explaining what this role is for."
+              label="Описание"
+              hint="Необязательно. Простыми словами — для чего эта роль."
               error={errors.description?.message}
             >
               <Input
                 id="cr-description"
-                placeholder="Inbound support · read-only on billing"
+                placeholder="Входящая поддержка · биллинг только для чтения"
                 aria-invalid={errors.description ? true : undefined}
                 {...register("description")}
               />
@@ -152,10 +152,10 @@ export function CreateRoleDialog({
               onClick={handleClose}
               disabled={submitting}
             >
-              Cancel
+              Отмена
             </Button>
             <Button type="submit" disabled={submitting}>
-              {submitting ? "Saving…" : "Create role"}
+              {submitting ? "Сохранение…" : "Создать роль"}
             </Button>
           </DialogFooter>
         </form>

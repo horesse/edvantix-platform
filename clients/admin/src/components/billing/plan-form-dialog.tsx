@@ -23,19 +23,20 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ApiRequestError } from "@/lib/api-client";
+import { cn } from "@/lib/cn";
 
 const PLAN_KEY_PATTERN = /^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$/;
 
 // A money/rate field is a free-text decimal string. These refinements run
 // client-side so a negative price is rejected before any network call (the
 // server also rejects it, but we don't rely on that).
-const NON_NEGATIVE_MSG = "Must be a non-negative number.";
+const NON_NEGATIVE_MSG = "Должно быть неотрицательным числом.";
 
 /** Required non-negative decimal (e.g. monthly base price). */
 const requiredNonNegative = z
   .string()
   .trim()
-  .min(1, "Required.")
+  .min(1, "Обязательное поле.")
   .refine((v) => Number.isFinite(Number(v)) && Number(v) >= 0, NON_NEGATIVE_MSG);
 
 /** Optional non-negative decimal (blank allowed → omitted). */
@@ -45,15 +46,22 @@ const optionalNonNegative = z
   .refine((v) => v === "" || (Number.isFinite(Number(v)) && Number(v) >= 0), NON_NEGATIVE_MSG);
 
 const INTERVAL_OPTIONS: SelectOption<PlanInterval>[] = [
-  { value: "Monthly", label: "Monthly", hint: "billed every month" },
-  { value: "Yearly", label: "Yearly", hint: "billed every 12 months" },
+  { value: "Monthly", label: "Ежемесячно", hint: "списание каждый месяц" },
+  { value: "Yearly", label: "Ежегодно", hint: "списание раз в 12 месяцев" },
 ];
 
+// School-domain resources first (the units a school actually thinks in),
+// then the infrastructure gauges. Labels are in school terms — "Ученики" /
+// "Преподаватели", not "Users".
 const OVERAGE_RESOURCES: { key: QuotaResource; label: string; placeholder: string }[] = [
-  { key: "ApiCalls", label: "API calls", placeholder: "0.0010" },
-  { key: "StorageBytes", label: "Storage bytes", placeholder: "0.00000001" },
-  { key: "Users", label: "Users", placeholder: "5.00" },
-  { key: "ActiveFeatureFlags", label: "Feature flags", placeholder: "1.00" },
+  { key: "ActiveStudents", label: "Ученики", placeholder: "150.00" },
+  { key: "ActiveTeachers", label: "Преподаватели", placeholder: "400.00" },
+  { key: "StudyGroups", label: "Учебные группы", placeholder: "100.00" },
+  { key: "MonthlySessions", label: "Занятий в месяц", placeholder: "5.00" },
+  { key: "StorageBytes", label: "Объём файлов (за байт)", placeholder: "0.00000001" },
+  { key: "ApiCalls", label: "Вызовы API", placeholder: "0.0010" },
+  { key: "Users", label: "Учётные записи", placeholder: "5.00" },
+  { key: "ActiveFeatureFlags", label: "Флаги функций", placeholder: "1.00" },
 ];
 
 type OverageState = Record<string, string>;
@@ -130,6 +138,7 @@ export function PlanFormDialog({
   const [key, setKey] = useState("");
   const [name, setName] = useState("");
   const [currency, setCurrency] = useState("USD");
+  const [description, setDescription] = useState("");
   const [monthlyBasePrice, setMonthlyBasePrice] = useState("");
   const [interval, setInterval] = useState<PlanInterval>("Monthly");
   const [annualPrice, setAnnualPrice] = useState("");
@@ -141,6 +150,7 @@ export function PlanFormDialog({
     setKey(plan?.key ?? "");
     setName(plan?.name ?? "");
     setCurrency(plan?.currency ?? "USD");
+    setDescription(plan?.description ?? "");
     setMonthlyBasePrice(plan ? String(plan.monthlyBasePrice) : "");
     setInterval(plan?.interval === "Yearly" ? "Yearly" : "Monthly");
     setAnnualPrice(plan?.annualPrice != null ? String(plan.annualPrice) : "");
@@ -160,6 +170,7 @@ export function PlanFormDialog({
   const annualNum = Number(annualPrice);
   const annualError = fieldError(optionalNonNegative, annualPrice);
   const annualPricePayload = interval === "Yearly" && annualPrice.trim().length > 0 ? annualNum : null;
+  const descriptionPayload = description.trim().length > 0 ? description.trim() : null;
 
   // Per-resource overage validation — a negative or non-numeric rate blocks submit.
   const overageErrors = useMemo(() => {
@@ -180,21 +191,21 @@ export function PlanFormDialog({
   const createMutation = useMutation({
     mutationFn: createPlan,
     onSuccess: () => {
-      toast.success(`Plan "${name}" created`);
+      toast.success(`Тариф «${name}» создан`);
       queryClient.invalidateQueries({ queryKey: ["billing", "plans"] });
       onClose();
     },
-    onError: (err) => toast.error("Create failed", { description: describe(err, "Could not create plan.") }),
+    onError: (err) => toast.error("Не удалось создать", { description: describe(err, "Не удалось создать тариф.") }),
   });
 
   const updateMutation = useMutation({
     mutationFn: updatePlan,
     onSuccess: () => {
-      toast.success(`Plan "${name}" updated`);
+      toast.success(`Тариф «${name}» обновлён`);
       queryClient.invalidateQueries({ queryKey: ["billing", "plans"] });
       onClose();
     },
-    onError: (err) => toast.error("Update failed", { description: describe(err, "Could not update plan.") }),
+    onError: (err) => toast.error("Не удалось сохранить", { description: describe(err, "Не удалось обновить тариф.") }),
   });
 
   const pending = createMutation.isPending || updateMutation.isPending;
@@ -212,6 +223,7 @@ export function PlanFormDialog({
         overageRates,
         interval,
         annualPrice: annualPricePayload,
+        description: descriptionPayload,
       });
       return;
     }
@@ -224,6 +236,7 @@ export function PlanFormDialog({
       overageRates,
       interval,
       annualPrice: annualPricePayload,
+      description: descriptionPayload,
     });
   };
 
@@ -240,12 +253,12 @@ export function PlanFormDialog({
             >
               <CreditCard className="h-[18px] w-[18px]" />
             </span>
-            <DialogTitle className="text-[16px]">{isEdit ? "Edit plan" : "New plan"}</DialogTitle>
+            <DialogTitle className="text-[16px]">{isEdit ? "Изменить тариф" : "Новый тариф"}</DialogTitle>
           </div>
           <DialogDescription className="mt-1">
             {isEdit
-              ? "Update name, pricing, interval, or overage rates. Key and currency are immutable."
-              : "Plan keys are canonical slugs used by tenant subscriptions and quota configuration."}
+              ? "Измените название, описание, цены, период или ставки за превышение. Ключ и валюта неизменны."
+              : "Ключ тарифа — канонический слаг, на который ссылаются подписки школ и настройки квот."}
           </DialogDescription>
         </DialogHeader>
 
@@ -255,17 +268,17 @@ export function PlanFormDialog({
             <div className="space-y-3">
               <SectionLabel
                 icon={CreditCard}
-                title="Plan details"
-                description="Identity + pricing. The interval sets the term length and how often the tenant is billed."
+                title="Параметры тарифа"
+                description="Идентификатор и цены. Период задаёт длину срока и частоту списаний со школы."
               />
               <div className="h-px bg-[var(--color-border)] opacity-60" />
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field
                   id="pf-key"
-                  label="Key"
-                  hint="Lowercase slug (e.g. 'pro', 'team-2025'). Immutable."
+                  label="Ключ"
+                  hint="Слаг в нижнем регистре (например, «pro», «team-2025»). Неизменяем."
                   required={!isEdit}
-                  error={keyInvalid ? "Invalid slug." : undefined}
+                  error={keyInvalid ? "Некорректный слаг." : undefined}
                 >
                   <Input
                     id="pf-key"
@@ -277,10 +290,10 @@ export function PlanFormDialog({
                     autoComplete="off"
                   />
                 </Field>
-                <Field id="pf-name" label="Display name" required>
+                <Field id="pf-name" label="Отображаемое название" required>
                   <Input id="pf-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Pro" />
                 </Field>
-                <Field id="pf-currency" label="Currency" hint="ISO 4217. Immutable." required={!isEdit}>
+                <Field id="pf-currency" label="Валюта" hint="ISO 4217. Неизменяема." required={!isEdit}>
                   <Input
                     id="pf-currency"
                     value={currency}
@@ -293,8 +306,8 @@ export function PlanFormDialog({
                 </Field>
                 <Field
                   id="pf-monthlyBasePrice"
-                  label="Monthly base price"
-                  hint="Canonical monthly rate; the term price for monthly plans."
+                  label="Базовая цена в месяц"
+                  hint="Каноническая месячная ставка; для месячных тарифов — цена за срок."
                   required
                   error={priceError}
                 >
@@ -306,7 +319,7 @@ export function PlanFormDialog({
                     placeholder="29.00"
                   />
                 </Field>
-                <Field id="pf-interval" label="Billing interval" required>
+                <Field id="pf-interval" label="Период списания" required>
                   <Select<PlanInterval>
                     id="pf-interval"
                     value={interval}
@@ -317,8 +330,8 @@ export function PlanFormDialog({
                 {interval === "Yearly" && (
                   <Field
                     id="pf-annualPrice"
-                    label="Annual price"
-                    hint="Per yearly term. Blank → 12× monthly."
+                    label="Цена за год"
+                    hint="За годовой срок. Пусто → 12× месячной."
                     error={annualError}
                   >
                     <Input
@@ -331,14 +344,34 @@ export function PlanFormDialog({
                   </Field>
                 )}
               </div>
+              <Field
+                id="pf-description"
+                label="Описание"
+                hint="Короткий текст для операторской карточки тарифа. Необязательно."
+              >
+                <textarea
+                  id="pf-description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={2}
+                  placeholder="Например: до 150 учеников и 12 преподавателей, безлимитные группы."
+                  className={cn(
+                    "w-full min-w-0 rounded-lg border border-[var(--color-input)] bg-transparent px-3 py-2",
+                    "text-sm shadow-xs outline-none placeholder:text-[var(--color-muted-foreground)]",
+                    "transition-[color,box-shadow,border-color,background-color] duration-[var(--duration-fast)] ease-[var(--ease-out-cubic)]",
+                    "dark:bg-[oklch(from_var(--color-input)_l_c_h_/_0.3)]",
+                    "focus-visible:border-[var(--color-ring)] focus-visible:ring-[3px] focus-visible:ring-[oklch(from_var(--color-ring)_l_c_h_/_0.5)]",
+                  )}
+                />
+              </Field>
             </div>
 
             {/* ── Overage rates ── */}
             <div className="space-y-3">
               <SectionLabel
                 icon={Gauge}
-                title="Overage rates"
-                description="Per-unit price when a tenant exceeds the plan limit. Leave blank to skip a resource."
+                title="Ставки за превышение"
+                description="Цена за единицу сверх лимита тарифа — по ученикам, преподавателям, группам и занятиям. Пустое поле — ресурс пропускается."
               />
               <div className="h-px bg-[var(--color-border)] opacity-60" />
               <div className="grid gap-4 sm:grid-cols-2">
@@ -364,10 +397,10 @@ export function PlanFormDialog({
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose} disabled={pending}>
-              Cancel
+              Отмена
             </Button>
             <Button type="submit" disabled={pending || keyInvalid || pricingInvalid}>
-              {pending ? "Saving…" : isEdit ? "Save changes" : "Create plan"}
+              {pending ? "Сохранение…" : isEdit ? "Сохранить" : "Создать тариф"}
             </Button>
           </DialogFooter>
         </form>

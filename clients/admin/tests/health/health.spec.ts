@@ -65,18 +65,15 @@ test.describe("health probes", () => {
 
     const main = page.getByRole("main");
     await expect(
-      main.getByRole("heading", { name: "Health", exact: true }),
+      main.getByRole("heading", { name: "Здоровье", exact: true }),
     ).toBeVisible({ timeout: 10_000 });
 
     // KPI strip labels render as the Stat component's mono-caps ".meta" crumb.
-    // "Liveness"/"Readiness" also appear as ProbeSection (SettingsSection) <h2>
-    // titles, so target the label element by its class rather than a bare text
-    // match.
     const kpiLabel = (text: string) => main.locator("div.meta", { hasText: text });
     await expect(kpiLabel("Liveness")).toBeVisible();
     await expect(kpiLabel("Readiness")).toBeVisible();
-    await expect(kpiLabel("Checks healthy")).toBeVisible();
-    await expect(kpiLabel("Checks failing")).toBeVisible();
+    await expect(kpiLabel("Проверок в норме")).toBeVisible();
+    await expect(kpiLabel("Проверок с проблемой")).toBeVisible();
 
     // A check name from the readiness mock.
     await expect(main.getByText("npgsql", { exact: true })).toBeVisible();
@@ -92,7 +89,7 @@ test.describe("health probes", () => {
 
     const main = page.getByRole("main");
     await expect(
-      main.getByRole("heading", { name: "Health", exact: true }),
+      main.getByRole("heading", { name: "Здоровье", exact: true }),
     ).toBeVisible({ timeout: 10_000 });
 
     // The Readiness probe section shows an Unhealthy badge + the failing check.

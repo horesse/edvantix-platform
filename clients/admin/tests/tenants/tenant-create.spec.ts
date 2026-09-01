@@ -47,27 +47,27 @@ test.describe("tenant create dialog", () => {
     // Open the create dialog from the list-page trigger. `exact` keeps this off
     // the dialog's own "Create tenant" submit button.
     await page
-      .getByRole("button", { name: "New tenant", exact: true })
+      .getByRole("button", { name: "Новая школа", exact: true })
       .click();
 
     const dialog = page.getByRole("dialog");
     await expect(
-      dialog.getByRole("heading", { name: "New tenant", exact: true }),
+      dialog.getByRole("heading", { name: "Новая школа", exact: true }),
     ).toBeVisible({ timeout: 10_000 });
 
-    await expect(dialog.getByLabel(/^Display name/)).toBeVisible();
-    await expect(dialog.getByLabel(/^Identifier/)).toBeVisible();
-    await expect(dialog.getByLabel(/^Admin email/)).toBeVisible();
-    await expect(dialog.getByLabel(/^Initial admin password/)).toBeVisible();
+    await expect(dialog.getByLabel(/^Название/)).toBeVisible();
+    await expect(dialog.getByLabel(/^Идентификатор/)).toBeVisible();
+    await expect(dialog.getByLabel(/^E-mail администратора/)).toBeVisible();
+    await expect(dialog.getByLabel(/^Начальный пароль администратора/)).toBeVisible();
 
-    // JWT issuer + connection string now live under a collapsed "Advanced" section.
-    await expect(dialog.getByLabel(/^JWT issuer/)).toBeHidden();
-    await dialog.getByRole("button", { name: /^Advanced/ }).click();
-    await expect(dialog.getByLabel(/^JWT issuer/)).toBeVisible();
-    await expect(dialog.getByLabel(/^Connection string/)).toBeVisible();
+    // JWT issuer + connection string now live under a collapsed "Дополнительно" section.
+    await expect(dialog.getByLabel(/^Издатель JWT/)).toBeHidden();
+    await dialog.getByRole("button", { name: /^Дополнительно/ }).click();
+    await expect(dialog.getByLabel(/^Издатель JWT/)).toBeVisible();
+    await expect(dialog.getByLabel(/^Строка подключения/)).toBeVisible();
 
     await expect(
-      dialog.getByRole("button", { name: "Create tenant", exact: true }),
+      dialog.getByRole("button", { name: "Создать школу", exact: true }),
     ).toBeVisible();
   });
 
@@ -114,25 +114,24 @@ test.describe("tenant create dialog", () => {
 
     await page.goto("/tenants");
     await page
-      .getByRole("button", { name: "New tenant", exact: true })
+      .getByRole("button", { name: "Новая школа", exact: true })
       .click();
 
     const dialog = page.getByRole("dialog");
-    await expect(dialog.getByLabel(/^Display name/)).toBeVisible({ timeout: 10_000 });
+    await expect(dialog.getByLabel(/^Название/)).toBeVisible({ timeout: 10_000 });
 
-    // Typing the display name fills the identifier automatically — the operator
-    // never has to type the slug by hand.
-    await dialog.getByLabel(/^Display name/).fill("Acme Corp");
-    await expect(dialog.getByLabel(/^Identifier/)).toHaveValue("acme-corp");
+    // Typing the display name fills the identifier automatically.
+    await dialog.getByLabel(/^Название/).fill("Acme Corp");
+    await expect(dialog.getByLabel(/^Идентификатор/)).toHaveValue("acme-corp");
 
-    await dialog.getByLabel(/^Admin email/).fill("admin@acme.example");
-    await dialog.getByLabel(/^Initial admin password/).fill("Sup3rSecret!");
+    await dialog.getByLabel(/^E-mail администратора/).fill("admin@acme.example");
+    await dialog.getByLabel(/^Начальный пароль администратора/).fill("Sup3rSecret!");
 
     const reqPromise = page.waitForRequest(
       (r) => r.url().endsWith("/api/v1/tenants/") && r.method() === "POST",
       { timeout: 5_000 },
     );
-    await dialog.getByRole("button", { name: "Create tenant", exact: true }).click();
+    await dialog.getByRole("button", { name: "Создать школу", exact: true }).click();
     const req = await reqPromise;
 
     const body = JSON.parse(req.postData() ?? "{}");
@@ -149,38 +148,38 @@ test.describe("tenant create dialog", () => {
   test("unlocking the identifier lets you type a custom slug", async ({ page }) => {
     await page.goto("/tenants");
     await page
-      .getByRole("button", { name: "New tenant", exact: true })
+      .getByRole("button", { name: "Новая школа", exact: true })
       .click();
 
     const dialog = page.getByRole("dialog");
-    await expect(dialog.getByLabel(/^Display name/)).toBeVisible({ timeout: 10_000 });
+    await expect(dialog.getByLabel(/^Название/)).toBeVisible({ timeout: 10_000 });
 
-    await dialog.getByLabel(/^Display name/).fill("Acme Corp");
-    await expect(dialog.getByLabel(/^Identifier/)).toHaveValue("acme-corp");
+    await dialog.getByLabel(/^Название/).fill("Acme Corp");
+    await expect(dialog.getByLabel(/^Идентификатор/)).toHaveValue("acme-corp");
 
     // Auto-derived identifier is read-only until unlocked.
-    await expect(dialog.getByLabel(/^Identifier/)).toHaveAttribute("readonly", "");
-    await dialog.getByRole("button", { name: "Edit" }).click();
-    await dialog.getByLabel(/^Identifier/).fill("acme-emea");
-    await expect(dialog.getByLabel(/^Identifier/)).toHaveValue("acme-emea");
+    await expect(dialog.getByLabel(/^Идентификатор/)).toHaveAttribute("readonly", "");
+    await dialog.getByRole("button", { name: "Правка" }).click();
+    await dialog.getByLabel(/^Идентификатор/).fill("acme-emea");
+    await expect(dialog.getByLabel(/^Идентификатор/)).toHaveValue("acme-emea");
 
     // Re-locking snaps it back to the slug derived from the display name.
-    await dialog.getByRole("button", { name: "Auto" }).click();
-    await expect(dialog.getByLabel(/^Identifier/)).toHaveValue("acme-corp");
+    await dialog.getByRole("button", { name: "Авто" }).click();
+    await expect(dialog.getByLabel(/^Идентификатор/)).toHaveValue("acme-corp");
   });
 
   test("the password generator fills a strong value and reveals it", async ({ page }) => {
     await page.goto("/tenants");
     await page
-      .getByRole("button", { name: "New tenant", exact: true })
+      .getByRole("button", { name: "Новая школа", exact: true })
       .click();
 
     const dialog = page.getByRole("dialog");
-    const password = dialog.getByLabel(/^Initial admin password/);
+    const password = dialog.getByLabel(/^Начальный пароль администратора/);
     await expect(password).toBeVisible({ timeout: 10_000 });
 
     await expect(password).toHaveAttribute("type", "password");
-    await dialog.getByRole("button", { name: "Generate strong password" }).click();
+    await dialog.getByRole("button", { name: "Сгенерировать надёжный пароль" }).click();
 
     // Generating reveals the field and writes a non-trivial secret.
     await expect(password).toHaveAttribute("type", "text");
@@ -201,28 +200,24 @@ test.describe("tenant create dialog", () => {
 
     await page.goto("/tenants");
     await page
-      .getByRole("button", { name: "New tenant", exact: true })
+      .getByRole("button", { name: "Новая школа", exact: true })
       .click();
 
     const dialog = page.getByRole("dialog");
-    await expect(dialog.getByLabel(/^Display name/)).toBeVisible({ timeout: 10_000 });
+    await expect(dialog.getByLabel(/^Название/)).toBeVisible({ timeout: 10_000 });
 
-    // Drive an invalid identifier by unlocking the field and typing a bad slug.
-    // We leave the email blank so the browser's native <input type=email>
-    // constraint doesn't pre-empt react-hook-form's submit handler — that lets
-    // zod report the field-level errors we assert on.
-    await dialog.getByLabel(/^Display name/).fill("Acme Corp");
-    await dialog.getByRole("button", { name: "Edit" }).click();
-    await dialog.getByLabel(/^Identifier/).fill("A");
-    await dialog.getByLabel(/^Initial admin password/).fill("short");
+    await dialog.getByLabel(/^Название/).fill("Acme Corp");
+    await dialog.getByRole("button", { name: "Правка" }).click();
+    await dialog.getByLabel(/^Идентификатор/).fill("A");
+    await dialog.getByLabel(/^Начальный пароль администратора/).fill("short");
 
-    await dialog.getByRole("button", { name: "Create tenant", exact: true }).click();
+    await dialog.getByRole("button", { name: "Создать школу", exact: true }).click();
 
     // Zod messages surface and no POST is fired.
     await expect(
-      dialog.getByText(/Lowercase letters, digits, hyphens/i),
+      dialog.getByText(/Строчные буквы, цифры, дефис/i),
     ).toBeVisible();
-    await expect(dialog.getByText(/At least 8 characters\./i)).toBeVisible();
+    await expect(dialog.getByText(/Не меньше 8 символов\./i)).toBeVisible();
     expect(posted).toBe(false);
   });
 });

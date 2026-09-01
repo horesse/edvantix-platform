@@ -39,10 +39,10 @@ export function SessionsSettings() {
     mutationFn: (sessionId: string) => revokeMySession(sessionId),
     onMutate: (sessionId) => setBusyIds((prev) => new Set(prev).add(sessionId)),
     onSuccess: () => {
-      toast.success("Session revoked");
+      toast.success("Сессия отозвана");
       void queryClient.invalidateQueries({ queryKey: ["identity", "sessions", "me"] });
     },
-    onError: (err) => toast.error("Revoke failed", { description: describe(err) }),
+    onError: (err) => toast.error("Не удалось отозвать", { description: describe(err) }),
     onSettled: (_d, _e, sessionId) =>
       setBusyIds((prev) => {
         const next = new Set(prev);
@@ -54,22 +54,20 @@ export function SessionsSettings() {
   const revokeAll = useMutation({
     mutationFn: revokeAllMySessions,
     onSuccess: (data) => {
-      toast.success(
-        `Revoked ${data.revokedCount} other ${data.revokedCount === 1 ? "session" : "sessions"}`,
-      );
+      toast.success(`Отозвано других сессий: ${data.revokedCount}`);
       void queryClient.invalidateQueries({ queryKey: ["identity", "sessions", "me"] });
     },
-    onError: (err) => toast.error("Revoke all failed", { description: describe(err) }),
+    onError: (err) => toast.error("Не удалось отозвать все", { description: describe(err) }),
   });
 
-  if (query.isLoading) return <LoadingRow label="Loading sessions" />;
+  if (query.isLoading) return <LoadingRow label="Загрузка сессий" />;
   if (query.isError) {
     return (
       <ErrorBand
         message={
           query.error instanceof ApiRequestError
             ? (query.error.problem?.detail ?? query.error.message)
-            : "Failed to load sessions."
+            : "Не удалось загрузить сессии."
         }
       />
     );
@@ -78,9 +76,9 @@ export function SessionsSettings() {
   return (
     <div className="space-y-5 fsh-enter">
       <SettingsSection
-        title="Active sessions"
+        title="Активные сессии"
         icon={MonitorSmartphone}
-        description="Every browser or device currently signed into your account. Revoking a session signs that device out within ~10 seconds."
+        description="Все браузеры и устройства, где сейчас выполнен вход в вашу учётку. Отзыв сессии выводит устройство за ~10 секунд."
         footer={
           activeOtherCount > 0 ? (
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -90,9 +88,8 @@ export function SessionsSettings() {
                   aria-hidden
                 />
                 <span className="text-[var(--color-muted-foreground)]">
-                  {activeOtherCount} other{" "}
-                  {activeOtherCount === 1 ? "session is" : "sessions are"} active.
-                  Sign them all out at once if you suspect an account compromise.
+                  Активных других сессий: {activeOtherCount}.
+                  Завершите их все сразу, если подозреваете компрометацию учётки.
                 </span>
               </div>
               <Button
@@ -102,7 +99,7 @@ export function SessionsSettings() {
                 disabled={revokeAll.isPending}
               >
                 <LogOut className="mr-1.5 h-3.5 w-3.5" />
-                {revokeAll.isPending ? "Signing out…" : "Sign out everywhere else"}
+                {revokeAll.isPending ? "Выход…" : "Выйти на всех остальных"}
               </Button>
             </div>
           ) : undefined
@@ -110,7 +107,7 @@ export function SessionsSettings() {
       >
         {sorted.length === 0 ? (
           <p className="text-sm text-[var(--color-muted-foreground)]">
-            No active sessions found. (Including this one? That would be a bug — please refresh.)
+            Активных сессий не найдено. (Включая эту? Это баг — обновите страницу.)
           </p>
         ) : (
           <ul className="divide-y divide-[var(--color-border)]">
@@ -163,29 +160,29 @@ function SessionRow({
           <span className="truncate text-sm font-medium">{describeDevice(session)}</span>
           {session.isCurrentSession && (
             <Badge variant="brand" className="font-mono uppercase tracking-[0.14em]">
-              This device
+              Это устройство
             </Badge>
           )}
           {!session.isActive && (
             <Badge variant="muted" className="font-mono uppercase tracking-[0.14em]">
-              Revoked
+              Отозвана
             </Badge>
           )}
         </div>
         <div className="mt-0.5 flex flex-wrap items-baseline gap-x-3 gap-y-0.5 font-mono text-[10.5px] text-[var(--color-muted-foreground)]">
-          <span>{session.ipAddress ?? "unknown ip"}</span>
-          <span>· last seen {formatRelative(session.lastActivityAt)}</span>
-          <span>· expires {formatDate(session.expiresAt)}</span>
+          <span>{session.ipAddress ?? "IP неизвестен"}</span>
+          <span>· активность {formatRelative(session.lastActivityAt)}</span>
+          <span>· истекает {formatDate(session.expiresAt)}</span>
         </div>
       </div>
       {session.isCurrentSession ? (
         <span className="text-[10.5px] font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]/60 flex items-center gap-1">
-          <MoreHorizontal className="h-3.5 w-3.5" aria-hidden /> use Sign out
+          <MoreHorizontal className="h-3.5 w-3.5" aria-hidden /> через «Выйти»
         </span>
       ) : session.isActive ? (
         <Button variant="outline" size="sm" onClick={onRevoke} disabled={busy}>
           <LogOut className="mr-1.5 h-3.5 w-3.5" />
-          {busy ? "Revoking…" : "Revoke"}
+          {busy ? "Отзыв…" : "Отозвать"}
         </Button>
       ) : (
         <span aria-hidden />
@@ -207,16 +204,16 @@ function sortSessions(rows: UserSessionDto[]): UserSessionDto[] {
 }
 
 function describeDevice(s: UserSessionDto): string {
-  const browser = s.browser ?? "Unknown browser";
+  const browser = s.browser ?? "Неизвестный браузер";
   const version = s.browserVersion ? ` ${s.browserVersion}` : "";
-  const os = s.operatingSystem ?? "unknown os";
-  return `${browser}${version} on ${os}`;
+  const os = s.operatingSystem ?? "неизвестная ОС";
+  return `${browser}${version} · ${os}`;
 }
 
 function formatDate(value?: string | null): string {
   if (!value) return "—";
   const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? value : d.toLocaleString();
+  return Number.isNaN(d.getTime()) ? value : d.toLocaleString("ru-RU");
 }
 
 function formatRelative(value?: string | null): string {
@@ -225,14 +222,14 @@ function formatRelative(value?: string | null): string {
   if (Number.isNaN(d.getTime())) return value;
   const diff = Date.now() - d.getTime();
   const sec = Math.round(diff / 1000);
-  if (sec < 60) return `${sec}s ago`;
+  if (sec < 60) return `${sec} с назад`;
   const min = Math.round(sec / 60);
-  if (min < 60) return `${min}m ago`;
+  if (min < 60) return `${min} мин назад`;
   const hr = Math.round(min / 60);
-  if (hr < 24) return `${hr}h ago`;
+  if (hr < 24) return `${hr} ч назад`;
   const day = Math.round(hr / 24);
-  if (day < 14) return `${day}d ago`;
-  return d.toLocaleDateString();
+  if (day < 14) return `${day} дн назад`;
+  return d.toLocaleDateString("ru-RU");
 }
 
 function describe(err: unknown): string {

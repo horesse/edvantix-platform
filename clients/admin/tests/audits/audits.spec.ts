@@ -47,14 +47,14 @@ test.describe("audit trail list", () => {
 
     const main = page.getByRole("main");
     await expect(
-      main.getByRole("heading", { name: "Audit trail", exact: true }),
+      main.getByRole("heading", { name: "Журнал аудита", exact: true }),
     ).toBeVisible({ timeout: 10_000 });
 
     // KPI strip labels.
-    await expect(main.getByText("Total events", { exact: true })).toBeVisible();
-    await expect(main.getByText("Errors + critical", { exact: true })).toBeVisible();
-    await expect(main.getByText("Security events", { exact: true })).toBeVisible();
-    await expect(main.getByText("Exceptions", { exact: true })).toBeVisible();
+    await expect(main.getByText("Всего событий", { exact: true })).toBeVisible();
+    await expect(main.getByText("Ошибки и критичные", { exact: true })).toBeVisible();
+    await expect(main.getByText("События безопасности", { exact: true })).toBeVisible();
+    await expect(main.getByText("Исключения", { exact: true })).toBeVisible();
 
     // The audit row from our mock (source + correlation).
     await expect(main.getByText("POST /api/v1/identity/token", { exact: true })).toBeVisible();
@@ -69,7 +69,7 @@ test.describe("audit trail list", () => {
 
     const main = page.getByRole("main");
     await expect(
-      main.getByText("No audit events match your filters.", { exact: true }),
+      main.getByText("Под фильтры событий аудита нет.", { exact: true }),
     ).toBeVisible({ timeout: 10_000 });
   });
 
@@ -81,21 +81,21 @@ test.describe("audit trail list", () => {
 
     const main = page.getByRole("main");
     await expect(
-      main.getByRole("heading", { name: "Audit trail", exact: true }),
+      main.getByRole("heading", { name: "Журнал аудита", exact: true }),
     ).toBeVisible({ timeout: 10_000 });
 
-    // The // Filters rail with its two dropdown triggers (Radix button-based
+    // The // Фильтры rail with its two dropdown triggers (Radix button-based
     // selects). Assert the triggers by their default empty-label text.
-    await expect(main.getByText("// Filters", { exact: true })).toBeVisible();
+    await expect(main.getByText("// Фильтры", { exact: true })).toBeVisible();
     await expect(
-      main.getByRole("button", { name: "All event types" }),
+      main.getByRole("button", { name: "Все типы" }),
     ).toBeVisible();
     await expect(
-      main.getByRole("button", { name: "All severities" }),
+      main.getByRole("button", { name: "Все важности" }),
     ).toBeVisible();
     // Search box.
     await expect(
-      main.getByPlaceholder("Search user, source, correlation…"),
+      main.getByPlaceholder("Поиск: пользователь, источник, correlation…"),
     ).toBeVisible();
   });
 });
@@ -116,8 +116,8 @@ test.describe("audit detail", () => {
 
     // The sheet renders in a Radix portal (role=dialog), outside <main>.
     const sheet = page.getByRole("dialog");
-    // Header shows "<EventType> event" — Security → "Security event".
-    await expect(sheet.getByText("Security event")).toBeVisible({ timeout: 10_000 });
+    // Header shows "Событие: <тип>" — Security → "Событие: Безопасность".
+    await expect(sheet.getByText("Событие: Безопасность")).toBeVisible({ timeout: 10_000 });
 
     // Correlation chip + value.
     await expect(sheet.getByText("Correlation id", { exact: true })).toBeVisible();

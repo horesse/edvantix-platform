@@ -32,9 +32,9 @@ type Props = {
 
 type DurationOption = { minutes: number; label: string };
 const DURATION_OPTIONS: DurationOption[] = [
-  { minutes: 10, label: "10 min" },
-  { minutes: 15, label: "15 min" },
-  { minutes: 30, label: "30 min" },
+  { minutes: 10, label: "10 мин" },
+  { minutes: 15, label: "15 мин" },
+  { minutes: 30, label: "30 мин" },
 ];
 
 /**
@@ -76,14 +76,14 @@ export function ImpersonateDialog({
             >
               <UserCog className="h-4 w-4" />
             </span>
-            <DialogTitle>Impersonate user</DialogTitle>
+            <DialogTitle>Войти как пользователь</DialogTitle>
           </div>
           <DialogDescription>
-            Tenant{" "}
+            Школа{" "}
             <code className="code-chip">{tenantName ?? tenantId}</code> ·{" "}
             {step === "pick"
-              ? "pick a user to impersonate."
-              : "session details. Token will be issued and opened in the dashboard."}
+              ? "выберите пользователя для имперсонации."
+              : "параметры сессии. Токен будет выдан и открыт в дашборде."}
           </DialogDescription>
         </DialogHeader>
 
@@ -164,8 +164,8 @@ function PickStep({
             autoFocus
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name, email, or username…"
-            aria-label="Search users to impersonate"
+            placeholder="Поиск по имени, e-mail или логину…"
+            aria-label="Поиск пользователей для имперсонации"
             className="pl-9"
           />
         </div>
@@ -175,20 +175,20 @@ function PickStep({
             <div className="px-3 py-6 text-sm text-[var(--color-destructive)]">
               {query.error instanceof ApiRequestError
                 ? query.error.problem?.detail ?? query.error.message
-                : "Failed to load users."}
+                : "Не удалось загрузить пользователей."}
             </div>
           )}
 
           {query.isLoading && (
             <div className="px-3 py-10 text-center font-mono text-xs uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]">
-              Loading
+              Загрузка
               <span className="caret text-[var(--color-accent-signal)]" aria-hidden />
             </div>
           )}
 
           {!query.isLoading && users.length === 0 && (
             <div className="px-3 py-10 text-center text-sm text-[var(--color-muted-foreground)]">
-              No users match{debounced ? ` “${debounced}”` : ""}.
+              Ничего не найдено{debounced ? ` по «${debounced}»` : ""}.
             </div>
           )}
 
@@ -213,7 +213,7 @@ function PickStep({
                         {[user.firstName, user.lastName].filter(Boolean).join(" ") ||
                           user.userName ||
                           user.email ||
-                          "Unnamed"}
+                          "Без имени"}
                       </span>
                       {user.userName && (
                         <span className="truncate font-mono text-[11px] text-[var(--color-muted-foreground)]">
@@ -235,7 +235,7 @@ function PickStep({
 
       <DialogFooter>
         <Button variant="outline" onClick={onCancel}>
-          Cancel
+          Отмена
         </Button>
       </DialogFooter>
     </>
@@ -273,8 +273,8 @@ function ConfigureStep({
       }),
     onSuccess: (response) => {
       handoffToDashboard(response, tenantId);
-      toast.success(`Impersonation started · ${minutes} min`, {
-        description: `Opened the dashboard as ${labelFor(user)}. End impersonation from inside the dashboard tab.`,
+      toast.success(`Имперсонация начата · ${minutes} мин`, {
+        description: `Дашборд открыт как ${labelFor(user)}. Завершите имперсонацию во вкладке дашборда.`,
       });
       onDone();
     },
@@ -283,7 +283,7 @@ function ConfigureStep({
         err instanceof ApiRequestError
           ? err.problem?.detail ?? err.problem?.title ?? err.message
           : err.message;
-      toast.error("Impersonation failed", { description: detail });
+      toast.error("Не удалось начать имперсонацию", { description: detail });
     },
   });
 
@@ -293,7 +293,7 @@ function ConfigureStep({
         <SelectedUserCard user={user} tenantId={tenantId} tenantName={tenantName} />
 
         <fieldset className="space-y-2">
-          <legend className="meta text-[var(--color-muted-foreground)]">// Duration</legend>
+          <legend className="meta text-[var(--color-muted-foreground)]">// Длительность</legend>
           <div className="grid grid-cols-3 gap-2">
             {DURATION_OPTIONS.map((opt) => {
               const active = minutes === opt.minutes;
@@ -313,7 +313,7 @@ function ConfigureStep({
                   <span className="font-display text-lg font-semibold tabular-nums">
                     {opt.minutes}
                   </span>
-                  <span className="meta text-[var(--color-muted-foreground)]">minutes</span>
+                  <span className="meta text-[var(--color-muted-foreground)]">минут</span>
                 </button>
               );
             })}
@@ -325,7 +325,7 @@ function ConfigureStep({
             htmlFor="impersonation-reason"
             className="meta flex items-center gap-1.5 text-[var(--color-muted-foreground)]"
           >
-            Reason
+            Причина
             <span className="text-[var(--color-destructive)]" aria-hidden>
               ·
             </span>
@@ -334,7 +334,7 @@ function ConfigureStep({
             id="impersonation-reason"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            placeholder="e.g. Customer ticket #4821 — verifying ledger discrepancy"
+            placeholder="напр.: обращение #4821 — проверка расхождения в счетах"
             rows={3}
             maxLength={500}
             className={cn(
@@ -346,8 +346,8 @@ function ConfigureStep({
           />
           <p className="flex items-center justify-between text-[11px] text-[var(--color-muted-foreground)]">
             <span>
-              Recorded in the security audit trail — be specific enough that a reviewer can
-              reconstruct the case later.
+              Записывается в журнал аудита безопасности — опишите так, чтобы позже можно было
+              восстановить контекст.
             </span>
             <span
               className={cn(
@@ -363,10 +363,9 @@ function ConfigureStep({
         <div className="flex items-start gap-2 rounded-md border border-[var(--color-warning)]/40 bg-[oklch(from_var(--color-warning)_l_c_h_/_0.08)] px-3 py-2.5 text-xs text-[var(--color-foreground)]">
           <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--color-warning)]" />
           <div>
-            <strong className="font-medium">Everything you do is attributed to your account.</strong>
-            {" "}The session token carries actor claims; the audit trail will show
-            both the user being impersonated and you as the actor. End from the dashboard
-            tab when done.
+            <strong className="font-medium">Все ваши действия отнесены к вашему аккаунту.</strong>
+            {" "}Токен сессии несёт claim'ы инициатора; в журнале аудита будут видны и
+            имперсонируемый пользователь, и вы как инициатор. Завершите во вкладке дашборда.
           </div>
         </div>
       </DialogBody>
@@ -374,7 +373,7 @@ function ConfigureStep({
       <DialogFooter>
         {onBack && (
           <Button variant="outline" onClick={onBack} disabled={mutation.isPending} className="sm:mr-auto">
-            <ArrowLeft className="mr-1 h-3.5 w-3.5" /> Choose another user
+            <ArrowLeft className="mr-1 h-3.5 w-3.5" /> Выбрать другого
           </Button>
         )}
         <Button
@@ -383,10 +382,10 @@ function ConfigureStep({
           onClick={() => mutation.mutate()}
         >
           {mutation.isPending ? (
-            "Issuing token…"
+            "Выдаётся токен…"
           ) : (
             <>
-              <Check className="mr-1 h-3.5 w-3.5" /> Start {minutes}-min impersonation
+              <Check className="mr-1 h-3.5 w-3.5" /> Начать имперсонацию на {minutes} мин
             </>
           )}
         </Button>
@@ -461,6 +460,6 @@ function labelFor(user: UserDto): string {
     [user.firstName, user.lastName].filter(Boolean).join(" ").trim() ||
     user.userName ||
     user.email ||
-    "Unnamed user"
+    "Пользователь без имени"
   );
 }

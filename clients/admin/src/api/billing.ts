@@ -20,6 +20,12 @@ export type QuotaResource =
   | "StorageBytes"
   | "Users"
   | "ActiveFeatureFlags"
+  // Domain gauges for the school product — one IQuotaGaugeProvider per resource
+  // answers the live count from its owning module's store (see QuotaResource.cs).
+  | "ActiveStudents"
+  | "ActiveTeachers"
+  | "StudyGroups"
+  | "MonthlySessions"
   | (string & {});
 
 // ─── plans ───────────────────────────────────────────────────────────
@@ -34,6 +40,8 @@ export type BillingPlanDto = {
   isActive: boolean;
   interval: PlanInterval;
   annualPrice?: number | null;
+  /** Free-text описание тарифа для операторской карточки. */
+  description?: string | null;
 };
 
 export type CreatePlanInput = {
@@ -44,6 +52,7 @@ export type CreatePlanInput = {
   overageRates?: Partial<Record<QuotaResource, number>> | null;
   interval?: PlanInterval;
   annualPrice?: number | null;
+  description?: string | null;
 };
 
 export type UpdatePlanInput = {
@@ -53,6 +62,7 @@ export type UpdatePlanInput = {
   overageRates?: Partial<Record<QuotaResource, number>> | null;
   interval?: PlanInterval;
   annualPrice?: number | null;
+  description?: string | null;
 };
 
 /** Price charged for one billing term: annual price (or 12x monthly) for yearly plans, else monthly. */
@@ -78,6 +88,7 @@ export function createPlan(input: CreatePlanInput): Promise<string> {
       overageRates: input.overageRates ?? null,
       interval: input.interval ?? "Monthly",
       annualPrice: input.annualPrice ?? null,
+      description: input.description ?? null,
     }),
   });
 }
@@ -92,8 +103,47 @@ export function updatePlan(input: UpdatePlanInput): Promise<string> {
       overageRates: input.overageRates ?? null,
       interval: input.interval ?? "Monthly",
       annualPrice: input.annualPrice ?? null,
+      description: input.description ?? null,
     }),
   });
+}
+
+// ─── usage snapshots (school domain metrics) ─────────────────────────
+//
+// One row per QuotaResource per (tenant, period). The gauge resources —
+// ActiveStudents / ActiveTeachers / StudyGroups / MonthlySessions — plus
+// StorageBytes are the "school card" metrics. `limitUnits` is the plan
+// limit resolved for that tenant at capture time; `overage` is used − limit
+// clamped at 0. Root operator may read across tenants (optionally narrowed
+// with `tenantId`); everyone else is forced to their own tenant.
+
+export type UsageSnapshotDto = {
+  id: string;
+  tenantId: string;
+  periodYear: number;
+  periodMonth: number;
+  resource: QuotaResource;
+  usedUnits: number;
+  limitUnits: number;
+  overage: number;
+  capturedAtUtc: string;
+};
+
+export type GetUsageSnapshotsParams = {
+  tenantId?: string;
+  periodYear?: number;
+  periodMonth?: number;
+};
+
+export function getUsageSnapshots(
+  params: GetUsageSnapshotsParams = {},
+): Promise<UsageSnapshotDto[]> {
+  const query = new URLSearchParams();
+  if (params.tenantId) query.set("tenantId", params.tenantId);
+  if (params.periodYear) query.set("periodYear", String(params.periodYear));
+  if (params.periodMonth) query.set("periodMonth", String(params.periodMonth));
+  const suffix = query.toString() ? `?${query.toString()}` : "";
+  return apiFetch<UsageSnapshotDto[]>(`/api/v1/billing/usage${suffix}`);
 }
 
 // ─── subscriptions ───────────────────────────────────────────────────

@@ -21,7 +21,7 @@ export function FilterBar({ children, trailing, className }: FilterBarProps) {
         className,
       )}
     >
-      <span className="meta text-[var(--color-muted-foreground)]">// Filters</span>
+      <span className="meta text-[var(--color-muted-foreground)]">// Фильтры</span>
       <div className="flex flex-1 flex-wrap items-center gap-2">{children}</div>
       {trailing && <div className="flex items-center gap-2">{trailing}</div>}
     </div>

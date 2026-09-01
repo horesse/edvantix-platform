@@ -39,11 +39,11 @@ export type NavSection = {
 // ─── Top-level singletons ────────────────────────────────────────────────────
 
 export const topNavTop: NavSpec[] = [
-  { to: "/", label: "Overview", icon: LayoutDashboard },
+  { to: "/", label: "Обзор", icon: LayoutDashboard },
 ];
 
 export const topNavBottom: NavSpec[] = [
-  { to: "/settings", label: "Settings", icon: Settings },
+  { to: "/settings", label: "Настройки", icon: Settings },
 ];
 
 // ─── Section accordions ──────────────────────────────────────────────────────
@@ -51,12 +51,12 @@ export const topNavBottom: NavSpec[] = [
 export const sections: NavSection[] = [
   {
     id: "multitenancy",
-    caption: "Tenants",
+    caption: "Мультитенантность",
     icon: Building2,
     items: [
       {
         to: "/tenants",
-        label: "Tenants",
+        label: "Школы",
         icon: Building2,
         perms: [MultitenancyPermissions.Tenants.View],
       },
@@ -64,24 +64,24 @@ export const sections: NavSection[] = [
   },
   {
     id: "identity",
-    caption: "Identity",
+    caption: "Идентификация",
     icon: UsersRound,
     items: [
       {
         to: "/users",
-        label: "Users",
+        label: "Пользователи",
         icon: UsersRound,
         perms: [IdentityPermissions.Users.View],
       },
       {
         to: "/roles",
-        label: "Roles",
+        label: "Роли",
         icon: ShieldCheck,
         perms: [IdentityPermissions.Roles.View],
       },
       {
         to: "/impersonation",
-        label: "Impersonation",
+        label: "Имперсонация",
         icon: UserCog,
         perms: [IdentityPermissions.Impersonation.View],
       },
@@ -89,30 +89,30 @@ export const sections: NavSection[] = [
   },
   {
     id: "operations",
-    caption: "Operations",
+    caption: "Операции",
     icon: Activity,
     items: [
       {
         to: "/billing",
-        label: "Billing",
+        label: "Биллинг",
         icon: Receipt,
         perms: [BillingPermissions.View],
       },
       {
         to: "/webhooks",
-        label: "Webhooks",
+        label: "Вебхуки",
         icon: Webhook,
         perms: [WebhooksPermissions.Subscriptions.View],
       },
       {
         to: "/audits",
-        label: "Audits",
+        label: "Аудит",
         icon: ScrollText,
         perms: [AuditingPermissions.AuditTrails.View],
       },
       {
         to: "/health",
-        label: "Health",
+        label: "Здоровье",
         icon: Activity,
       },
     ],
@@ -162,57 +162,57 @@ export type NavItem = NavSpec & { matchPrefix?: string };
 
 /** @deprecated Flat list kept only for call-sites still importing NAV_ITEMS. */
 export const NAV_ITEMS: NavItem[] = [
-  { to: "/", label: "Overview", icon: LayoutDashboard },
+  { to: "/", label: "Обзор", icon: LayoutDashboard },
   {
     to: "/tenants",
-    label: "Tenants",
+    label: "Школы",
     icon: Building2,
     matchPrefix: "/tenants",
     perms: [MultitenancyPermissions.Tenants.View],
   },
   {
     to: "/users",
-    label: "Users",
+    label: "Пользователи",
     icon: UsersRound,
     matchPrefix: "/users",
     perms: [IdentityPermissions.Users.View],
   },
   {
     to: "/roles",
-    label: "Roles",
+    label: "Роли",
     icon: ShieldCheck,
     matchPrefix: "/roles",
     perms: [IdentityPermissions.Roles.View],
   },
   {
     to: "/billing",
-    label: "Billing",
+    label: "Биллинг",
     icon: Receipt,
     matchPrefix: "/billing",
     perms: [BillingPermissions.View],
   },
   {
     to: "/impersonation",
-    label: "Impersonation",
+    label: "Имперсонация",
     icon: UserCog,
     matchPrefix: "/impersonation",
     perms: [IdentityPermissions.Impersonation.View],
   },
   {
     to: "/audits",
-    label: "Audits",
+    label: "Аудит",
     icon: ScrollText,
     matchPrefix: "/audits",
     perms: [AuditingPermissions.AuditTrails.View],
   },
   {
     to: "/webhooks",
-    label: "Webhooks",
+    label: "Вебхуки",
     icon: Webhook,
     matchPrefix: "/webhooks",
     perms: [WebhooksPermissions.Subscriptions.View],
   },
-  { to: "/health", label: "Health", icon: Activity, matchPrefix: "/health" },
+  { to: "/health", label: "Здоровье", icon: Activity, matchPrefix: "/health" },
 ];
 
 /** @deprecated Use filterNavSpec instead. */

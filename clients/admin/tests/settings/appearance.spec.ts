@@ -18,20 +18,20 @@ test.describe("settings · appearance", () => {
     const main = page.getByRole("main");
     // "Theme" prose appears in the section description AND the settings nav
     // link ("Theme and visual preferences"); anchor to the SettingsSection <h2>.
-    await expect(main.getByRole("heading", { name: "Theme" })).toBeVisible({ timeout: 10_000 });
+    await expect(main.getByRole("heading", { name: "Тема" })).toBeVisible({ timeout: 10_000 });
     // Each mode is an aria-pressed <button>. The accessible name is built from
     // the label + blurb (+ "Active" when selected), so match the label as a
     // substring rather than anchoring to the start.
-    await expect(main.getByRole("button", { name: /Light/ })).toBeVisible();
-    await expect(main.getByRole("button", { name: /Dark/ })).toBeVisible();
+    await expect(main.getByRole("button", { name: /Светлая/ })).toBeVisible();
+    await expect(main.getByRole("button", { name: /Тёмная/ })).toBeVisible();
   });
 
   test("selecting Dark applies dark mode and Light reverts it", async ({ page }) => {
     await page.goto("/settings/appearance");
 
     const main = page.getByRole("main");
-    const dark = main.getByRole("button", { name: /Dark/ });
-    const light = main.getByRole("button", { name: /Light/ });
+    const dark = main.getByRole("button", { name: /Тёмная/ });
+    const light = main.getByRole("button", { name: /Светлая/ });
     await expect(dark).toBeVisible({ timeout: 10_000 });
 
     // Force a known starting point regardless of the system color-scheme,
@@ -49,7 +49,7 @@ test.describe("settings · appearance", () => {
     await page.goto("/settings/appearance");
 
     const main = page.getByRole("main");
-    const light = main.getByRole("button", { name: /Light/ });
+    const light = main.getByRole("button", { name: /Светлая/ });
     await expect(light).toBeVisible({ timeout: 10_000 });
 
     await light.click();

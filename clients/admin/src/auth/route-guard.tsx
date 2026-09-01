@@ -32,7 +32,7 @@ export function RouteGuard({ perms, children }: RouteGuardProps) {
         className="flex min-h-[60vh] items-center justify-center text-sm font-mono uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]"
         aria-busy
       >
-        Resolving permissions
+        Проверка прав доступа
         <span className="caret text-[var(--color-accent-signal)]" aria-hidden />
       </div>
     );

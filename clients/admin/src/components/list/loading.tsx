@@ -10,7 +10,7 @@ type LoadingRowProps = {
  * a list while the first page resolves. Subtle, no spinner — the
  * caret-style ellipsis is enough.
  */
-export function LoadingRow({ className, label = "Loading" }: LoadingRowProps) {
+export function LoadingRow({ className, label = "Загрузка" }: LoadingRowProps) {
   return (
     <div
       role="status"

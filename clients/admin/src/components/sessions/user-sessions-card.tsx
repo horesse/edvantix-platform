@@ -54,20 +54,20 @@ export function UserSessionsCard({ userId }: { userId: string }) {
     mutationFn: (sessionId: string) => adminRevokeUserSession(userId, sessionId),
     onMutate: (sessionId) => addBusy(sessionId),
     onSuccess: () => {
-      toast.success("Session revoked");
+      toast.success("Сессия отозвана");
       queryClient.invalidateQueries({ queryKey: ["admin", "user-sessions", userId] });
     },
-    onError: (err) => toast.error("Revoke failed", { description: describe(err) }),
+    onError: (err) => toast.error("Не удалось отозвать", { description: describe(err) }),
     onSettled: (_d, _e, sessionId) => clearBusy(sessionId),
   });
 
   const revokeAll = useMutation({
     mutationFn: () => adminRevokeAllUserSessions(userId),
     onSuccess: (data) => {
-      toast.success(`Revoked ${data.revokedCount} ${data.revokedCount === 1 ? "session" : "sessions"}`);
+      toast.success(`Отозвано сессий: ${data.revokedCount}`);
       queryClient.invalidateQueries({ queryKey: ["admin", "user-sessions", userId] });
     },
-    onError: (err) => toast.error("Revoke all failed", { description: describe(err) }),
+    onError: (err) => toast.error("Не удалось отозвать все", { description: describe(err) }),
   });
 
   if (!canView) return null;
@@ -78,24 +78,24 @@ export function UserSessionsCard({ userId }: { userId: string }) {
   return (
     <FormShell>
       <FormSection
-        title="Sessions"
-        description="Active browser/device sessions for this user. Revoking signs the device out within ~10 seconds."
+        title="Сессии"
+        description="Активные сессии браузеров и устройств этого пользователя. Отзыв выводит устройство за ~10 секунд."
       >
         {query.isError ? (
           <ErrorBand
             message={
               query.error instanceof ApiRequestError
                 ? query.error.problem?.detail ?? query.error.message
-                : "Failed to load sessions."
+                : "Не удалось загрузить сессии."
             }
           />
         ) : query.isLoading ? (
           <p className="meta text-[var(--color-muted-foreground)]">
-            Loading<span className="caret text-[var(--color-accent-signal)]" />
+            Загрузка<span className="caret text-[var(--color-accent-signal)]" />
           </p>
         ) : sessions.length === 0 ? (
           <p className="text-sm text-[var(--color-muted-foreground)]">
-            No sessions on record for this user.
+            У этого пользователя нет сессий.
           </p>
         ) : (
           <>
@@ -114,7 +114,7 @@ export function UserSessionsCard({ userId }: { userId: string }) {
             {canRevoke && activeCount > 0 && (
               <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
                 <span className="meta text-[var(--color-muted-foreground)]">
-                  {activeCount} active {activeCount === 1 ? "session" : "sessions"}
+                  активных сессий: {activeCount}
                 </span>
                 <Button
                   variant="outline"
@@ -123,7 +123,7 @@ export function UserSessionsCard({ userId }: { userId: string }) {
                   disabled={revokeAll.isPending}
                 >
                   <LogOut className="mr-1.5 h-3.5 w-3.5" />
-                  {revokeAll.isPending ? "Signing out…" : "Revoke all sessions"}
+                  {revokeAll.isPending ? "Выход…" : "Отозвать все сессии"}
                 </Button>
               </div>
             )}
@@ -157,23 +157,23 @@ function SessionRow({
       <div className="min-w-0">
         <div className="truncate text-sm font-medium">{describeDevice(session)}</div>
         <div className="mt-0.5 flex flex-wrap items-baseline gap-x-3 gap-y-0.5 font-mono text-[10.5px] text-[var(--color-muted-foreground)]">
-          <span>{session.ipAddress ?? "unknown ip"}</span>
-          <span>· last seen {formatRelative(session.lastActivityAt)}</span>
+          <span>{session.ipAddress ?? "IP неизвестен"}</span>
+          <span>· активность {formatRelative(session.lastActivityAt)}</span>
         </div>
       </div>
       {session.isActive ? (
         <Badge variant="brand" className="font-mono uppercase tracking-[0.14em]">
-          Active
+          Активна
         </Badge>
       ) : (
         <Badge variant="muted" className="font-mono uppercase tracking-[0.14em]">
-          Revoked
+          Отозвана
         </Badge>
       )}
       {canRevoke ? (
         <Button variant="outline" size="sm" onClick={onRevoke} disabled={busy}>
           <LogOut className="mr-1.5 h-3.5 w-3.5" />
-          {busy ? "Revoking…" : "Revoke"}
+          {busy ? "Отзыв…" : "Отозвать"}
         </Button>
       ) : (
         <span aria-hidden />
@@ -183,10 +183,10 @@ function SessionRow({
 }
 
 function describeDevice(s: UserSessionDto): string {
-  const browser = s.browser ?? "Unknown browser";
+  const browser = s.browser ?? "Неизвестный браузер";
   const version = s.browserVersion ? ` ${s.browserVersion}` : "";
-  const os = s.operatingSystem ?? "unknown os";
-  return `${browser}${version} on ${os}`;
+  const os = s.operatingSystem ?? "неизвестная ОС";
+  return `${browser}${version} · ${os}`;
 }
 
 function formatRelative(value?: string | null): string {
@@ -195,14 +195,14 @@ function formatRelative(value?: string | null): string {
   if (Number.isNaN(d.getTime())) return value;
   const diff = Date.now() - d.getTime();
   const sec = Math.round(diff / 1000);
-  if (sec < 60) return `${sec}s ago`;
+  if (sec < 60) return `${sec} с назад`;
   const min = Math.round(sec / 60);
-  if (min < 60) return `${min}m ago`;
+  if (min < 60) return `${min} мин назад`;
   const hr = Math.round(min / 60);
-  if (hr < 24) return `${hr}h ago`;
+  if (hr < 24) return `${hr} ч назад`;
   const day = Math.round(hr / 24);
-  if (day < 14) return `${day}d ago`;
-  return d.toLocaleDateString();
+  if (day < 14) return `${day} дн назад`;
+  return d.toLocaleDateString("ru-RU");
 }
 
 function describe(err: unknown): string {

@@ -27,7 +27,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe("billing invoices list", () => {
-  test("renders the Invoices heading, an invoice row, and its status badge", async ({ page }) => {
+  test("renders the Счета heading, an invoice row, and its status badge", async ({ page }) => {
     await page.route("**/api/v1/billing/invoices?*", async (route) => {
       if (route.request().method() !== "GET") {
         await route.fallback();
@@ -44,17 +44,14 @@ test.describe("billing invoices list", () => {
 
     const main = page.getByRole("main");
 
-    // CardTitle "Invoices" — scope to main and exclude the BillingLayout tab
-    // link (also "Invoices", rendered as an <a>). The CardTitle is a <div>.
+    // CardTitle "Счета" — scope to main and exclude the BillingLayout tab link.
     await expect(
-      main.locator("div", { hasText: /^Invoices$/ }).first(),
+      main.locator("div", { hasText: /^Счета$/ }).first(),
     ).toBeVisible({ timeout: 10_000 });
 
-    // The invoice row from our mock: number code + status badge. Target the
-    // visible badge <span>; the status filter is a closed dropdown, so its
-    // "Draft" item isn't in the DOM to collide with.
+    // The invoice row from our mock: number code + status badge.
     await expect(main.getByText("INV-2026-0001", { exact: true })).toBeVisible();
-    await expect(main.locator("span", { hasText: /^Draft$/ })).toBeVisible();
+    await expect(main.locator("span", { hasText: /^Черновик$/ })).toBeVisible();
   });
 
   test("shows the empty state when no invoices match", async ({ page }) => {
@@ -73,7 +70,7 @@ test.describe("billing invoices list", () => {
     await page.goto("/billing/invoices");
 
     await expect(
-      page.getByText(/no invoices match the current filters/i),
+      page.getByText(/под текущие фильтры счетов нет/i),
     ).toBeVisible({ timeout: 10_000 });
   });
 

@@ -17,9 +17,18 @@ const PAGE_SIZE = 12;
 // Desktop grid template — shared by header + rows.
 const DESKTOP_COLS = "grid-cols-[1fr_140px_24px] lg:grid-cols-[1.6fr_1.4fr_140px_24px]";
 
+/** Russian plural: pluralRu(1, ["школа","школы","школ"]). */
+function pluralRu(n: number, forms: [string, string, string]): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return forms[0];
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return forms[1];
+  return forms[2];
+}
+
 function formatDate(value: string): string {
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString();
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString("ru-RU");
 }
 
 export function TenantsListPage() {
@@ -44,21 +53,22 @@ export function TenantsListPage() {
     if (!data) return "—";
     const p = String(data.pageNumber).padStart(2, "0");
     const t = String(Math.max(data.totalPages, 1)).padStart(2, "0");
-    return `Page ${p} of ${t}`;
+    return `Стр. ${p} из ${t}`;
   }, [data]);
+
+  const total = data?.totalCount ?? 0;
+  const schoolsWord = pluralRu(total, ["школа", "школы", "школ"]);
 
   return (
     <div className="space-y-4 sm:space-y-6">
       <EntityPageHeader
         icon={Building2}
-        title="Registry"
+        title="Школы"
         tone="info"
-        total={data?.totalCount ?? null}
-        unit="tenant"
         description={
           data
-            ? `${data.totalCount} ${data.totalCount === 1 ? "tenant" : "tenants"} registered on this instance.`
-            : "Loading the registry…"
+            ? `Зарегистрировано ${total} ${schoolsWord} на этом экземпляре.`
+            : "Загрузка списка школ…"
         }
       >
         {canCreateTenant && (
@@ -66,7 +76,7 @@ export function TenantsListPage() {
             onClick={() => setCreateOpen(true)}
             className="h-9 flex-1 gap-1.5 rounded-lg px-4 text-[13px] font-semibold sm:flex-none"
           >
-            <Plus className="size-4" /> New tenant
+            <Plus className="size-4" /> Новая школа
           </Button>
         )}
       </EntityPageHeader>
@@ -76,7 +86,7 @@ export function TenantsListPage() {
           message={
             query.error instanceof ApiRequestError
               ? query.error.problem?.detail ?? query.error.message
-              : "Failed to load tenants."
+              : "Не удалось загрузить школы."
           }
         />
       )}
@@ -86,15 +96,15 @@ export function TenantsListPage() {
           role="status"
           className="py-12 text-center font-mono text-sm uppercase tracking-[0.18em] text-[var(--color-muted-foreground)]"
         >
-          Loading…
+          Загрузка…
         </div>
       )}
 
       {!query.isLoading && items.length === 0 && !query.isError && (
         <div className="py-16 text-center">
-          <p className="font-display text-2xl text-[var(--color-foreground)]">No tenants yet.</p>
+          <p className="font-display text-2xl text-[var(--color-foreground)]">Школ пока нет.</p>
           <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-            Provision the first tenant to get started.
+            Заведите первую школу, чтобы начать.
           </p>
         </div>
       )}
@@ -102,7 +112,7 @@ export function TenantsListPage() {
       {items.length > 0 && (
         <div>
           <p className="mb-3 text-[12px] font-medium text-[var(--color-muted-foreground)]">
-            {data?.totalCount ?? 0} tenant{(data?.totalCount ?? 0) !== 1 ? "s" : ""} registered
+            Зарегистрировано {total} {schoolsWord}
           </p>
 
           {/* Mobile card list */}
@@ -122,13 +132,13 @@ export function TenantsListPage() {
               className={`grid items-center gap-3 border-b border-[var(--color-border)] bg-[var(--color-muted)]/40 px-4 py-2.5 ${DESKTOP_COLS}`}
             >
               <span className="text-[11.5px] font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
-                Tenant
+                Школа
               </span>
               <span className="hidden text-[11.5px] font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)] lg:block">
-                Admin email
+                E-mail администратора
               </span>
               <span className="text-[11.5px] font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
-                Status
+                Статус
               </span>
               <span />
             </div>
@@ -160,7 +170,7 @@ export function TenantsListPage() {
               onClick={() => setPageNumber((p) => Math.max(1, p - 1))}
               className="h-9 rounded-lg px-3 text-[13px]"
             >
-              <ChevronLeft className="mr-1 h-3.5 w-3.5" /> Previous
+              <ChevronLeft className="mr-1 h-3.5 w-3.5" /> Назад
             </Button>
             <Button
               variant="outline"
@@ -169,7 +179,7 @@ export function TenantsListPage() {
               onClick={() => setPageNumber((p) => p + 1)}
               className="h-9 rounded-lg px-3 text-[13px]"
             >
-              Next <ChevronRight className="ml-1 h-3.5 w-3.5" />
+              Вперёд <ChevronRight className="ml-1 h-3.5 w-3.5" />
             </Button>
           </div>
         </div>
@@ -192,7 +202,7 @@ function StatusPill({ active }: { active: boolean }) {
           : "bg-[var(--color-muted)] text-[var(--color-muted-foreground)]",
       )}
     >
-      {active ? "Active" : "Inactive"}
+      {active ? "Активна" : "Неактивна"}
     </span>
   );
 }
@@ -205,7 +215,7 @@ function TenantMobileCard({ tenant, onClick }: { tenant: TenantDto; onClick: () 
       <button
         type="button"
         onClick={onClick}
-        aria-label={`Open tenant ${tenant.name}`}
+        aria-label={`Открыть школу ${tenant.name}`}
         className={cn(
           "group w-full overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 text-left shadow-xs",
           "transition-colors hover:border-[var(--color-border-strong)] hover:bg-[var(--color-accent)]",
@@ -259,7 +269,7 @@ function TenantDesktopRow({ tenant, onClick }: { tenant: TenantDto; onClick: () 
               {tenant.name}
             </span>
             <span className="block truncate font-mono text-[12px] text-[var(--color-muted-foreground)]">
-              {tenant.id} · valid {formatDate(tenant.validUpto)}
+              {tenant.id} · до {formatDate(tenant.validUpto)}
             </span>
           </div>
         </div>

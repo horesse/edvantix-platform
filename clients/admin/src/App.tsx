@@ -22,7 +22,7 @@ export function App() {
               fallback={
                 <div
                   role="status"
-                  aria-label="Loading"
+                  aria-label="Загрузка"
                   className="grid min-h-dvh place-items-center bg-[var(--color-background)]"
                 />
               }

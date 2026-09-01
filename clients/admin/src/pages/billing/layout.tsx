@@ -6,8 +6,8 @@ import { EntityPageHeader } from "@/components/list";
 type Tab = { to: string; label: string };
 
 const TABS: Tab[] = [
-  { to: "/billing/plans", label: "Plans" },
-  { to: "/billing/invoices", label: "Invoices" },
+  { to: "/billing/plans", label: "Тарифы" },
+  { to: "/billing/invoices", label: "Счета" },
 ];
 
 /**
@@ -20,13 +20,13 @@ export function BillingLayout() {
       <EntityPageHeader
         icon={CreditCard}
         tone="saffron"
-        title="Billing"
-        description="Manage plans, subscriptions, and invoices across every tenant on this instance."
+        title="Биллинг"
+        description="Тарифы, подписки и счета по всем школам этого экземпляра."
       />
 
       <nav
         className="flex items-center gap-1 border-b border-[var(--color-border)]"
-        aria-label="Billing sections"
+        aria-label="Разделы биллинга"
       >
         {TABS.map((tab) => (
           <NavLink

@@ -20,6 +20,7 @@ import {
   SheetContent,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/cn";
+import { AUDIT_SEVERITY_RU, AUDIT_TYPE_RU } from "@/lib/audit-labels";
 
 // ─────────────────────────────────────────────────────────────────────────
 // AuditDetailSheet — side sheet shown when an audit row is clicked on the
@@ -80,16 +81,16 @@ export function AuditDetailSheetBody({
           </span>
           <div>
             <div className="text-[13px] font-semibold leading-tight tracking-tight text-[var(--color-foreground)]">
-              {event ? `${formatEventType(event.eventType)} event` : "Audit event"}
+              {event ? `Событие: ${AUDIT_TYPE_RU[formatEventType(event.eventType)] ?? formatEventType(event.eventType)}` : "Событие аудита"}
             </div>
             <div className="mt-0.5 font-mono text-[10.5px] text-[var(--color-muted-foreground)]">
-              {event ? formatTimestamp(event.occurredAtUtc) : "Loading…"}
+              {event ? formatTimestamp(event.occurredAtUtc) : "Загрузка…"}
             </div>
           </div>
         </div>
         <button
           type="button"
-          aria-label="Close"
+          aria-label="Закрыть"
           onClick={onClose}
           className={cn(
             "grid h-7 w-7 shrink-0 place-items-center rounded-md",
@@ -106,7 +107,7 @@ export function AuditDetailSheetBody({
       <div className="min-h-0 flex-1 overflow-y-auto">
         {query.isLoading && !event && (
           <div className="p-6">
-            <LoadingRow label="Loading event" />
+            <LoadingRow label="Загрузка события" />
           </div>
         )}
 
@@ -116,7 +117,7 @@ export function AuditDetailSheetBody({
               message={
                 query.error instanceof ApiRequestError
                   ? query.error.problem?.detail ?? query.error.message
-                  : "Failed to load event."
+                  : "Не удалось загрузить событие."
               }
             />
           </div>
@@ -143,26 +144,26 @@ function IdentityBand({ event }: { event: AuditDetailDto }) {
   const sev = severityTone(event.severity);
   const eventLabel = formatEventType(event.eventType);
   return (
-    <div className="px-6 py-4" aria-label="Event identity">
+    <div className="px-6 py-4" aria-label="Идентификация события">
       <div className="mb-2 font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-[var(--color-muted-foreground)]">
-        Identity
+        Идентификация
       </div>
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
         <Badge
           variant={eventTypeVariant(eventLabel)}
           className="font-mono uppercase tracking-[0.16em]"
         >
-          {eventLabel}
+          {AUDIT_TYPE_RU[eventLabel] ?? eventLabel}
         </Badge>
         <Badge
           variant={sev.variant}
           className="font-mono uppercase tracking-[0.16em]"
         >
-          {event.severity}
+          {AUDIT_SEVERITY_RU[event.severity] ?? event.severity}
         </Badge>
         {event.source && (
           <span className="min-w-0 truncate font-mono text-[12px] text-[var(--color-muted-foreground)]">
-            <span className="opacity-60">source · </span>
+            <span className="opacity-60">источник · </span>
             <span className="text-[var(--color-foreground)]">{event.source}</span>
           </span>
         )}
@@ -191,10 +192,10 @@ function CorrelationBand({ event }: { event: AuditDetailDto }) {
       <div className="mb-2 flex items-center gap-1.5">
         <Fingerprint className="h-3.5 w-3.5 text-[var(--color-muted-foreground)]" />
         <span className="font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-[var(--color-muted-foreground)]">
-          Correlation
+          Корреляция
         </span>
         <span className="ml-1 text-[10.5px] text-[var(--color-muted-foreground)]">
-          — paste into your observability stack
+          — вставьте в свой стек наблюдаемости
         </span>
       </div>
       <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
@@ -232,7 +233,7 @@ function CorrelationChip({ label, value }: { label: string; value: string | null
           ? "hover:bg-[var(--color-muted)]/50"
           : "opacity-60",
       )}
-      aria-label={hasValue ? `Copy ${label}` : `${label} not available`}
+      aria-label={hasValue ? `Скопировать ${label}` : `${label} недоступно`}
     >
       <div className="min-w-0 flex-1 space-y-0.5">
         <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--color-muted-foreground)]">
@@ -270,12 +271,12 @@ function ContextGrid({ event }: { event: AuditDetailDto }) {
   const tags = renderTagsInline(event.tags as number);
 
   const tiles: Array<{ label: string; value: React.ReactNode; mono?: boolean }> = [
-    { label: "Occurred at", value: formatTimestamp(event.occurredAtUtc), mono: true },
-    { label: "Received at", value: formatTimestamp(event.receivedAtUtc), mono: true },
-    { label: "Tenant", value: event.tenantId ?? "—", mono: true },
-    { label: "User", value: userLine, mono: true },
-    { label: "Source", value: event.source ?? "—", mono: true },
-    { label: "Tags", value: tags },
+    { label: "Произошло", value: formatTimestamp(event.occurredAtUtc), mono: true },
+    { label: "Получено", value: formatTimestamp(event.receivedAtUtc), mono: true },
+    { label: "Школа", value: event.tenantId ?? "—", mono: true },
+    { label: "Пользователь", value: userLine, mono: true },
+    { label: "Источник", value: event.source ?? "—", mono: true },
+    { label: "Метки", value: tags },
   ];
 
   return (
@@ -283,7 +284,7 @@ function ContextGrid({ event }: { event: AuditDetailDto }) {
       <div className="mb-2 flex items-center gap-1.5">
         <AlertTriangle className="h-3.5 w-3.5 text-[var(--color-muted-foreground)]" />
         <span className="font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-[var(--color-muted-foreground)]">
-          Context
+          Контекст
         </span>
       </div>
       <div
@@ -353,17 +354,17 @@ function PayloadPanel({ payload }: { payload: unknown }) {
             Payload
           </span>
           <span className="text-[10.5px] text-[var(--color-muted-foreground)]">
-            · {lineCount} lines
+            · строк: {lineCount}
           </span>
         </div>
         <Button variant="ghost" size="sm" onClick={copy} className="h-6 px-2 text-[11px]">
           {copied ? (
             <>
-              <ClipboardCheck className="mr-1 h-3 w-3" /> Copied
+              <ClipboardCheck className="mr-1 h-3 w-3" /> Скопировано
             </>
           ) : (
             <>
-              <Copy className="mr-1 h-3 w-3" /> Copy
+              <Copy className="mr-1 h-3 w-3" /> Копировать
             </>
           )}
         </Button>

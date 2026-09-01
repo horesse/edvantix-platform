@@ -17,7 +17,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe("tenants registry list", () => {
-  test("renders the Registry heading and a tenant row from the mock", async ({ page }) => {
+  test("renders the Школы heading and a school row from the mock", async ({ page }) => {
     await page.route("**/api/v1/tenants/?*", async (route) => {
       await route.fulfill({
         status: 200,
@@ -29,7 +29,7 @@ test.describe("tenants registry list", () => {
     await page.goto("/tenants");
 
     await expect(
-      page.getByRole("heading", { name: "Registry", exact: true }),
+      page.getByRole("heading", { name: "Школы", exact: true }),
     ).toBeVisible({ timeout: 10_000 });
 
     // The tenant row from our mock. The name renders in both a (hidden) mobile
@@ -53,11 +53,11 @@ test.describe("tenants registry list", () => {
 
     await page.goto("/tenants");
 
-    await expect(page.getByText("No tenants yet.", { exact: true })).toBeVisible({
+    await expect(page.getByText("Школ пока нет.", { exact: true })).toBeVisible({
       timeout: 10_000,
     });
     await expect(
-      page.getByText("Provision the first tenant to get started.", { exact: true }),
+      page.getByText("Заведите первую школу, чтобы начать.", { exact: true }),
     ).toBeVisible();
   });
 
@@ -72,22 +72,20 @@ test.describe("tenants registry list", () => {
 
     await page.goto("/tenants");
     await expect(
-      page.getByRole("heading", { name: "Registry", exact: true }),
+      page.getByRole("heading", { name: "Школы", exact: true }),
     ).toBeVisible({ timeout: 10_000 });
 
-    // Creation is now an in-page dialog, not a /tenants/new route. Clicking the
-    // trigger opens the Radix dialog rather than navigating. `exact` keeps the
-    // trigger off the dialog's own "Create tenant" submit button.
-    await page.getByRole("button", { name: "New tenant", exact: true }).click();
+    // Creation is now an in-page dialog, not a /tenants/new route.
+    await page.getByRole("button", { name: "Новая школа", exact: true }).click();
 
     await expect(page).toHaveURL(/\/tenants$/);
     const dialog = page.getByRole("dialog");
     await expect(
-      dialog.getByRole("heading", { name: "New tenant", exact: true }),
+      dialog.getByRole("heading", { name: "Новая школа", exact: true }),
     ).toBeVisible();
   });
 
-  test("hides the New tenant button for a Tenants.View-only user", async ({ page }) => {
+  test("hides the Новая школа button for a Tenants.View-only user", async ({ page }) => {
     // Keep Tenants.View (route guard) but drop Tenants.Create.
     const viewOnly = ADMIN_PERMS.filter((p) => p !== "Permissions.Tenants.Create");
     await seedAuthedSession(page, { ...TEST_USER, permissions: viewOnly });
@@ -103,9 +101,11 @@ test.describe("tenants registry list", () => {
 
     await page.goto("/tenants");
     await expect(
-      page.getByRole("heading", { name: "Registry", exact: true }),
+      page.getByRole("heading", { name: "Школы", exact: true }),
     ).toBeVisible({ timeout: 10_000 });
 
-    await expect(page.getByRole("button", { name: "New tenant", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Новая школа", exact: true })).toHaveCount(0);
+    // No visible "Tenant" copy anywhere on the screen.
+    await expect(page.getByText(/\bTenant\b/)).toHaveCount(0);
   });
 });
