@@ -31,6 +31,40 @@ tags: [задачи, frontend]
       (`GET /api/v1/audits/by-entity/{entityName}/{entityId}`, PR #15), но привязка к
       карточке ученика во frontend-этапах не значилась — подтвердить, нужна ли она в MVP
       или это осознанно вне скоупа.
+- [ ] **Привязка тарифа к зачислению в группу.** Бэкенд поддерживает
+      `GroupEnrollment.TariffId` (`EnrollStudentsCommand` принимает `tariffId`,
+      массовая генерация счетов берёт его, иначе — тариф курса; см.
+      [[Payments]] → bulk-generate, [[StudyGroups]] → Enrollments). Во frontend поля
+      нет: `EnrollDialog` на `/study-groups/:id` собирает только «Скидка, %», хинт
+      прямо гласит «Тариф назначается после подключения Payments»
+      (`clients/dashboard/src/pages/study-groups/study-group-detail.tsx`). API-типы
+      `EnrollStudentsInput.tariffId` / `GroupEnrollmentDto.tariffId` уже есть в
+      `clients/dashboard/src/api/study-groups.ts` — не пробрасываются в UI.
+      Нужно: селектор тарифа в диалоге зачисления (список из `GET /api/v1/tariffs`,
+      фильтр по активным, подсказка про фолбэк на тариф курса), показ выбранного
+      тарифа в ростере группы и, желательно, смена тарифа у существующего
+      зачисления. Проверить наличие write-эндпоинта для смены `TariffId` без
+      переоформления — если нет, это пункт в [[Задачи · Новые модули]] (StudyGroups).
+- [ ] **Вынести настройки школы из личных настроек отдельным пунктом.** Сейчас
+      «Школа» (часовой пояс, валюта, нумерация счетов) — это вкладка внутри
+      `/settings`, вперемешку с личными вкладками Profile / Security / Appearance /
+      Notifications / API keys (`clients/dashboard/src/pages/settings/settings-layout.tsx`,
+      `ALL_TABS`). Настройки школы — тенант-скоуп (право
+      `Permissions.SchoolSettings.Manage`), а не «настройки профиля», и логически не
+      должны жить в одном списке с личными.
+      Нужно: отдельный пункт/раздел верхнего уровня в сайдбаре
+      (`clients/dashboard/src/components/layout/nav-data.ts`) — напр. «Школа» или
+      «Настройки школы» рядом с «Системой»/«Идентификацией», гейт на
+      `Permissions.SchoolSettings.Manage`. Под него же завести уже существующие,
+      но не представленные в навигации экраны: **аудитории**
+      (`pages/scheduling/rooms-settings.tsx`, роут `/settings/rooms`,
+      `Permissions.Scheduling.Rooms.Manage`) и **нерабочие дни**
+      (`pages/scheduling/non-working-days-settings.tsx`, роут
+      `/settings/non-working-days`) — сейчас доступны только ссылками со страницы
+      `/settings/school`. Личный `/settings` оставить только с личными вкладками
+      (заодно доперевести их подписи на RU — «Profile»/«Security»/… ещё англ.).
+      Роуты школьных экранов можно как оставить под `/settings/*`, так и перенести
+      под общий префикс (напр. `/school/*`) — решить при реализации.
 
 ## Связанное
 
