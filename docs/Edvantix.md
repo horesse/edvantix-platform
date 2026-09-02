@@ -135,6 +135,7 @@ flowchart TB
 | Область | Состояние |
 |---|---|
 | Каркас (Identity, Multitenancy, Auditing, Files, Webhooks, Chat, Tickets, Notifications, Billing) | ✅ есть в коде |
-| Catalog (демо e-commerce) | 🔴 удаляется |
+| Catalog (демо e-commerce) | ✅ удалён (PR #12 backend, #23 frontend) |
 | People, Curriculum, StudyGroups, Scheduling, Payments (бэкенд) | ✅ есть в коде |
-| Frontend школы (учебные экраны) | 🟡 не начат |
+| Frontend школы (dashboard + admin, этапы 1–7) | ✅ слит в `main` (PR #14–#24) |
+| Открытые пункты | доки для интеграторов + публичный docs-репозиторий — см. [[Бэклог]] |
