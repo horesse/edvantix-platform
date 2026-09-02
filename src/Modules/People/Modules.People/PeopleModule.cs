@@ -9,6 +9,7 @@ using FSH.Modules.People.Data;
 using FSH.Modules.People.Features.v1.Guardians.CreateGuardian;
 using FSH.Modules.People.Features.v1.Guardians.DeleteGuardian;
 using FSH.Modules.People.Features.v1.Guardians.GetGuardianById;
+using FSH.Modules.People.Features.v1.Guardians.GetGuardianStudents;
 using FSH.Modules.People.Features.v1.Guardians.LinkGuardianUser;
 using FSH.Modules.People.Features.v1.Guardians.SearchGuardians;
 using FSH.Modules.People.Features.v1.Guardians.UnlinkGuardianUser;
@@ -143,6 +144,7 @@ public sealed class PeopleModule : IModule
         group.MapUpdateGuardianEndpoint();
         group.MapDeleteGuardianEndpoint();
         group.MapGetGuardianByIdEndpoint();
+        group.MapGetGuardianStudentsEndpoint();
         group.MapSearchGuardiansEndpoint();
         group.MapLinkGuardianUserEndpoint();
         group.MapUnlinkGuardianUserEndpoint();

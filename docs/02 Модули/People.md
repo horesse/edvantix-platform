@@ -151,6 +151,7 @@ erDiagram
 | `GetTeacherByIdQuery`                           | `TeacherDto`                                                      |
 | `SearchGuardiansQuery`                          | `PagedResponse<GuardianDto>`                                      |
 | `GetGuardianByIdQuery`                          | `GuardianDto`                                                     |
+| `GetGuardianStudentsQuery`                      | `IReadOnlyList<GuardianStudentDto>` — обратная сторона `GetStudentGuardiansQuery`: связь + `StudentDto` подопечного. Для блока «подопечные» на карточке представителя |
 | `GetMyPeopleScopeQuery`                         | `PeopleScope`                                                     |
 
 ² В спецификации был `IReadOnlyList<GuardianDto>` — заменено на `StudentGuardianDto`
@@ -274,6 +275,7 @@ POST   /api/v1/teachers/{id}/unlink-user
                                                (workload — mapped by Scheduling, see below)
 
 GET    /api/v1/guardians                      + полный CRUD
+GET    /api/v1/guardians/{id}/students        подопечные представителя (People.Students.View)
 POST   /api/v1/guardians/{id}/link-user
 POST   /api/v1/guardians/{id}/unlink-user
 

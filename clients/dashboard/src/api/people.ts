@@ -395,6 +395,17 @@ export type GuardianDto = {
   userId?: string | null;
 };
 
+/** The guardian's-eye view of {@link StudentGuardianDto}: same link fields, but
+ *  carrying the ward's {@link StudentDto} instead of the guardian's record. */
+export type GuardianStudentDto = {
+  id: string;
+  studentId: string;
+  guardianId: string;
+  relation: string;
+  isPrimaryPayer: boolean;
+  student: StudentDto;
+};
+
 export type SearchGuardiansParams = {
   search?: string;
   pageNumber?: number;
@@ -468,6 +479,17 @@ export async function linkGuardianUser(id: string, userId: string): Promise<void
 
 export async function unlinkGuardianUser(id: string): Promise<void> {
   await apiFetch<void>(`${GUARDIANS}/${encodeURIComponent(id)}/unlink-user`, { method: "POST" });
+}
+
+// ── Guardian ↔ students (the "подопечные" block on the guardian card) ──
+
+/** Students this guardian is responsible for. The link is authored from the
+ *  student card ("Представители" tab); this is the read-only reverse view.
+ *  Requires `Permissions.People.Students.View`. */
+export function getGuardianStudents(guardianId: string): Promise<GuardianStudentDto[]> {
+  return apiFetch<GuardianStudentDto[]>(
+    `${GUARDIANS}/${encodeURIComponent(guardianId)}/students`,
+  );
 }
 
 // ─── People scope (current user) ──────────────────────────────────────
