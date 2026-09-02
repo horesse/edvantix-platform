@@ -53,6 +53,8 @@ import {
   getGroupAttendanceReport,
   type StudentAttendanceSummaryDto,
 } from "@/api/scheduling";
+import { getTariffs } from "@/api/payments";
+import { TARIFF_KIND_LABEL, formatMoney } from "@/pages/payments/payments-ui";
 import { useAuth } from "@/auth/use-auth";
 import { ApiRequestError } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
@@ -123,6 +125,7 @@ export function StudyGroupBuilderPage() {
   );
   const canViewAttendance = perms.includes("Permissions.Scheduling.Attendance.View");
   const canViewChat = perms.includes("Permissions.Chat.Channels.View");
+  const canViewTariffs = perms.includes("Permissions.Payments.Tariffs.View");
 
   const groupKey = ["study-group", studyGroupId] as const;
   const query = useQuery({
@@ -153,6 +156,14 @@ export function StudyGroupBuilderPage() {
     queryFn: () => searchCourses({ pageSize: 100 }),
     staleTime: 60_000,
   });
+  // Active tariffs — for the enroll dialog selector and the roster tariff labels.
+  // Gated on the Payments permission so a StudyGroups-only role never 403s here.
+  const tariffsQuery = useQuery({
+    queryKey: ["tariffs", { isActive: true, for: "study-group" }],
+    queryFn: () => getTariffs(true),
+    enabled: canViewTariffs,
+    staleTime: 60_000,
+  });
 
   const studentName = useMemo(() => {
     const m = new Map<string, string>();
@@ -169,6 +180,19 @@ export function StudyGroupBuilderPage() {
     for (const c of coursesQuery.data?.items ?? []) m.set(c.id, c.title);
     return m;
   }, [coursesQuery.data]);
+  const tariffName = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const t of tariffsQuery.data ?? []) m.set(t.id, t.name);
+    return m;
+  }, [tariffsQuery.data]);
+  const tariffOptions = useMemo(
+    () =>
+      (tariffsQuery.data ?? []).map((t) => ({
+        value: t.id,
+        label: `${t.name} · ${formatMoney(t.amount, t.currency)} · ${TARIFF_KIND_LABEL[t.kind]}`,
+      })),
+    [tariffsQuery.data],
+  );
   const teacherOptions = useMemo(
     () =>
       (teachersQuery.data?.items ?? []).map((t) => ({ value: t.id, label: t.displayName })),
@@ -443,6 +467,7 @@ export function StudyGroupBuilderPage() {
                       group={group}
                       frozen={frozen}
                       studentName={studentName}
+                      tariffName={tariffName}
                       canCreate={canEnrollCreate}
                       canDelete={canEnrollDelete}
                       canTransfer={canEnrollTransfer}
@@ -512,6 +537,8 @@ export function StudyGroupBuilderPage() {
                 <EnrollDialog
                   open={enrollOpen}
                   group={group}
+                  tariffOptions={tariffOptions}
+                  canPickTariff={canViewTariffs}
                   onClose={() => setEnrollOpen(false)}
                   onDone={invalidateGroup}
                 />
@@ -764,6 +791,7 @@ function EnrollmentsSection({
   group,
   frozen,
   studentName,
+  tariffName,
   canCreate,
   canDelete,
   canTransfer,
@@ -775,6 +803,7 @@ function EnrollmentsSection({
   group: StudyGroupDetailDto;
   frozen: boolean;
   studentName: Map<string, string>;
+  tariffName: Map<string, string>;
   canCreate: boolean;
   canDelete: boolean;
   canTransfer: boolean;
@@ -869,8 +898,13 @@ function EnrollmentsSection({
                   <div className="min-w-0">
                     <p className="truncate text-[13px] font-medium text-[var(--color-foreground)]">
                       {name}
+                      {e.tariffId && (
+                        <span className="ml-2 text-[11px] font-normal text-[var(--color-muted-foreground)]">
+                          тариф: {tariffName.get(e.tariffId) ?? short(e.tariffId)}
+                        </span>
+                      )}
                       {e.discountPercent > 0 && (
-                        <span className="ml-2 text-[11px] text-[var(--color-muted-foreground)]">
+                        <span className="ml-2 text-[11px] font-normal text-[var(--color-muted-foreground)]">
                           скидка {e.discountPercent}%
                         </span>
                       )}
@@ -974,16 +1008,21 @@ function IconAction({
 function EnrollDialog({
   open,
   group,
+  tariffOptions,
+  canPickTariff,
   onClose,
   onDone,
 }: {
   open: boolean;
   group: StudyGroupDetailDto;
+  tariffOptions: ComboboxOption[];
+  canPickTariff: boolean;
   onClose: () => void;
   onDone: () => void;
 }) {
   const [selected, setSelected] = useState<string[]>([]);
   const [picker, setPicker] = useState<string | null>(null);
+  const [tariffId, setTariffId] = useState<string | null>(null);
   const [discount, setDiscount] = useState("0");
   const [enrollError, setEnrollError] = useState<string | null>(null);
 
@@ -991,6 +1030,7 @@ function EnrollDialog({
     if (!open) {
       setSelected([]);
       setPicker(null);
+      setTariffId(null);
       setDiscount("0");
       setEnrollError(null);
     }
@@ -1028,8 +1068,11 @@ function EnrollDialog({
   );
 
   const mutation = useMutation({
-    mutationFn: (vars: { studentIds: string[]; discountPercent: number }) =>
-      enrollStudents({ studyGroupId: group.id, ...vars }),
+    mutationFn: (vars: {
+      studentIds: string[];
+      tariffId: string | null;
+      discountPercent: number;
+    }) => enrollStudents({ studyGroupId: group.id, ...vars }),
     onSuccess: (ids) => {
       toast.success(`Зачислено учеников: ${ids.length}`);
       onDone();
@@ -1056,7 +1099,7 @@ function EnrollDialog({
     e.preventDefault();
     setEnrollError(null);
     if (selected.length === 0 || !validPct) return;
-    mutation.mutate({ studentIds: selected, discountPercent: pct });
+    mutation.mutate({ studentIds: selected, tariffId, discountPercent: pct });
   };
 
   return (
@@ -1115,10 +1158,33 @@ function EnrollDialog({
               </ul>
             )}
 
+            {canPickTariff && (
+              <Field
+                id="en-tariff"
+                label="Тариф"
+                hint="Общий для всего набора. Если не выбрать — при массовой генерации счетов берётся тариф курса."
+              >
+                <Combobox
+                  id="en-tariff"
+                  label="Тариф"
+                  value={tariffId}
+                  onChange={setTariffId}
+                  options={tariffOptions}
+                  placeholder={
+                    tariffOptions.length === 0
+                      ? "Нет активных тарифов"
+                      : "Тариф курса по умолчанию"
+                  }
+                  searchable
+                  clearable
+                />
+              </Field>
+            )}
+
             <Field
               id="en-discount"
               label="Скидка, %"
-              hint="Общая для всего набора. Тариф назначается после подключения Payments."
+              hint="Общая для всего набора."
             >
               <Input
                 id="en-discount"
