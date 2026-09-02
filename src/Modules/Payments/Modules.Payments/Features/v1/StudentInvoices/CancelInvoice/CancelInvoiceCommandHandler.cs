@@ -22,22 +22,27 @@ public sealed class CancelInvoiceCommandHandler(
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        var invoice = await dbContext.StudentInvoices
-            .FirstOrDefaultAsync(i => i.Id == command.InvoiceId, cancellationToken)
-            .ConfigureAwait(false)
-            ?? throw new NotFoundException($"Invoice {command.InvoiceId} not found.");
+        // StudentInvoice has no row-version: a race on the invoice otherwise escapes as an opaque
+        // DbUpdateConcurrencyException 500. Reload-and-retry, then a clean 409 if it keeps losing.
+        return await InvoiceWrite.WithConcurrencyRetryAsync(dbContext, async ct =>
+        {
+            var invoice = await dbContext.StudentInvoices
+                .FirstOrDefaultAsync(i => i.Id == command.InvoiceId, ct)
+                .ConfigureAwait(false)
+                ?? throw new NotFoundException($"Invoice {command.InvoiceId} not found.");
 
-        invoice.Cancel(command.Reason);
+            invoice.Cancel(command.Reason);
 
-        var tenantId = multiTenantContextAccessor.MultiTenantContext.TenantInfo?.Id;
-        var now = timeProvider.GetUtcNow();
-        await outboxStore.AddAsync(
-            new StudentInvoiceCancelledIntegrationEvent(
-                Guid.NewGuid(), now.UtcDateTime, tenantId, Guid.NewGuid().ToString(), "Payments",
-                invoice.Id, command.Reason),
-            cancellationToken).ConfigureAwait(false);
+            var tenantId = multiTenantContextAccessor.MultiTenantContext.TenantInfo?.Id;
+            var now = timeProvider.GetUtcNow();
+            await outboxStore.AddAsync(
+                new StudentInvoiceCancelledIntegrationEvent(
+                    Guid.NewGuid(), now.UtcDateTime, tenantId, Guid.NewGuid().ToString(), "Payments",
+                    invoice.Id, command.Reason),
+                ct).ConfigureAwait(false);
 
-        await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        return Unit.Value;
+            await dbContext.SaveChangesAsync(ct).ConfigureAwait(false);
+            return Unit.Value;
+        }, cancellationToken).ConfigureAwait(false);
     }
 }
