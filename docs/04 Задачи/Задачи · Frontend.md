@@ -45,26 +45,23 @@ tags: [задачи, frontend]
       тарифа в ростере группы и, желательно, смена тарифа у существующего
       зачисления. Проверить наличие write-эндпоинта для смены `TariffId` без
       переоформления — если нет, это пункт в [[Задачи · Новые модули]] (StudyGroups).
-- [ ] **Вынести настройки школы из личных настроек отдельным пунктом.** Сейчас
-      «Школа» (часовой пояс, валюта, нумерация счетов) — это вкладка внутри
-      `/settings`, вперемешку с личными вкладками Profile / Security / Appearance /
-      Notifications / API keys (`clients/dashboard/src/pages/settings/settings-layout.tsx`,
-      `ALL_TABS`). Настройки школы — тенант-скоуп (право
-      `Permissions.SchoolSettings.Manage`), а не «настройки профиля», и логически не
-      должны жить в одном списке с личными.
-      Нужно: отдельный пункт/раздел верхнего уровня в сайдбаре
-      (`clients/dashboard/src/components/layout/nav-data.ts`) — напр. «Школа» или
-      «Настройки школы» рядом с «Системой»/«Идентификацией», гейт на
-      `Permissions.SchoolSettings.Manage`. Под него же завести уже существующие,
-      но не представленные в навигации экраны: **аудитории**
-      (`pages/scheduling/rooms-settings.tsx`, роут `/settings/rooms`,
-      `Permissions.Scheduling.Rooms.Manage`) и **нерабочие дни**
-      (`pages/scheduling/non-working-days-settings.tsx`, роут
-      `/settings/non-working-days`) — сейчас доступны только ссылками со страницы
-      `/settings/school`. Личный `/settings` оставить только с личными вкладками
-      (заодно доперевести их подписи на RU — «Profile»/«Security»/… ещё англ.).
-      Роуты школьных экранов можно как оставить под `/settings/*`, так и перенести
-      под общий префикс (напр. `/school/*`) — решить при реализации.
+- [x] **Настройки школы вынесены из личных настроек отдельным разделом.** В сайдбаре
+      появился раздел **«Школа»** (`nav-data.ts`, `id: "school"`) рядом с
+      «Идентификацией»/«Системой» с тремя пунктами: **Настройки школы**
+      (`Permissions.SchoolSettings.Manage`), **Аудитории**
+      (`Permissions.Scheduling.Rooms.View`) и **Нерабочие дни**
+      (`Permissions.Scheduling.ScheduleTemplates.View`) — каждый гейтится правом
+      своего эндпоинта. Экраны переехали под общий префикс `/school/*`
+      (`/school/settings`, `/school/rooms`, `/school/non-working-days`); старые пути
+      `/settings/{school,rooms,non-working-days}` оставлены редиректами. Личный
+      `/settings` теперь только с личными вкладками, их подписи переведены на RU
+      («Профиль», «Безопасность», «Оформление», «Уведомления», «API-ключи»), как и
+      меню аккаунта в топбаре. `SchoolSettings` получил собственный `PageHero`, т.к.
+      больше не живёт в шелле личных настроек. Команд-палетка: пункт «Настройки школы»
+      ведёт на новый путь, добавлены «Аудитории» и «Нерабочие дни». Тесты:
+      `tests/system/navigation.spec.ts` (новый describe «Школа»), обновлены
+      `tests/settings/school.spec.ts` и `tests/scheduling/settings.spec.ts`;
+      238 Playwright зелёных, `npm run build` проходит.
 
 ## Связанное
 

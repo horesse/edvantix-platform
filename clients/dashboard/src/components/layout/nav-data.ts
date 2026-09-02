@@ -3,8 +3,10 @@ import {
   BookOpen,
   CalendarDays,
   CalendarRange,
+  CalendarX2,
   ClipboardCheck,
   CreditCard,
+  DoorOpen,
   FolderOpen,
   FolderTree,
   GraduationCap,
@@ -13,9 +15,11 @@ import {
   LayoutDashboard,
   MessageCircle,
   Receipt,
+  School,
   ScrollText,
   Settings,
   ShieldCheck,
+  SlidersHorizontal,
   Ticket,
   Trash2,
   TrendingUp,
@@ -202,6 +206,37 @@ export const sections: NavSection[] = [
       // Billing.View.
       { to: "/subscription", label: "Подписка", icon: CreditCard, perm: "Permissions.Billing.View" },
       { to: "/invoices", label: "Счета", icon: Receipt, perm: "Permissions.Billing.View" },
+    ],
+  },
+  {
+    // Настройки школы — тенант-скоуп, а не личные настройки. Держим отдельным
+    // разделом рядом с «Идентификацией»/«Системой». Каждый пункт гейтится правом
+    // соответствующего write-эндпоинта:
+    //   PUT /tenants/settings          → SchoolSettings.Manage
+    //   GET /rooms                     → Scheduling.Rooms.View
+    //   GET /non-working-days          → Scheduling.ScheduleTemplates.View
+    id: "school",
+    caption: "Школа",
+    icon: School,
+    items: [
+      {
+        to: "/school/settings",
+        label: "Настройки школы",
+        icon: SlidersHorizontal,
+        perm: "Permissions.SchoolSettings.Manage",
+      },
+      {
+        to: "/school/rooms",
+        label: "Аудитории",
+        icon: DoorOpen,
+        perm: "Permissions.Scheduling.Rooms.View",
+      },
+      {
+        to: "/school/non-working-days",
+        label: "Нерабочие дни",
+        icon: CalendarX2,
+        perm: "Permissions.Scheduling.ScheduleTemplates.View",
+      },
     ],
   },
   {

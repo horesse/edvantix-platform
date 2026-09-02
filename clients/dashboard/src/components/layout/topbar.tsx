@@ -337,12 +337,12 @@ export function Topbar() {
 
           {/* Account quick actions */}
           <DropdownMenuLabel className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
-            Account
+            Аккаунт
           </DropdownMenuLabel>
           <div className="px-1 pb-1">
-            <SimpleMenuItem icon={UserRound} label="Profile" onSelect={() => navigate("/settings/profile")} />
-            <SimpleMenuItem icon={SettingsIcon} label="Settings" onSelect={() => navigate("/settings")} />
-            <SimpleMenuItem icon={KeyRound} label="API keys" onSelect={() => navigate("/settings/api-keys")} />
+            <SimpleMenuItem icon={UserRound} label="Профиль" onSelect={() => navigate("/settings/profile")} />
+            <SimpleMenuItem icon={SettingsIcon} label="Настройки" onSelect={() => navigate("/settings")} />
+            <SimpleMenuItem icon={KeyRound} label="API-ключи" onSelect={() => navigate("/settings/api-keys")} />
           </div>
 
           <DropdownMenuSeparator className="!my-0" />

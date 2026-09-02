@@ -3,7 +3,7 @@ import { mockJsonResponse } from "../helpers/api-mocks";
 import { seedAuthedSession, TEST_USER } from "../helpers/auth-seed";
 import { installShellMocks } from "../helpers/shell-mocks";
 
-// Stage 7 — /settings/school: the school-wide time zone + currency editor over
+// Stage 7 — /school/settings: the school-wide time zone + currency editor over
 // GET/PUT /api/v1/tenants/settings (Multitenancy). Invoice numbering is a stub;
 // non-working-days / rooms are links out.
 
@@ -16,7 +16,7 @@ test.beforeEach(async ({ page }) => {
   await installShellMocks(page);
 });
 
-test.describe("settings/school", () => {
+test.describe("school/settings", () => {
   test("GET renders the current time zone and currency", async ({ page }) => {
     await grant(page, ["Permissions.SchoolSettings.Manage"]);
     await mockJsonResponse(page, "**/api/v1/tenants/settings", {
@@ -24,7 +24,7 @@ test.describe("settings/school", () => {
       currency: "RUB",
     });
 
-    await page.goto("/settings/school");
+    await page.goto("/school/settings");
 
     // Section headers.
     await expect(
@@ -53,7 +53,7 @@ test.describe("settings/school", () => {
       status: 204,
     });
 
-    await page.goto("/settings/school");
+    await page.goto("/school/settings");
     await expect(page.getByText("USD", { exact: true }).last()).toBeVisible();
 
     // Save is disabled until something changes.
@@ -82,7 +82,7 @@ test.describe("settings/school", () => {
       currency: "USD",
     });
 
-    await page.goto("/settings/school");
+    await page.goto("/school/settings");
 
     await expect(page.getByText(/Только просмотр/)).toBeVisible();
     await expect(page.getByRole("button", { name: "Сохранить" })).toHaveCount(0);

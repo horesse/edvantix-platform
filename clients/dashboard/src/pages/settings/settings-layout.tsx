@@ -1,17 +1,14 @@
-import { useMemo } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import {
   Bell,
   ChevronRight,
   KeyRound,
-  Landmark,
   Palette,
   Settings as SettingsIcon,
   Shield,
   UserRound,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useAuth } from "@/auth/use-auth";
 import { EntityPageHeader } from "@/components/list";
 import { cn } from "@/lib/cn";
 
@@ -20,25 +17,16 @@ type Tab = {
   label: string;
   hint: string;
   icon: LucideIcon;
-  /** When set, the tab is hidden unless the user holds this permission —
-   *  mirrors the endpoint the tab's page manages (School settings → PUT
-   *  /tenants/settings → SchoolSettings.Manage). */
-  perm?: string;
 };
 
-const ALL_TABS: Tab[] = [
-  {
-    to: "/settings/school",
-    label: "Школа",
-    hint: "Часовой пояс, валюта, нумерация счетов",
-    icon: Landmark,
-    perm: "Permissions.SchoolSettings.Manage",
-  },
-  { to: "/settings/profile", label: "Profile", hint: "Your identity across the tenant", icon: UserRound },
-  { to: "/settings/security", label: "Security", hint: "Password and active sessions", icon: Shield },
-  { to: "/settings/appearance", label: "Appearance", hint: "Theme and visual preferences", icon: Palette },
-  { to: "/settings/notifications", label: "Notifications", hint: "How we reach you", icon: Bell },
-  { to: "/settings/api-keys", label: "API keys", hint: "Personal access tokens", icon: KeyRound },
+// Личные вкладки только. Настройки школы (тенант-скоуп) вынесены в отдельный
+// раздел сайдбара «Школа» — см. components/layout/nav-data.ts.
+const TABS: Tab[] = [
+  { to: "/settings/profile", label: "Профиль", hint: "Ваш профиль в пространстве школы", icon: UserRound },
+  { to: "/settings/security", label: "Безопасность", hint: "Пароль и активные сессии", icon: Shield },
+  { to: "/settings/appearance", label: "Оформление", hint: "Тема и визуальные настройки", icon: Palette },
+  { to: "/settings/notifications", label: "Уведомления", hint: "Как мы с вами связываемся", icon: Bell },
+  { to: "/settings/api-keys", label: "API-ключи", hint: "Персональные токены доступа", icon: KeyRound },
 ];
 
 const pad2 = (n: number) => n.toString().padStart(2, "0");
@@ -51,11 +39,6 @@ const pad2 = (n: number) => n.toString().padStart(2, "0");
  */
 export function SettingsLayout() {
   const location = useLocation();
-  const permissions = useAuth().user?.permissions;
-  const TABS = useMemo(() => {
-    const held = new Set(permissions ?? []);
-    return ALL_TABS.filter((t) => !t.perm || held.has(t.perm));
-  }, [permissions]);
   const activeIndex = Math.max(
     0,
     TABS.findIndex((t) => location.pathname.startsWith(t.to)),
@@ -64,14 +47,14 @@ export function SettingsLayout() {
 
   return (
     <div className="space-y-6">
-      {/* Page header — title resolves to "Settings · {active section}" so the
+      {/* Page header — title resolves to "Настройки · {active section}" so the
           masthead lives inline with the page title instead of stacking a
           second header inside the right column. */}
       <EntityPageHeader
         icon={SettingsIcon}
         title={
           <span className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
-            <span>Settings</span>
+            <span>Настройки</span>
             <span
               aria-hidden
               className="text-[oklch(from_var(--color-border-strong)_l_c_h_/_0.7)]"
@@ -88,11 +71,11 @@ export function SettingsLayout() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[260px_1fr] lg:gap-10">
         {/* ─── Editorial left nav ─── */}
-        <nav aria-label="Settings sections">
+        <nav aria-label="Разделы настроек">
           {/* Desktop: vertical numbered list */}
           <div className="sticky top-6 hidden lg:block">
             <p className="mb-4 pl-5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[oklch(from_var(--color-muted-foreground)_l_c_h_/_0.6)]">
-              Sections
+              Разделы
             </p>
             <ul className="relative space-y-px">
               {/* Faint vertical rail tying the numbers together */}
