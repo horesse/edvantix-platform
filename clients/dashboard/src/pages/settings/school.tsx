@@ -11,9 +11,16 @@ import {
 import { useAuth } from "@/auth/use-auth";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Combobox, Field, type ComboboxOption } from "@/components/list";
+import { Combobox, Field, PageHero, type ComboboxOption } from "@/components/list";
 import { describe } from "@/lib/list-helpers";
 import { SettingsSection } from "./settings-layout";
+
+const HERO = {
+  eyebrow: "Школа",
+  title: "Настройки школы",
+  subtitle:
+    "Часовой пояс, валюта и нумерация счетов. Применяется ко всей школе, не к вашему профилю.",
+} as const;
 
 // ── Option sources ─────────────────────────────────────────────────────────
 // `Intl.supportedValuesOf` is available in every browser we target and in the
@@ -159,6 +166,7 @@ export function SchoolSettings() {
   if (query.isLoading && !server) {
     return (
       <div className="space-y-4">
+        <PageHero {...HERO} />
         <Skeleton className="h-40 w-full rounded-xl" />
         <Skeleton className="h-32 w-full rounded-xl" />
       </div>
@@ -167,16 +175,20 @@ export function SchoolSettings() {
 
   if (query.isError && !server) {
     return (
-      <SettingsSection title="Школа" icon={Landmark}>
-        <p role="alert" className="text-[13px] text-[var(--color-destructive)]">
-          Не удалось загрузить настройки школы: {describe(query.error)}
-        </p>
-      </SettingsSection>
+      <div className="space-y-4">
+        <PageHero {...HERO} />
+        <SettingsSection title="Школа" icon={Landmark}>
+          <p role="alert" className="text-[13px] text-[var(--color-destructive)]">
+            Не удалось загрузить настройки школы: {describe(query.error)}
+          </p>
+        </SettingsSection>
+      </div>
     );
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-5">
+    <form onSubmit={onSubmit} className="space-y-4">
+      <PageHero {...HERO} />
       <SettingsSection
         title="Регион и валюта"
         icon={Clock}
@@ -250,13 +262,13 @@ export function SchoolSettings() {
       >
         <div className="flex flex-col gap-2 sm:flex-row">
           <Button asChild variant="outline" size="sm" className="justify-start gap-2">
-            <Link to="/settings/non-working-days">
+            <Link to="/school/non-working-days">
               <CalendarX2 className="size-3.5" />
               Нерабочие дни
             </Link>
           </Button>
           <Button asChild variant="outline" size="sm" className="justify-start gap-2">
-            <Link to="/settings/rooms">
+            <Link to="/school/rooms">
               <DoorOpen className="size-3.5" />
               Аудитории
             </Link>

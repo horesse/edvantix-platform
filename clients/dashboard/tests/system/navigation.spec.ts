@@ -106,6 +106,51 @@ test.describe("dashboard navigation — permission gating", () => {
   });
 });
 
+test.describe("dashboard navigation — «Школа» section", () => {
+  const SCHOOL_PERMS = [
+    "Permissions.SchoolSettings.Manage",
+    "Permissions.Scheduling.Rooms.View",
+    "Permissions.Scheduling.ScheduleTemplates.View",
+  ];
+
+  test("school settings live in their own section, not personal «Настройки»", async ({
+    page,
+  }) => {
+    await grant(page, SCHOOL_PERMS);
+    // Land on a school route so the «Школа» accordion auto-opens.
+    await page.goto("/school/settings");
+
+    const nav = sidebar(page);
+    await expect(nav.getByRole("button", { name: "Школа" })).toBeVisible();
+
+    const links: [string, string][] = [
+      ["Настройки школы", "/school/settings"],
+      ["Аудитории", "/school/rooms"],
+      ["Нерабочие дни", "/school/non-working-days"],
+    ];
+    for (const [name, href] of links) {
+      const link = nav.getByRole("link", { name });
+      await expect(link).toBeVisible();
+      await expect(link).toHaveAttribute("href", href);
+    }
+  });
+
+  test("the «Школа» section is hidden without any of its permissions", async ({ page }) => {
+    await grant(page, ["Permissions.People.Students.View"]);
+    await page.goto("/");
+    await expect(sidebar(page).getByRole("button", { name: "Школа" })).toHaveCount(0);
+  });
+
+  test("personal «Настройки» no longer carries a school tab", async ({ page }) => {
+    await grant(page, SCHOOL_PERMS);
+    await page.goto("/settings/profile");
+    // The personal settings shell renders its own section nav; «Школа» is not one of them.
+    await expect(
+      page.getByRole("navigation", { name: "Разделы настроек" }).getByText("Школа"),
+    ).toHaveCount(0);
+  });
+});
+
 test.describe("dashboard navigation — «Группы доступа» rename", () => {
   test("the identity group entry is labelled «Группы доступа», route unchanged", async ({
     page,

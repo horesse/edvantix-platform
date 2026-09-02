@@ -10,14 +10,14 @@ test.describe("справочники расписания", () => {
     await installShellMocks(page);
   });
 
-  test("/settings/rooms — создание аудитории", async ({ page }) => {
+  test("/school/rooms — создание аудитории", async ({ page }) => {
     await mockJsonResponse(page, "**/api/v1/identity/permissions", [
       PERMS.roomsView,
       PERMS.roomsManage,
     ]);
     await mockJsonResponse(page, "**/api/v1/rooms", [room(ROOM_ID, "Кабинет 1")]);
 
-    await page.goto("/settings/rooms");
+    await page.goto("/school/rooms");
     await expect(page.getByRole("heading", { name: "Аудитории" })).toBeVisible();
     await expect(page.getByText("Кабинет 1").first()).toBeVisible();
 
@@ -49,14 +49,14 @@ test.describe("справочники расписания", () => {
     expect(req.postDataJSON()).toMatchObject({ name: "Онлайн-зал", isVirtual: false });
   });
 
-  test("/settings/non-working-days — добавление дня", async ({ page }) => {
+  test("/school/non-working-days — добавление дня", async ({ page }) => {
     await mockJsonResponse(page, "**/api/v1/identity/permissions", [
       PERMS.templatesView,
       PERMS.templatesManage,
     ]);
     await mockJsonResponse(page, "**/api/v1/non-working-days**", []);
 
-    await page.goto("/settings/non-working-days");
+    await page.goto("/school/non-working-days");
     await expect(page.getByRole("heading", { name: "Нерабочие дни" })).toBeVisible();
 
     await mockJsonResponse(

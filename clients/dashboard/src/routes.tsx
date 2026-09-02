@@ -374,10 +374,22 @@ export const router = createBrowserRouter([
           },
           { path: "payments/debtors", element: withSuspense(<DebtorsPage />) },
           { path: "payments/revenue", element: withSuspense(<RevenuePage />) },
-          { path: "settings/rooms", element: withSuspense(<RoomsSettingsPage />) },
+          // Настройки школы (тенант-скоуп) — отдельный раздел «Школа» в сайдбаре,
+          // а не вкладка личных настроек. Экраны аудиторий и нерабочих дней живут
+          // здесь же. Старые пути /settings/{school,rooms,non-working-days}
+          // сохранены как редиректы для закладок.
+          { path: "school", element: <Navigate to="/school/settings" replace /> },
+          { path: "school/settings", element: withSuspense(<SchoolSettings />) },
+          { path: "school/rooms", element: withSuspense(<RoomsSettingsPage />) },
+          {
+            path: "school/non-working-days",
+            element: withSuspense(<NonWorkingDaysSettingsPage />),
+          },
+          { path: "settings/school", element: <Navigate to="/school/settings" replace /> },
+          { path: "settings/rooms", element: <Navigate to="/school/rooms" replace /> },
           {
             path: "settings/non-working-days",
-            element: withSuspense(<NonWorkingDaysSettingsPage />),
+            element: <Navigate to="/school/non-working-days" replace />,
           },
           { path: "identity", element: <Navigate to="/identity/users" replace /> },
           { path: "identity/users", element: withSuspense(<UsersPage />) },
@@ -391,7 +403,6 @@ export const router = createBrowserRouter([
             element: withSuspense(<SettingsLayout />),
             children: [
               { index: true, element: <Navigate to="profile" replace /> },
-              { path: "school", element: withSuspense(<SchoolSettings />) },
               { path: "profile", element: withSuspense(<ProfileSettings />) },
               { path: "security", element: withSuspense(<SecuritySettings />) },
               { path: "appearance", element: withSuspense(<AppearanceSettings />) },

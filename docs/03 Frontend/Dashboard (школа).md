@@ -40,7 +40,8 @@ API-клиент — рукописный `apiFetch` (`src/lib/api-client.ts`), 
 | Аудит | `pages/audits.tsx` | ✅ оставить |
 | Активность | `pages/activity.tsx` | ✅ оставить |
 | Сессии, корзина | `pages/system/*` | ✅ оставить |
-| Настройки | `pages/settings/*` | 🔧 добавить настройки школы |
+| Настройки | `pages/settings/*` | ✅ только личные вкладки (профиль, безопасность, оформление, уведомления, API-ключи) |
+| Школа | `pages/settings/school.tsx`, `pages/scheduling/{rooms,non-working-days}-settings.tsx` | ✅ отдельный раздел `/school/*` — настройки школы, аудитории, нерабочие дни |
 | Здоровье | `pages/health.tsx` | ✅ оставить |
 | Аутентификация | `pages/login.tsx`, `auth/*` | ✅ оставить |
 
@@ -92,8 +93,17 @@ API-клиент — рукописный `apiFetch` (`src/lib/api-client.ts`), 
   ├─ Сессии
   └─ Корзина
 Подписка
-Настройки
+Школа
+  ├─ Настройки школы   (Permissions.SchoolSettings.Manage)
+  ├─ Аудитории         (Permissions.Scheduling.Rooms.View)
+  └─ Нерабочие дни     (Permissions.Scheduling.ScheduleTemplates.View)
+Настройки   (личные: профиль, безопасность, оформление, уведомления, API-ключи)
 ```
+
+> [!note] Раздел «Школа» — тенант-скоуп, отдельно от личных «Настроек»
+> Настройки школы (часовой пояс, валюта, нумерация счетов) плюс справочники
+> аудиторий и нерабочих дней вынесены в самостоятельный раздел `/school/*`.
+> Старые пути `/settings/{school,rooms,non-working-days}` оставлены редиректами.
 
 ## API-модули
 
