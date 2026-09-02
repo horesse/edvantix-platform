@@ -22,7 +22,7 @@ public sealed class GetDebtorsReportQueryHandler(
         var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
 
         var q = dbContext.StudentInvoices.AsNoTracking()
-            .Where(i => (i.Status == InvoiceStatus.Issued || i.Status == InvoiceStatus.PartiallyPaid) && i.DueDate < today);
+            .Where(StudentInvoiceQueries.OverdueBefore(today));
         if (query.StudyGroupId is { } studyGroupId)
         {
             q = q.Where(i => i.StudyGroupId == studyGroupId);

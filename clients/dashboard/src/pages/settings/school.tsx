@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarX2, Clock, DoorOpen, Hash, Landmark } from "lucide-react";
+import { CalendarX2, Clock, DoorOpen, Hash, Landmark, Lock } from "lucide-react";
 import { toast } from "sonner";
 import {
   getTenantSettings,
@@ -10,7 +10,9 @@ import {
 } from "@/api/tenant-settings";
 import { useAuth } from "@/auth/use-auth";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import { Combobox, Field, PageHero, type ComboboxOption } from "@/components/list";
 import { describe } from "@/lib/list-helpers";
 import { SettingsSection } from "./settings-layout";
@@ -116,6 +118,8 @@ export function SchoolSettings() {
   const server = query.data;
   const [timeZoneId, setTimeZoneId] = useState<string | null>(null);
   const [currency, setCurrency] = useState<string | null>(null);
+  const [restrictMaterialsOnDebt, setRestrictMaterialsOnDebt] = useState(false);
+  const [debtGraceDays, setDebtGraceDays] = useState(7);
 
   // Seed the form from the server response once (and again whenever a fresh
   // response lands after a save). Editing is local until the user hits Save.
@@ -123,6 +127,8 @@ export function SchoolSettings() {
     if (server) {
       setTimeZoneId(server.timeZoneId);
       setCurrency(server.currency);
+      setRestrictMaterialsOnDebt(server.restrictMaterialsOnDebt ?? false);
+      setDebtGraceDays(server.debtGraceDays ?? 7);
     }
   }, [server]);
 
@@ -143,9 +149,15 @@ export function SchoolSettings() {
     [server?.currency],
   );
 
+  const graceValid =
+    Number.isInteger(debtGraceDays) && debtGraceDays >= 0 && debtGraceDays <= 90;
+
   const dirty =
     !!server &&
-    (timeZoneId !== server.timeZoneId || (currency ?? "") !== server.currency);
+    (timeZoneId !== server.timeZoneId ||
+      (currency ?? "") !== server.currency ||
+      restrictMaterialsOnDebt !== (server.restrictMaterialsOnDebt ?? false) ||
+      debtGraceDays !== (server.debtGraceDays ?? 7));
 
   const save = useMutation({
     mutationFn: (input: TenantSettingsDto) => updateTenantSettings(input),
@@ -159,9 +171,38 @@ export function SchoolSettings() {
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!timeZoneId || !currency) return;
-    save.mutate({ timeZoneId, currency });
+    if (!timeZoneId || !currency || !graceValid) return;
+    save.mutate({
+      timeZoneId,
+      currency,
+      restrictMaterialsOnDebt,
+      debtGraceDays,
+    });
   };
+
+  // One Save covers the whole form; every editable section renders the same footer.
+  const saveFooter = canManage ? (
+    <div className="flex items-center justify-end gap-2">
+      {dirty && (
+        <span className="text-[11.5px] text-[var(--color-muted-foreground)]">
+          Есть несохранённые изменения
+        </span>
+      )}
+      <Button
+        type="submit"
+        size="sm"
+        disabled={
+          !dirty || save.isPending || !timeZoneId || !currency || !graceValid
+        }
+      >
+        {save.isPending ? "Сохранение…" : "Сохранить"}
+      </Button>
+    </div>
+  ) : (
+    <p className="text-[11.5px] text-[var(--color-muted-foreground)]">
+      Только просмотр — изменение настроек школы требует права «Управление настройками школы».
+    </p>
+  );
 
   if (query.isLoading && !server) {
     return (
@@ -193,28 +234,7 @@ export function SchoolSettings() {
         title="Регион и валюта"
         icon={Clock}
         description="Часовой пояс школы используется для отображения расписания и занятий; валюта — для тарифов, счетов и отчётов по оплатам."
-        footer={
-          canManage ? (
-            <div className="flex items-center justify-end gap-2">
-              {dirty && (
-                <span className="text-[11.5px] text-[var(--color-muted-foreground)]">
-                  Есть несохранённые изменения
-                </span>
-              )}
-              <Button
-                type="submit"
-                size="sm"
-                disabled={!dirty || save.isPending || !timeZoneId || !currency}
-              >
-                {save.isPending ? "Сохранение…" : "Сохранить"}
-              </Button>
-            </div>
-          ) : (
-            <p className="text-[11.5px] text-[var(--color-muted-foreground)]">
-              Только просмотр — изменение настроек школы требует права «Управление настройками школы».
-            </p>
-          )
-        }
+        footer={saveFooter}
       >
         <div className="grid gap-4 sm:grid-cols-2">
           <Field id="school-tz" label="Часовой пояс" required>
@@ -241,6 +261,53 @@ export function SchoolSettings() {
               placeholder="Выберите валюту"
             />
           </Field>
+        </div>
+      </SettingsSection>
+
+      <SettingsSection
+        title="Доступ к материалам"
+        icon={Lock}
+        description="Если включено, ученик (и его представитель) теряет доступ к учебным материалам, пока по счёту есть просрочка старше грейс-периода. Расписание, занятия и счета остаются доступны. Сохранение — общей кнопкой в блоке «Регион и валюта»."
+      >
+        <div className="space-y-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p
+                id="school-debt-restrict-label"
+                className="text-[13px] font-medium text-[var(--color-foreground)]"
+              >
+                Ограничивать материалы при задолженности
+              </p>
+              <p className="mt-0.5 text-[11.5px] text-[var(--color-muted-foreground)]">
+                По умолчанию выключено.
+              </p>
+            </div>
+            <Switch
+              checked={restrictMaterialsOnDebt}
+              onCheckedChange={setRestrictMaterialsOnDebt}
+              disabled={!canManage}
+              aria-labelledby="school-debt-restrict-label"
+            />
+          </div>
+          <div className="max-w-[220px]">
+            <Field
+              id="school-debt-grace"
+              label="Грейс-период, дней"
+              hint="0–90. Через столько дней после срока оплаты материалы закрываются."
+            >
+              <Input
+                id="school-debt-grace"
+                type="number"
+                inputMode="numeric"
+                min={0}
+                max={90}
+                value={Number.isNaN(debtGraceDays) ? "" : debtGraceDays}
+                onChange={(e) => setDebtGraceDays(e.target.valueAsNumber)}
+                disabled={!canManage || !restrictMaterialsOnDebt}
+                aria-invalid={!graceValid}
+              />
+            </Field>
+          </div>
         </div>
       </SettingsSection>
 

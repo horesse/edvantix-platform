@@ -1,4 +1,5 @@
 using FSH.Modules.Files.Contracts;
+using FSH.Modules.Payments.Contracts;
 
 namespace FSH.Modules.Curriculum.Authorization;
 
@@ -9,20 +10,32 @@ namespace FSH.Modules.Curriculum.Authorization;
 ///
 /// - Attach: any authenticated user. The durable gate is the lesson-materials endpoint's own
 ///   permission check (<c>LessonMaterials.Manage</c>).
-/// - Read: open. Whether a *student* may see a given material is decided by
-///   <c>LessonMaterial.VisibleToStudents</c> on the Curriculum side, not by this policy — the
-///   file layer has no notion of that flag.
+/// - Read: open, EXCEPT when the caller is a student/guardian blocked by the EDX-015
+///   materials-on-debt rule (<see cref="IMaterialsAccessService"/> — tenant flag OFF by default,
+///   so this is a no-op read of cached tenant settings for most schools). Whether a *student* may
+///   see a given material's row is still decided by <c>LessonMaterial.VisibleToStudents</c> on the
+///   Curriculum side; the file layer has no notion of that flag.
 /// - Delete: uploader-only, same convention as <c>ProductFileAccessPolicy</c>.
 /// </summary>
-public sealed class LessonMaterialAccessPolicy : IFileAccessPolicy
+public sealed class LessonMaterialAccessPolicy(IMaterialsAccessService materialsAccess) : IFileAccessPolicy
 {
     public string OwnerType => "LessonMaterial";
 
     public Task<bool> CanAttachAsync(Guid? ownerId, string currentUserId, CancellationToken cancellationToken)
         => Task.FromResult(!string.IsNullOrEmpty(currentUserId));
 
-    public Task<bool> CanReadAsync(FileAccessContext context, string currentUserId, CancellationToken cancellationToken)
-        => Task.FromResult(true);
+    public async Task<bool> CanReadAsync(FileAccessContext context, string currentUserId, CancellationToken cancellationToken)
+    {
+        if (!Guid.TryParse(currentUserId, out var userId))
+        {
+            // No resolvable user id — leave the decision to the endpoint's own auth. Historically
+            // this policy returned true unconditionally, so keep that for the anonymous/edge case.
+            return true;
+        }
+
+        var status = await materialsAccess.GetForUserAsync(userId, cancellationToken).ConfigureAwait(false);
+        return !status.Restricted;
+    }
 
     public Task<bool> CanDeleteAsync(FileAccessContext context, string currentUserId, CancellationToken cancellationToken)
     {

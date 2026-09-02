@@ -146,9 +146,63 @@ public sealed class TenantSettingsTests : IAsyncLifetime
         settings.Currency.ShouldBe("EUR");
     }
 
+    [Fact]
+    public async Task GetSettings_Should_DefaultDebtRestriction_Off_With_SevenDayGrace()
+    {
+        using var client = await _auth.CreateAuthenticatedClientAsync(
+            _tenantAAdminEmail, TestConstants.DefaultPassword, _tenantA);
+
+        var response = await client.GetAsync(SettingsPath);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var settings = await response.Content.ReadFromJsonAsync<TenantSettingsDto>(Json);
+        settings.ShouldNotBeNull();
+        settings.RestrictMaterialsOnDebt.ShouldBeFalse();
+        settings.DebtGraceDays.ShouldBe(7);
+    }
+
+    [Fact]
+    public async Task UpdateSettings_Should_PersistDebtRestrictionFields()
+    {
+        using var client = await _auth.CreateAuthenticatedClientAsync(
+            _tenantBAdminEmail, TestConstants.DefaultPassword, _tenantB);
+
+        var updateResponse = await client.PutAsJsonAsync(SettingsPath, new
+        {
+            timeZoneId = "UTC",
+            currency = "USD",
+            restrictMaterialsOnDebt = true,
+            debtGraceDays = 3,
+        });
+        updateResponse.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        var getResponse = await client.GetAsync(SettingsPath);
+        var settings = await getResponse.Content.ReadFromJsonAsync<TenantSettingsDto>(Json);
+        settings.ShouldNotBeNull();
+        settings.RestrictMaterialsOnDebt.ShouldBeTrue();
+        settings.DebtGraceDays.ShouldBe(3);
+    }
+
     #endregion
 
     #region Validation
+
+    [Fact]
+    public async Task UpdateSettings_Should_Return400_When_DebtGraceDaysOutOfRange()
+    {
+        using var client = await _auth.CreateAuthenticatedClientAsync(
+            _tenantAAdminEmail, TestConstants.DefaultPassword, _tenantA);
+
+        var response = await client.PutAsJsonAsync(SettingsPath, new
+        {
+            timeZoneId = "UTC",
+            currency = "USD",
+            restrictMaterialsOnDebt = true,
+            debtGraceDays = 365,
+        });
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+    }
 
     [Fact]
     public async Task UpdateSettings_Should_Return400_When_TimeZoneIsUnknown()
@@ -368,6 +422,8 @@ public sealed class TenantSettingsTests : IAsyncLifetime
     {
         public string TimeZoneId { get; init; } = string.Empty;
         public string Currency { get; init; } = string.Empty;
+        public bool RestrictMaterialsOnDebt { get; init; }
+        public int DebtGraceDays { get; init; }
     }
 
     #endregion

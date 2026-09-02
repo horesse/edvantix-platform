@@ -14,6 +14,8 @@
 		<ProjectReference Include="..\Modules.Curriculum.Contracts\Modules.Curriculum.Contracts.csproj" />
 		<ProjectReference Include="..\..\Identity\Modules.Identity.Contracts\Modules.Identity.Contracts.csproj" />
 		<ProjectReference Include="..\..\Files\Modules.Files.Contracts\Modules.Files.Contracts.csproj" />
+		<!-- EDX-015 — lesson-material access is gated by the payer's arrears (IMaterialsAccessService). -->
+		<ProjectReference Include="..\..\Payments\Modules.Payments.Contracts\Modules.Payments.Contracts.csproj" />
 	</ItemGroup>
 
 </Project>

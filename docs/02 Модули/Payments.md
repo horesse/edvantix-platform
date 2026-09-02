@@ -241,13 +241,19 @@ erDiagram
 | `GetStudentBalanceQuery` | `StudentBalanceDto` (включает `packages: PackageBalanceDto[]`) |
 | `GetDebtorsReportQuery` | должники по школе |
 | `GetRevenueReportQuery` | поступления за период |
+| `GetMyMaterialsAccessQuery` | `MaterialsAccessStatus` — блокирован ли вызывающий (EDX-015) |
 | `GetTariffsQuery` | справочник |
 
 ### DTO
 
 `TariffDto` · `StudentInvoiceDto` · `StudentInvoiceDetailDto` · `InvoiceLineDto` ·
 `PaymentConfirmationDto` · `StudentBalanceDto` · `PackageBalanceDto` · `DebtorDto` ·
-`RevenueReportDto`
+`RevenueReportDto` · `MaterialsAccessStatus`
+
+### Сервисы (для других модулей)
+
+`IMaterialsAccessService` — единый источник правила «блокировать материалы при
+задолженности» (EDX-015). Потребители: [[Curriculum]], кабинет dashboard.
 
 ### Публикуемые события
 
@@ -302,6 +308,7 @@ POST   /api/v1/student-invoices/{id}/cancel
 POST   /api/v1/student-invoices/bulk-issue
 GET    /api/v1/student-invoices/{id}/pdf
 GET    /api/v1/student-invoices/my
+GET    /api/v1/student-invoices/my/materials-access
 
 POST   /api/v1/student-invoices/{id}/payments
 GET    /api/v1/student-invoices/{id}/payments
@@ -327,6 +334,28 @@ POST /api/v1/student-invoices/bulk-generate
 
 PDF рендерится через `IInvoicePdfRenderer` — интерфейс переиспользуется из [[Billing]],
 реализация под школьный счёт своя.
+
+## Автоблокировка доступа к материалам при задолженности
+
+Продуктовое правило (EDX-015). Флаг тенанта `TenantSettings.RestrictMaterialsOnDebt`
+(в [[Multitenancy]]), **по умолчанию выключен**.
+
+- **Что блокируем:** список материалов урока (`GET /lessons/{id}/materials` → 403) и
+  выдачу ссылок на файлы материалов (`IFileAccessPolicy` для `OwnerType=LessonMaterial`).
+  Расписание, посещаемость, счета, чат — не трогаем: иначе ученик не придёт на уже
+  оплаченное преподавателю занятие.
+- **Когда блокируем:** у ученика есть счёт в статусе `Issued`/`PartiallyPaid` с
+  `DueDate` старше `TenantSettings.DebtGraceDays` (по умолчанию 7; `0` — сразу по
+  наступлении просрочки). Это выборка `/reports/debtors` плюс окно грейса — общий
+  предикат `StudentInvoiceQueries.OverdueBefore`.
+- **Кого не блокируем:** сотрудников (в `PeopleScope` есть `TeacherId`),
+  менеджеров/админов (пустой `PeopleScope`). Представителя блокируем по конкретному
+  подопечному-должнику.
+- **Единый источник решения:** `IMaterialsAccessService.GetForUserAsync(userId)` →
+  `MaterialsAccessStatus(Restricted, OverdueSince, GraceDays)`. Реализация читает флаг
+  тенанта, резолвит `IPeopleScopeResolver` и делает один индексный запрос по счетам.
+  Вызывается из [[Curriculum]] (политика доступа + запрос списка) и из эндпоинта
+  `GET /student-invoices/my/materials-access` (плашка в кабинете dashboard).
 
 ## Задания Hangfire
 

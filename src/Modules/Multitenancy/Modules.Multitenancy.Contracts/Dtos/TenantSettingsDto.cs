@@ -17,5 +17,12 @@ public sealed record TenantSettingsDto
     /// <summary>ISO 4217 currency code (e.g. "USD").</summary>
     public string Currency { get; init; } = "USD";
 
+    /// <summary>EDX-015 — when <c>true</c>, students overdue by more than <see cref="DebtGraceDays"/>
+    /// days lose access to lesson materials (schedule stays open). Default <c>false</c>.</summary>
+    public bool RestrictMaterialsOnDebt { get; init; }
+
+    /// <summary>Grace period in days past an invoice's due date before materials are blocked.</summary>
+    public int DebtGraceDays { get; init; } = 7;
+
     public static TenantSettingsDto Default => new();
 }

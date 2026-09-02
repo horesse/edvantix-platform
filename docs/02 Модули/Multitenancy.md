@@ -22,7 +22,7 @@ tags: [модуль, каркас, multitenancy]
 |---|---|
 | `AppTenantInfo` | тенант Finbuckle: идентификатор, имя, строка подключения, срок действия |
 | `TenantTheme` | брендирование: цвета, логотип |
-| `TenantSettings` | часовой пояс (IANA `TimeZoneId`, по умолчанию `UTC`) и валюта (ISO 4217 `Currency`, по умолчанию `USD`) школы |
+| `TenantSettings` | часовой пояс (IANA `TimeZoneId`, по умолчанию `UTC`), валюта (ISO 4217 `Currency`, по умолчанию `USD`), автоблокировка материалов при задолженности (`RestrictMaterialsOnDebt`, по умолчанию `false`; грейс `DebtGraceDays`, по умолчанию 7 — см. [[Payments]] → «Автоблокировка доступа к материалам») школы |
 | `TenantExpiryNotice` | уведомления о приближении окончания срока |
 | `TenantProvisioning`, `TenantProvisioningStep` | пошаговый провижининг со статусами и повтором |
 

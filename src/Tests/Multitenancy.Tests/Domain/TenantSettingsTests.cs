@@ -203,4 +203,48 @@ public sealed class TenantSettingsTests
     }
 
     #endregion
+
+    #region EDX-015 — materials-on-debt restriction
+
+    [Fact]
+    public void Create_Should_DefaultDebtRestriction_Off_With_SevenDayGrace()
+    {
+        var settings = TenantSettings.Create("tenant-1");
+
+        settings.RestrictMaterialsOnDebt.ShouldBeFalse();
+        settings.DebtGraceDays.ShouldBe(TenantSettings.DefaultDebtGraceDays);
+        settings.DebtGraceDays.ShouldBe(7);
+    }
+
+    [Fact]
+    public void Create_Should_UseProvidedDebtRestrictionValues()
+    {
+        var settings = TenantSettings.Create("tenant-1", restrictMaterialsOnDebt: true, debtGraceDays: 14);
+
+        settings.RestrictMaterialsOnDebt.ShouldBeTrue();
+        settings.DebtGraceDays.ShouldBe(14);
+    }
+
+    [Fact]
+    public void Update_Should_SetDebtRestrictionValues()
+    {
+        var settings = TenantSettings.Create("tenant-1");
+
+        settings.Update("UTC", "USD", "modifier", restrictMaterialsOnDebt: true, debtGraceDays: 0);
+
+        settings.RestrictMaterialsOnDebt.ShouldBeTrue();
+        settings.DebtGraceDays.ShouldBe(0);
+    }
+
+    [Fact]
+    public void Update_Should_ClampNegativeGraceToZero()
+    {
+        var settings = TenantSettings.Create("tenant-1");
+
+        settings.Update("UTC", "USD", null, restrictMaterialsOnDebt: true, debtGraceDays: -5);
+
+        settings.DebtGraceDays.ShouldBe(0);
+    }
+
+    #endregion
 }
