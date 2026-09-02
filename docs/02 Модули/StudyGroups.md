@@ -7,7 +7,7 @@ tags: [модуль, новый, study-groups]
 
 # StudyGroups
 
-← [[Edvantix]] · [[Карта модулей]] · задачи: [[Задачи · Новые модули]]
+← [[Edvantix]] · [[Карта модулей]] · задачи: [[Бэклог]]
 
 > ✅ Реализован · порядок `610` · схема `study_groups`
 >
@@ -17,8 +17,8 @@ tags: [модуль, новый, study-groups]
 > на People/Curriculum — всё сделано. `dotnet build` — 0 предупреждений/0 ошибок,
 > `StudyGroups.Tests` (юнит) — 32/32, `StudyGroupsTenantIsolationTests` (интеграционные) — 2/2,
 > полный прогон `Integration.Tests` — 746/747 (1 skip, не связан со StudyGroups), без регрессий.
-> Подробный статус по шагам — [[Задачи · Новые модули]] → раздел StudyGroups. Frontend не начат —
-> см. [[Задачи · Frontend]] → «Этап 3 · StudyGroups».
+> Ретроспектива этапа и рисков — [[Этапы внедрения]] → «Этап 3 · StudyGroups».
+> Frontend реализован (PR #18). Открытый хвост — [[EDX-007 Смена тарифа действующего зачисления]].
 
 ## Назначение
 
@@ -229,4 +229,4 @@ GET    /api/v1/students/{id}/enrollments
 
 ## Связанное
 
-[[ADR-005 Именование Group и StudyGroup]] · [[Scheduling]] · [[Payments]] · [[Задачи · Новые модули]]
+[[ADR-005 Именование Group и StudyGroup]] · [[Scheduling]] · [[Payments]] · [[Бэклог]]

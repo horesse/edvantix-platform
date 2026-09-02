@@ -7,7 +7,7 @@ tags: [модуль, каркас, webhooks]
 
 # Webhooks
 
-← [[Edvantix]] · [[Карта модулей]] · задачи: [[Задачи · Доработки каркаса]]
+← [[Edvantix]] · [[Карта модулей]] · задачи: [[Бэклог]]
 
 > ✅ Реализован · порядок `400` · схема `webhooks`
 
@@ -127,6 +127,10 @@ GET    /api/v1/webhooks/event-types
 `type` дублируется в заголовке `X-Webhook-Event`. Сборка конверта —
 `WebhookEnvelopeBuilder`; тестовая доставка (`POST /subscriptions/{id}/test`) шлёт тот же
 конверт с `type = "webhook.test"`.
+
+> [!todo] Открытая задача — [[EDX-016 Справочник полей событий вебхуков]]
+> Здесь должна появиться таблица по каждому из 24 типов (`GET /api/v1/webhooks/event-types`):
+> поля `data` с типами и примером. Источник истины — `WebhookEventCatalog` и `*IntegrationEvent`.
 
 ## Зависимости
 

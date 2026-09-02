@@ -71,4 +71,4 @@ Catalog удаляется **после** того, как [[Curriculum]] нап
 
 ## Связанное
 
-[[Catalog (удаляется)]] · [[Curriculum]] · [[Задачи · Удаление Catalog]] · [[Payments]]
+[[Catalog (удаляется)]] · [[Curriculum]] · [[Бэклог]] · [[Payments]]

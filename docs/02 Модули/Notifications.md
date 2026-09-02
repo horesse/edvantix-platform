@@ -7,7 +7,7 @@ tags: [модуль, каркас, notifications]
 
 # Notifications
 
-← [[Edvantix]] · [[Карта модулей]] · задачи: [[Задачи · Доработки каркаса]]
+← [[Edvantix]] · [[Карта модулей]] · задачи: [[Бэклог]]
 
 > ✅ Реализован · порядок `750` · схема `notifications`
 
@@ -143,11 +143,6 @@ dispatcher-тест на буферизацию + `Integration.Tests/Tests/Notif
 >   `SessionRescheduledIntegrationEvent` +`StudyGroupId`; Payments-события
 >   `Issued`/`Overdue`/`PaymentConfirmed` +`Number`/`Currency` (и `StudentId`/
 >   `PayerGuardianId`, где их не было). См. справочники [[Scheduling]]/[[Payments]].
-
-> [!note] Публичный docs-репозиторий и changelog — открытый пункт
-> Правило 10 `AGENTS.md`: `github.com/fullstackhero/docs` и changelog для этой доработки
-> не обновлялись в этой сессии — как и у всех предыдущих backend-сессий, доступа к тому
-> репозиторию не было.
 
 ## Контракты
 
