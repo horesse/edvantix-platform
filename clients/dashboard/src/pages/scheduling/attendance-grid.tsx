@@ -113,8 +113,8 @@ export function AttendanceGridPage() {
   });
 
   const studentsQuery = useQuery({
-    queryKey: ["students", { pageSize: 300, for: "attendance" }],
-    queryFn: () => searchStudents({ pageSize: 300 }),
+    queryKey: ["students", { pageSize: 200, for: "attendance" }],
+    queryFn: () => searchStudents({ pageSize: 200 }),
     staleTime: 60_000,
   });
   const studentName = useMemo(() => {

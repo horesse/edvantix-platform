@@ -132,8 +132,8 @@ export function SessionDetailPage() {
     staleTime: 60_000,
   });
   const studentsQuery = useQuery({
-    queryKey: ["students", { pageSize: 300, for: "session" }],
-    queryFn: () => searchStudents({ pageSize: 300 }),
+    queryKey: ["students", { pageSize: 200, for: "session" }],
+    queryFn: () => searchStudents({ pageSize: 200 }),
     staleTime: 60_000,
     enabled: (session?.attendance.length ?? 0) > 0,
   });
