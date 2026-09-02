@@ -20,6 +20,33 @@ const ALL_PERMS = [
   "Permissions.People.Guardians.Create",
   "Permissions.People.Guardians.Update",
   "Permissions.People.Guardians.Delete",
+  "Permissions.People.Students.View",
+];
+
+const WARD_LINKS = [
+  {
+    id: "00000000-0000-0000-0000-0000000000l1",
+    studentId: "00000000-0000-0000-0000-0000000000s1",
+    guardianId: GUARDIANS[0].id,
+    relation: "мать",
+    isPrimaryPayer: true,
+    student: {
+      id: "00000000-0000-0000-0000-0000000000s1",
+      lastName: "Иванов",
+      firstName: "Пётр",
+      middleName: null,
+      displayName: "Иванов Пётр",
+      birthDate: "2012-05-01",
+      phone: "+7 900 111-22-33",
+      email: "petr@acme.com",
+      userId: null,
+      status: "Active",
+      source: null,
+      avatarFileId: null,
+      managerUserId: "00000000-0000-0000-0000-0000000000m1",
+      enrolledAtUtc: "2024-09-01T00:00:00Z",
+    },
+  },
 ];
 
 test.describe("people/guardians", () => {
@@ -61,9 +88,34 @@ test.describe("people/guardians", () => {
   test("detail loads and shows the account section", async ({ page }) => {
     const id = GUARDIANS[0].id;
     await mockJsonResponse(page, `**/api/v1/guardians/${id}`, GUARDIANS[0]);
+    await mockJsonResponse(page, `**/api/v1/guardians/${id}/students`, []);
     await page.goto(`/guardians/${id}`);
 
     await expect(page.getByRole("heading", { name: "Иванова Мария", level: 1 })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Учётная запись" })).toBeVisible();
+  });
+
+  test("wards block lists the guardian's students", async ({ page }) => {
+    const id = GUARDIANS[0].id;
+    await mockJsonResponse(page, `**/api/v1/guardians/${id}`, GUARDIANS[0]);
+    await mockJsonResponse(page, `**/api/v1/guardians/${id}/students`, WARD_LINKS);
+    await page.goto(`/guardians/${id}`);
+
+    await expect(page.getByRole("heading", { name: "Подопечные" })).toBeVisible();
+    const row = page.getByRole("link", { name: /Иванов Пётр/ });
+    await expect(row).toBeVisible();
+    await expect(row).toHaveAttribute("href", `/students/${WARD_LINKS[0].studentId}`);
+    await expect(page.getByText("Плательщик").last()).toBeVisible();
+  });
+
+  test("wards block shows an empty state when there are no links", async ({ page }) => {
+    const id = GUARDIANS[0].id;
+    await mockJsonResponse(page, `**/api/v1/guardians/${id}`, GUARDIANS[0]);
+    await mockJsonResponse(page, `**/api/v1/guardians/${id}/students`, []);
+    await page.goto(`/guardians/${id}`);
+
+    await expect(
+      page.getByText("К этому представителю не привязан ни один ученик."),
+    ).toBeVisible();
   });
 });

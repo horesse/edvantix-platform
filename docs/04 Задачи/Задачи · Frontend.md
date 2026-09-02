@@ -23,9 +23,10 @@ tags: [задачи, frontend]
 
 ## Открытые пункты
 
-- [ ] `/guardians` — блок «подопечные»: нужен `GET /guardians/{id}/students` в People
-      (сейчас связь только через `GET /students/{id}/guardians`). До эндпоинта карточка
-      представителя держит блок как заглушку.
+- [x] `/guardians` — блок «подопечные»: добавлен `GET /guardians/{id}/students` в People
+      (обработчик + DTO `GuardianStudentDto`, право `Permissions.People.Students.View`),
+      карточка представителя показывает список подопечных с ролью, статусом ученика
+      и меткой плательщика, ссылки ведут на `/students/:id`.
 - [ ] `/students/:id` — вкладка «История» (аудит по ученику). Бэкенд готов
       (`GET /api/v1/audits/by-entity/{entityName}/{entityId}`, PR #15), но привязка к
       карточке ученика во frontend-этапах не значилась — подтвердить, нужна ли она в MVP
