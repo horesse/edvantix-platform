@@ -22,6 +22,8 @@ import {
   type SessionDto,
 } from "@/api/scheduling";
 import { getLessonMaterials } from "@/api/curriculum";
+import { getMyMaterialsAccess } from "@/api/payments";
+import { MaterialsDebtNotice } from "@/components/materials-debt-notice";
 import { searchStudents, searchTeachers } from "@/api/people";
 import { searchStudyGroups } from "@/api/study-groups";
 import { getRooms } from "@/api/scheduling";
@@ -157,10 +159,20 @@ export function SessionDetailPage() {
     return m;
   }, [studentsQuery.data]);
 
+  // EDX-015 — student/guardian in arrears loses lesson materials (not the schedule).
+  // Staff get `restricted: false`, so this changes nothing for them.
+  const materialsAccessQuery = useQuery({
+    queryKey: ["my-materials-access"],
+    queryFn: getMyMaterialsAccess,
+    enabled: !!session?.lessonId && canViewMaterials,
+    staleTime: 60_000,
+  });
+  const materialsRestricted = materialsAccessQuery.data?.restricted ?? false;
+
   const materialsQuery = useQuery({
     queryKey: ["lesson-materials", session?.lessonId],
     queryFn: () => getLessonMaterials(session!.lessonId!),
-    enabled: !!session?.lessonId && canViewMaterials,
+    enabled: !!session?.lessonId && canViewMaterials && !materialsRestricted,
     staleTime: 60_000,
   });
 
@@ -403,7 +415,9 @@ export function SessionDetailPage() {
                 icon={BookOpen}
                 description="Подтягиваются из программы (Curriculum)."
               >
-                {materialsQuery.isLoading ? (
+                {materialsRestricted ? (
+                  <MaterialsDebtNotice />
+                ) : materialsQuery.isLoading ? (
                   <p className="text-[13px] text-[var(--color-muted-foreground)]">
                     Загрузка…
                   </p>

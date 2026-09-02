@@ -124,6 +124,11 @@ erDiagram
   списка категории `LessonMaterial` в [[Files]]. Причина — гигабайты на MinIO без
   транскодирования и адаптивного стриминга (см. [[Открытые вопросы]] → «Хранение видео»).
 - `VisibleToStudents = false` — материал только для преподавателя (ключи, методичка).
+- Доступ ученика/представителя к материалам дополнительно гейтится задолженностью
+  (EDX-015): при включённом флаге школы `TenantSettings.RestrictMaterialsOnDebt` и
+  просрочке старше грейс-периода `GET /lessons/{id}/materials` отдаёт 403, а
+  `LessonMaterialAccessPolicy.CanReadAsync` не выдаёт ссылок на файлы. Правило —
+  `IMaterialsAccessService` из [[Payments]]; сотрудников/преподавателей не блокирует.
 - `SortOrder` — плотная последовательность, пересчитывается при перестановке.
 - Удаление урока, на который ссылаются проведённые занятия, запрещено — только
   архивация ([[ADR-006 Урок программы и занятие расписания]]).
@@ -253,7 +258,8 @@ PUT    /api/v1/lessons/{id}/materials/reorder
 
 ## Зависимости
 
-**Ссылается на:** `Identity.Contracts`, `Multitenancy.Contracts`, `Files.Contracts`.
+**Ссылается на:** `Identity.Contracts`, `Multitenancy.Contracts`, `Files.Contracts`,
+`Payments.Contracts` (EDX-015 — `IMaterialsAccessService`).
 
 **На него ссылаются:** [[StudyGroups]] (`CourseId`), [[Scheduling]] (`LessonId`),
 [[Payments]] (`Tariff.CourseId`).

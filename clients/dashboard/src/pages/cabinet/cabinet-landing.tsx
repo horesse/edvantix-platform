@@ -16,6 +16,7 @@ import { useCabinetRole, isCabinetRole } from "@/cabinet/use-cabinet-role";
 import { useWard } from "@/cabinet/use-ward";
 import { WardSwitcher } from "@/cabinet/ward-switcher";
 import { EntityDetailSection, PageHero } from "@/components/list";
+import { MaterialsDebtNotice } from "@/components/materials-debt-notice";
 import { cn } from "@/lib/cn";
 import { formatZonedDateTime } from "@/lib/tz";
 import { formatMoney } from "@/pages/payments/payments-ui";
@@ -258,6 +259,8 @@ export function CabinetLandingPage() {
       />
 
       {!isTeacher && <WardSwitcher />}
+
+      {!isTeacher && <MaterialsDebtNotice />}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <CabinetLink

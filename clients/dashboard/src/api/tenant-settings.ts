@@ -15,6 +15,11 @@ export type TenantSettingsDto = {
   timeZoneId: string;
   /** ISO 4217 currency code, e.g. "USD" (stored upper-case). */
   currency: string;
+  /** EDX-015 — when true, a student overdue by more than `debtGraceDays` days
+   *  loses access to lesson materials (schedule stays open). Default false. */
+  restrictMaterialsOnDebt: boolean;
+  /** Grace period in days past an invoice's due date before materials are blocked. */
+  debtGraceDays: number;
 };
 
 export function getTenantSettings(): Promise<TenantSettingsDto> {
@@ -27,6 +32,8 @@ export function updateTenantSettings(input: TenantSettingsDto): Promise<void> {
     body: JSON.stringify({
       timeZoneId: input.timeZoneId,
       currency: input.currency.toUpperCase(),
+      restrictMaterialsOnDebt: input.restrictMaterialsOnDebt,
+      debtGraceDays: input.debtGraceDays,
     }),
   });
 }

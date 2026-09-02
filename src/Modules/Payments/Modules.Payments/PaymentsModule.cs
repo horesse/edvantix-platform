@@ -4,6 +4,7 @@ using FSH.Framework.Persistence;
 using FSH.Framework.Shared.Constants;
 using FSH.Framework.Web.Modules;
 using FSH.Modules.Payments.Authorization;
+using FSH.Modules.Payments.Contracts;
 using FSH.Modules.Payments.Contracts.Authorization;
 using FSH.Modules.Payments.Data;
 using FSH.Modules.Payments.Features.v1.Payments.ConfirmPayment;
@@ -16,6 +17,7 @@ using FSH.Modules.Payments.Features.v1.StudentInvoices.CreateStudentInvoice;
 using FSH.Modules.Payments.Features.v1.StudentInvoices.GetDebtorsReport;
 using FSH.Modules.Payments.Features.v1.StudentInvoices.GetInvoicePdf;
 using FSH.Modules.Payments.Features.v1.StudentInvoices.GetMyInvoices;
+using FSH.Modules.Payments.Features.v1.StudentInvoices.GetMyMaterialsAccess;
 using FSH.Modules.Payments.Features.v1.StudentInvoices.GetRevenueReport;
 using FSH.Modules.Payments.Features.v1.StudentInvoices.GetStudentBalance;
 using FSH.Modules.Payments.Features.v1.StudentInvoices.GetStudentInvoiceById;
@@ -59,6 +61,10 @@ public sealed class PaymentsModule : IModule
         builder.Services.AddScoped<IInvoicePdfRenderer, InvoicePdfRenderer>();
         builder.Services.AddScoped<IDraftInvoiceRefreshService, DraftInvoiceRefreshService>();
         builder.Services.AddScoped<IFileAccessPolicy, PaymentProofAccessPolicy>();
+
+        // EDX-015 — the materials-on-debt rule. Curriculum's LessonMaterialAccessPolicy and the
+        // dashboard cabinet both consult this through IMaterialsAccessService.
+        builder.Services.AddScoped<IMaterialsAccessService, MaterialsAccessService>();
 
         // Outbox/Inbox for PaymentsDbContext — publishes StudentInvoiceIssued/Cancelled,
         // StudentPaymentConfirmed, StudentInvoiceOverdue (the last from DetectOverdueInvoicesJob).
@@ -112,6 +118,7 @@ public sealed class PaymentsModule : IModule
         group.MapGetStudentInvoiceByIdEndpoint();
         group.MapSearchStudentInvoicesEndpoint();
         group.MapGetMyInvoicesEndpoint();
+        group.MapGetMyMaterialsAccessEndpoint();
         group.MapGetInvoicePdfEndpoint();
 
         group.MapConfirmPaymentEndpoint();

@@ -72,7 +72,52 @@ test.describe("school/settings", () => {
     );
     await save.click();
     const req = await putReq;
-    expect(req.postDataJSON()).toEqual({ timeZoneId: "UTC", currency: "RUB" });
+    expect(req.postDataJSON()).toEqual({
+      timeZoneId: "UTC",
+      currency: "RUB",
+      restrictMaterialsOnDebt: false,
+      debtGraceDays: 7,
+    });
+  });
+
+  test("EDX-015 — toggling «Ограничивать материалы» sends the flag", async ({ page }) => {
+    await grant(page, ["Permissions.SchoolSettings.Manage"]);
+    await mockJsonResponse(page, "**/api/v1/tenants/settings", {
+      timeZoneId: "UTC",
+      currency: "USD",
+      restrictMaterialsOnDebt: false,
+      debtGraceDays: 7,
+    });
+    await mockJsonResponse(page, "**/api/v1/tenants/settings", "", {
+      method: "PUT",
+      status: 204,
+    });
+
+    await page.goto("/school/settings");
+
+    await expect(
+      page.getByRole("heading", { name: "Доступ к материалам" }),
+    ).toBeVisible();
+
+    const toggle = page.getByRole("switch", {
+      name: "Ограничивать материалы при задолженности",
+    });
+    await expect(toggle).toHaveAttribute("aria-checked", "false");
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-checked", "true");
+
+    const putReq = page.waitForRequest(
+      (r) => r.url().includes("/api/v1/tenants/settings") && r.method() === "PUT",
+      { timeout: 5_000 },
+    );
+    await page.getByRole("button", { name: "Сохранить" }).click();
+    const req = await putReq;
+    expect(req.postDataJSON()).toEqual({
+      timeZoneId: "UTC",
+      currency: "USD",
+      restrictMaterialsOnDebt: true,
+      debtGraceDays: 7,
+    });
   });
 
   test("read-only for a user without Manage", async ({ page }) => {

@@ -429,6 +429,21 @@ export function getMyInvoices(
   return apiFetch<StudentInvoiceDto[]>(`${INVOICES}/my${qs}`);
 }
 
+/** EDX-015 — whether the caller is currently blocked from lesson materials because a
+ *  student they pay for is overdue past the school's grace window. `restricted` already
+ *  folds in the tenant flag + grace + who's exempt; the cabinet only renders the banner.
+ *  Backend: `Modules.Payments` → `GET /student-invoices/my/materials-access`. */
+export type MaterialsAccessStatus = {
+  restricted: boolean;
+  /** Earliest overdue due date (ISO date) that triggered the block, or null. */
+  overdueSince: string | null;
+  graceDays: number;
+};
+
+export function getMyMaterialsAccess(): Promise<MaterialsAccessStatus> {
+  return apiFetch<MaterialsAccessStatus>(`${INVOICES}/my/materials-access`);
+}
+
 /**
  * Stream an invoice PDF and trigger a browser download named `{number}.pdf`.
  * apiFetch only returns parsed JSON, so we fetch the blob directly here while

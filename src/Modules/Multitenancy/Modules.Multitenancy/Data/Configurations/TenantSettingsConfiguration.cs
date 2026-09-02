@@ -31,6 +31,14 @@ public class TenantSettingsConfiguration : IEntityTypeConfiguration<TenantSettin
             .HasMaxLength(3)
             .IsRequired();
 
+        // EDX-015 — armed per tenant, default OFF / 7-day grace. HasDefaultValue backfills the
+        // rows that predate the AddDebtAccessRestriction migration.
+        builder.Property(s => s.RestrictMaterialsOnDebt)
+            .HasDefaultValue(false);
+
+        builder.Property(s => s.DebtGraceDays)
+            .HasDefaultValue(Domain.TenantSettings.DefaultDebtGraceDays);
+
         // Audit
         builder.Property(s => s.CreatedOnUtc).IsRequired();
         builder.Property(s => s.CreatedBy).HasMaxLength(256);

@@ -19,6 +19,7 @@ import {
   ErrorBand,
   PageHero,
 } from "@/components/list";
+import { MaterialsDebtNotice } from "@/components/materials-debt-notice";
 import { describe, formatDate } from "@/lib/list-helpers";
 import {
   formatMoney,
@@ -80,6 +81,8 @@ export function CabinetInvoicesPage() {
       />
 
       <WardSwitcher />
+
+      <MaterialsDebtNotice />
 
       <EntityFilterPill<StatusFilter>
         label="Статус"

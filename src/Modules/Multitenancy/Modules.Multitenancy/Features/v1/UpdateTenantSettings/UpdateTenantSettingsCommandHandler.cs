@@ -23,6 +23,8 @@ public sealed class UpdateTenantSettingsCommandHandler(
         {
             TimeZoneId = command.TimeZoneId,
             Currency = command.Currency,
+            RestrictMaterialsOnDebt = command.RestrictMaterialsOnDebt,
+            DebtGraceDays = command.DebtGraceDays,
         };
 
         await settingsService.UpdateAsync(tenantId, settings, cancellationToken);

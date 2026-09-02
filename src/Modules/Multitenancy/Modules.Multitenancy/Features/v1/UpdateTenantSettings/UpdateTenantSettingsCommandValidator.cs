@@ -17,6 +17,12 @@ public partial class UpdateTenantSettingsCommandValidator : AbstractValidator<Up
             .NotEmpty()
             .Must(BeValidCurrencyCode)
             .WithMessage("Currency must be a 3-letter ISO 4217 code (e.g. USD).");
+
+        // EDX-015 — grace window for the materials-on-debt block. Cap at 90 days: past that it is
+        // effectively "never block", which is what the flag itself is for.
+        RuleFor(x => x.DebtGraceDays)
+            .InclusiveBetween(0, 90)
+            .WithMessage("DebtGraceDays must be between 0 and 90.");
     }
 
     // .NET 6+ understands IANA identifiers on Windows via ICU as well as on Linux, but this must

@@ -13,6 +13,7 @@ public class TenantSettings : BaseEntity<Guid>, IHasTenant, IAuditableEntity
 {
     public const string DefaultTimeZoneId = "UTC";
     public const string DefaultCurrency = "USD";
+    public const int DefaultDebtGraceDays = 7;
 
     public string TenantId { get; private set; } = default!;
 
@@ -21,6 +22,19 @@ public class TenantSettings : BaseEntity<Guid>, IHasTenant, IAuditableEntity
 
     /// <summary>ISO 4217 currency code, stored upper-case (e.g. "USD").</summary>
     public string Currency { get; set; } = DefaultCurrency;
+
+    /// <summary>
+    /// When <c>true</c>, a student (and their guardian) loses access to lesson materials while any
+    /// of the student's invoices is overdue by more than <see cref="DebtGraceDays"/> days —
+    /// the schedule/attendance/invoices stay accessible. Default OFF. See EDX-015 and
+    /// docs/02 Модули/Payments.md → «Автоблокировка доступа к материалам при задолженности».
+    /// The rule itself lives in Payments (<c>IMaterialsAccessService</c>); this flag only arms it.
+    /// </summary>
+    public bool RestrictMaterialsOnDebt { get; set; }
+
+    /// <summary>Grace period (days past an invoice's due date) before <see cref="RestrictMaterialsOnDebt"/>
+    /// starts blocking. <c>0</c> = block the moment an invoice is overdue.</summary>
+    public int DebtGraceDays { get; set; } = DefaultDebtGraceDays;
 
     // IAuditableEntity
     public DateTimeOffset CreatedOnUtc { get; private set; } = DateTimeOffset.UtcNow;
@@ -39,7 +53,9 @@ public class TenantSettings : BaseEntity<Guid>, IHasTenant, IAuditableEntity
         string tenantId,
         string? timeZoneId = null,
         string? currency = null,
-        string? createdBy = null)
+        string? createdBy = null,
+        bool restrictMaterialsOnDebt = false,
+        int debtGraceDays = DefaultDebtGraceDays)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(tenantId);
 
@@ -49,18 +65,27 @@ public class TenantSettings : BaseEntity<Guid>, IHasTenant, IAuditableEntity
             TenantId = tenantId,
             TimeZoneId = string.IsNullOrWhiteSpace(timeZoneId) ? DefaultTimeZoneId : timeZoneId,
             Currency = string.IsNullOrWhiteSpace(currency) ? DefaultCurrency : currency.ToUpperInvariant(),
+            RestrictMaterialsOnDebt = restrictMaterialsOnDebt,
+            DebtGraceDays = debtGraceDays < 0 ? DefaultDebtGraceDays : debtGraceDays,
             CreatedBy = createdBy,
             CreatedOnUtc = DateTimeOffset.UtcNow,
         };
     }
 
-    public void Update(string timeZoneId, string currency, string? modifiedBy)
+    public void Update(
+        string timeZoneId,
+        string currency,
+        string? modifiedBy,
+        bool restrictMaterialsOnDebt = false,
+        int debtGraceDays = DefaultDebtGraceDays)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(timeZoneId);
         ArgumentException.ThrowIfNullOrWhiteSpace(currency);
 
         TimeZoneId = timeZoneId;
         Currency = currency.ToUpperInvariant();
+        RestrictMaterialsOnDebt = restrictMaterialsOnDebt;
+        DebtGraceDays = debtGraceDays < 0 ? 0 : debtGraceDays;
         LastModifiedOnUtc = DateTimeOffset.UtcNow;
         LastModifiedBy = modifiedBy;
     }

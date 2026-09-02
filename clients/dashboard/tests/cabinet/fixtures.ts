@@ -40,6 +40,21 @@ export async function mockTenantSettings(page: Page): Promise<void> {
   await mockJsonResponse(page, "**/api/v1/tenants/settings", {
     timeZoneId: "Europe/Moscow",
     currency: "RUB",
+    restrictMaterialsOnDebt: false,
+    debtGraceDays: 7,
+  });
+}
+
+/** EDX-015 — GET /student-invoices/my/materials-access. Register AFTER any broad
+ *  `**\/student-invoices/my**` mock so this specific path wins. */
+export async function mockMaterialsAccess(
+  page: Page,
+  status: { restricted: boolean; overdueSince?: string | null; graceDays?: number },
+): Promise<void> {
+  await mockJsonResponse(page, "**/api/v1/student-invoices/my/materials-access", {
+    restricted: status.restricted,
+    overdueSince: status.overdueSince ?? (status.restricted ? "2026-08-01" : null),
+    graceDays: status.graceDays ?? 7,
   });
 }
 
