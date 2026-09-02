@@ -4,7 +4,7 @@ tags: [frontend, admin]
 
 # Admin (операторская)
 
-← [[Edvantix]] · [[Карта экранов]] · задачи: [[Задачи · Frontend]]
+← [[Edvantix]] · [[Карта экранов]] · задачи: [[Бэклог]]
 
 `clients/admin` · порт **5173** · приложение оператора платформы (`SuperAdmin`).
 Здесь управляют школами-тенантами, планами и подписками — **не** учебным процессом.
@@ -34,7 +34,7 @@ tags: [frontend, admin]
 | Настройки | `pages/settings/*` | ✅ |
 | Дашборд | `pages/dashboard.tsx` | 🔧 показатели платформы |
 
-Работы по приложению — [[Задачи · Frontend]].
+Работы по приложению — [[Бэклог]].
 
 ## Чего здесь быть не должно
 
@@ -49,4 +49,4 @@ tags: [frontend, admin]
 
 ## Связанное
 
-[[Dashboard (школа)]] · [[Карта экранов]] · [[Multitenancy]] · [[Задачи · Frontend]] · `.agents/rules/frontend/admin.md`
+[[Dashboard (школа)]] · [[Карта экранов]] · [[Multitenancy]] · [[Бэклог]] · `.agents/rules/frontend/admin.md`
