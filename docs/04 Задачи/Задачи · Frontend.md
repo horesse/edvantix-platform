@@ -31,20 +31,19 @@ tags: [задачи, frontend]
       (`GET /api/v1/audits/by-entity/{entityName}/{entityId}`, PR #15), но привязка к
       карточке ученика во frontend-этапах не значилась — подтвердить, нужна ли она в MVP
       или это осознанно вне скоупа.
-- [ ] **Привязка тарифа к зачислению в группу.** Бэкенд поддерживает
-      `GroupEnrollment.TariffId` (`EnrollStudentsCommand` принимает `tariffId`,
-      массовая генерация счетов берёт его, иначе — тариф курса; см.
-      [[Payments]] → bulk-generate, [[StudyGroups]] → Enrollments). Во frontend поля
-      нет: `EnrollDialog` на `/study-groups/:id` собирает только «Скидка, %», хинт
-      прямо гласит «Тариф назначается после подключения Payments»
-      (`clients/dashboard/src/pages/study-groups/study-group-detail.tsx`). API-типы
-      `EnrollStudentsInput.tariffId` / `GroupEnrollmentDto.tariffId` уже есть в
-      `clients/dashboard/src/api/study-groups.ts` — не пробрасываются в UI.
-      Нужно: селектор тарифа в диалоге зачисления (список из `GET /api/v1/tariffs`,
-      фильтр по активным, подсказка про фолбэк на тариф курса), показ выбранного
-      тарифа в ростере группы и, желательно, смена тарифа у существующего
-      зачисления. Проверить наличие write-эндпоинта для смены `TariffId` без
-      переоформления — если нет, это пункт в [[Задачи · Новые модули]] (StudyGroups).
+- [x] **Привязка тарифа к зачислению в группу.** В `EnrollDialog` на
+      `/study-groups/:id` добавлен селектор «Тариф» (список из `GET /api/v1/tariffs`,
+      только активные, лейбл `имя · сумма · вид`, подсказка про фолбэк на тариф
+      курса при массовой генерации счетов); `tariffId` проходит через `mutate(arg)`
+      (правило 9). В ростере «Состав группы» у строки зачисления показывается имя
+      привязанного тарифа. Запрос тарифов и оба места гейтятся на
+      `Permissions.Payments.Tariffs.View`, чтобы роль без Payments не ловила 403.
+      Файлы: `clients/dashboard/src/pages/study-groups/study-group-detail.tsx`,
+      тесты `clients/dashboard/tests/study-groups/enrollments.spec.ts`.
+      **Смена тарифа у существующего зачисления не сделана** — в
+      `Modules.StudyGroups` нет write-эндпоинта, меняющего `GroupEnrollment.TariffId`
+      без переоформления (есть только Enroll / Transfer / Pause / Resume / Unenroll).
+      Заведено бэкенд-пунктом в [[Задачи · Новые модули]] (StudyGroups).
 - [x] **Настройки школы вынесены из личных настроек отдельным разделом.** В сайдбаре
       появился раздел **«Школа»** (`nav-data.ts`, `id: "school"`) рядом с
       «Идентификацией»/«Системой» с тремя пунктами: **Настройки школы**

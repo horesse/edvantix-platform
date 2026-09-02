@@ -22,24 +22,29 @@ public sealed class IssueInvoiceCommandHandler(
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        var invoice = await dbContext.StudentInvoices
-            .Include(i => i.Lines)
-            .FirstOrDefaultAsync(i => i.Id == command.InvoiceId, cancellationToken)
-            .ConfigureAwait(false)
-            ?? throw new NotFoundException($"Invoice {command.InvoiceId} not found.");
+        // StudentInvoice has no row-version: a race on the invoice (a draft refresh, an accrual job,
+        // a double-submit) otherwise escapes as an opaque DbUpdateConcurrencyException 500.
+        return await InvoiceWrite.WithConcurrencyRetryAsync(dbContext, async ct =>
+        {
+            var invoice = await dbContext.StudentInvoices
+                .Include(i => i.Lines)
+                .FirstOrDefaultAsync(i => i.Id == command.InvoiceId, ct)
+                .ConfigureAwait(false)
+                ?? throw new NotFoundException($"Invoice {command.InvoiceId} not found.");
 
-        invoice.Issue(command.IssuedOn);
+            invoice.Issue(command.IssuedOn);
 
-        var tenantId = multiTenantContextAccessor.MultiTenantContext.TenantInfo?.Id;
-        var now = timeProvider.GetUtcNow();
-        await outboxStore.AddAsync(
-            new StudentInvoiceIssuedIntegrationEvent(
-                Guid.NewGuid(), now.UtcDateTime, tenantId, Guid.NewGuid().ToString(), "Payments",
-                invoice.Id, invoice.StudentId, invoice.PayerGuardianId, invoice.Total, invoice.DueDate,
-                invoice.Number, invoice.Currency),
-            cancellationToken).ConfigureAwait(false);
+            var tenantId = multiTenantContextAccessor.MultiTenantContext.TenantInfo?.Id;
+            var now = timeProvider.GetUtcNow();
+            await outboxStore.AddAsync(
+                new StudentInvoiceIssuedIntegrationEvent(
+                    Guid.NewGuid(), now.UtcDateTime, tenantId, Guid.NewGuid().ToString(), "Payments",
+                    invoice.Id, invoice.StudentId, invoice.PayerGuardianId, invoice.Total, invoice.DueDate,
+                    invoice.Number, invoice.Currency),
+                ct).ConfigureAwait(false);
 
-        await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        return Unit.Value;
+            await dbContext.SaveChangesAsync(ct).ConfigureAwait(false);
+            return Unit.Value;
+        }, cancellationToken).ConfigureAwait(false);
     }
 }

@@ -10,6 +10,7 @@ const TEACHER_ID = "70000000-0000-0000-0000-000000000001";
 const STU_A = "50000000-0000-0000-0000-0000000000a1";
 const STU_B = "50000000-0000-0000-0000-0000000000b2";
 const ENR_A = "e0000000-0000-0000-0000-0000000000a1";
+const TARIFF_ID = "1a000000-0000-0000-0000-0000000000a1";
 
 type Over = Record<string, unknown>;
 
@@ -62,6 +63,9 @@ const TEACHERS = paged([
 const COURSES = paged([
   { id: COURSE_ID, subjectId: "s1", title: "Английский язык", slug: "english", description: null, level: "Beginner", durationHours: 40, status: "Published", coverFileId: null, publishedAtUtc: "2026-01-01T00:00:00Z", createdAtUtc: "2026-01-01T00:00:00Z" },
 ]);
+const TARIFFS = [
+  { id: TARIFF_ID, name: "Базовый", courseId: COURSE_ID, kind: "PerLesson", amount: 500, currency: "RUB", lessonsCount: 0, validDays: 0, chargeOnExcusedAbsence: false, isActive: true, createdAtUtc: "2026-01-01T00:00:00Z", updatedAtUtc: null },
+];
 
 const ALL_PERMS = [
   "Permissions.StudyGroups.StudyGroups.View",
@@ -72,6 +76,7 @@ const ALL_PERMS = [
   "Permissions.StudyGroups.Enrollments.Create",
   "Permissions.StudyGroups.Enrollments.Delete",
   "Permissions.StudyGroups.Enrollments.Transfer",
+  "Permissions.Payments.Tariffs.View",
 ];
 
 test.describe("study-groups/:id — enrollments", () => {
@@ -82,6 +87,7 @@ test.describe("study-groups/:id — enrollments", () => {
     await mockJsonResponse(page, "**/api/v1/students?**", STUDENTS);
     await mockJsonResponse(page, "**/api/v1/teachers?**", TEACHERS);
     await mockJsonResponse(page, "**/api/v1/courses?**", COURSES);
+    await mockJsonResponse(page, "**/api/v1/tariffs?**", TARIFFS);
     await mockJsonResponse(page, "**/api/v1/study-groups?**", paged([detail(), detail({ id: G2_ID, code: "ENG-A2", name: "Английский A2" })]));
   });
 
@@ -112,6 +118,53 @@ test.describe("study-groups/:id — enrollments", () => {
       studentIds: [STU_A],
       discountPercent: 0,
     });
+  });
+
+  test("enroll passes the picked tariffId through mutate(arg)", async ({ page }) => {
+    await mockJsonResponse(page, `**/api/v1/study-groups/${GID}`, detail());
+    await mockJsonResponse(
+      page,
+      `**/api/v1/study-groups/${GID}/enrollments`,
+      [ENR_A],
+      { method: "POST" },
+    );
+    await page.goto(`/study-groups/${GID}`);
+    await expect(
+      page.getByRole("heading", { name: "Английский A1 · утро", level: 1 }),
+    ).toBeVisible();
+
+    const post = page.waitForRequest(
+      (r) => r.url().includes(`/study-groups/${GID}/enrollments`) && r.method() === "POST",
+    );
+    await page.getByRole("button", { name: "Зачислить", exact: true }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel("Ученик").click();
+    await page.getByRole("menuitemradio", { name: "Смирнов Иван" }).click();
+    await dialog.getByLabel("Тариф").click();
+    await page.getByRole("menuitemradio", { name: /Базовый/ }).click();
+    await dialog.getByRole("button", { name: /Зачислить \(1\)/ }).click();
+
+    const req = await post;
+    expect(JSON.parse(req.postData() ?? "{}")).toMatchObject({
+      studentIds: [STU_A],
+      tariffId: TARIFF_ID,
+      discountPercent: 0,
+    });
+  });
+
+  test("roster row shows the enrollment's tariff name", async ({ page }) => {
+    await mockJsonResponse(
+      page,
+      `**/api/v1/study-groups/${GID}`,
+      detail({
+        status: "Active",
+        activeEnrollmentCount: 1,
+        enrollments: [enrollment({ tariffId: TARIFF_ID })],
+      }),
+    );
+    await page.goto(`/study-groups/${GID}`);
+
+    await expect(page.getByText("тариф: Базовый").last()).toBeVisible();
   });
 
   test("enroll surfaces the 409 'мест нет' instead of swallowing it", async ({ page }) => {

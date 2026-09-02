@@ -25,15 +25,20 @@ public sealed class ReversePaymentCommandHandler(PaymentsDbContext dbContext, IC
             throw new NotFoundException($"Payment {command.PaymentId} not found.");
         }
 
-        var invoice = await dbContext.StudentInvoices
-            .Include(i => i.Payments)
-            .FirstAsync(i => i.Id == invoiceId, cancellationToken)
-            .ConfigureAwait(false);
+        // Same exposure as ConfirmPayment — StudentInvoice has no row-version, so a race on the
+        // invoice surfaces as a raw DbUpdateConcurrencyException. Reload-and-retry, then a clean 409.
+        return await InvoiceWrite.WithConcurrencyRetryAsync(dbContext, async ct =>
+        {
+            var invoice = await dbContext.StudentInvoices
+                .Include(i => i.Payments)
+                .FirstAsync(i => i.Id == invoiceId, ct)
+                .ConfigureAwait(false);
 
-        string reversedByUserId = currentUser.GetUserId().ToString();
-        var reversal = invoice.ReversePayment(command.PaymentId, reversedByUserId, command.Note);
+            string reversedByUserId = currentUser.GetUserId().ToString();
+            var reversal = invoice.ReversePayment(command.PaymentId, reversedByUserId, command.Note);
 
-        await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        return reversal.Id;
+            await dbContext.SaveChangesAsync(ct).ConfigureAwait(false);
+            return reversal.Id;
+        }, cancellationToken).ConfigureAwait(false);
     }
 }
