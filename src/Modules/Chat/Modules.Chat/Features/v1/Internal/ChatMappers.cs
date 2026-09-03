@@ -21,7 +21,8 @@ internal static class ChatMappers
             c.UpdatedAtUtc,
             c.LastMessageAtUtc,
             unreadCount,
-            c.Members.Select(m => m.ToDto()).ToList());
+            c.Members.Select(m => m.ToDto()).ToList(),
+            c.SourceStudyGroupId);
 
     public static MessageAttachmentDto ToDto(this MessageAttachment a) =>
         new(a.Id, a.FileAssetId, a.Url, a.ContentType, a.OriginalFileName, a.SizeBytes);

@@ -12,4 +12,8 @@ public sealed record ChannelDto(
     DateTime? UpdatedAtUtc,
     DateTime? LastMessageAtUtc,
     int UnreadCount,
-    IReadOnlyList<ChannelMemberDto> Members);
+    IReadOnlyList<ChannelMemberDto> Members,
+    // Set when the channel backs a study group (provisioned from StudyGroupCreatedIntegrationEvent).
+    // Null for user-created channels and DMs — lets the SPA tell group channels apart from ad-hoc
+    // ones and deep-link to the group.
+    Guid? SourceStudyGroupId = null);

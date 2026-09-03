@@ -9,5 +9,10 @@ public sealed class ListMyChannelsQueryValidator : AbstractValidator<ListMyChann
     {
         RuleFor(x => x.Page).GreaterThanOrEqualTo(1);
         RuleFor(x => x.PageSize).InclusiveBetween(1, 200);
+        RuleFor(x => x.Kind)
+            .Must(k => string.IsNullOrWhiteSpace(k)
+                || k == ChannelKindFilter.StudyGroup
+                || k == ChannelKindFilter.Standalone)
+            .WithMessage($"Kind must be '{ChannelKindFilter.StudyGroup}', '{ChannelKindFilter.Standalone}', or empty.");
     }
 }

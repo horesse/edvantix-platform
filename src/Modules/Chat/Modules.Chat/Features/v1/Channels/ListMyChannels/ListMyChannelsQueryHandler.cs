@@ -25,8 +25,17 @@ public sealed class ListMyChannelsQueryHandler(
         int page = Math.Max(1, q.Page);
         int pageSize = Math.Clamp(q.PageSize, 1, 200);
 
-        var channels = await db.Channels.AsNoTracking()
-            .Where(c => c.Members.Any(m => m.UserId == currentUserId))
+        var query = db.Channels.AsNoTracking()
+            .Where(c => c.Members.Any(m => m.UserId == currentUserId));
+
+        query = q.Kind switch
+        {
+            ChannelKindFilter.StudyGroup => query.Where(c => c.SourceStudyGroupId != null),
+            ChannelKindFilter.Standalone => query.Where(c => c.SourceStudyGroupId == null),
+            _ => query,
+        };
+
+        var channels = await query
             .OrderByDescending(c => c.LastMessageAtUtc ?? c.CreatedAtUtc)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
