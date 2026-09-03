@@ -342,3 +342,22 @@ export async function getAuditsByCorrelation(
   );
 }
 
+/**
+ * Change history of a single entity, for its detail card ("История этого ученика").
+ * A thin shell over `GET /audits` — the server fills `EntityName` and builds the
+ * unified `Id:{entityId}` key, so callers pass the raw id.
+ * `GET /api/v1/audits/by-entity/{entityName}/{entityId}` → Permissions.AuditTrails.View.
+ */
+export async function listEntityAudits(
+  entityName: string,
+  entityId: string,
+  query: { pageNumber?: number; pageSize?: number; fromUtc?: string; toUtc?: string } = {},
+  signal?: AbortSignal,
+): Promise<PagedResponse<AuditSummaryDto>> {
+  const qs = toQueryString(query);
+  return apiFetch<PagedResponse<AuditSummaryDto>>(
+    `/api/v1/audits/by-entity/${encodeURIComponent(entityName)}/${encodeURIComponent(entityId)}${qs ? `?${qs}` : ""}`,
+    { signal },
+  );
+}
+
