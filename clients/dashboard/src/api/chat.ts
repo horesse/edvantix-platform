@@ -37,6 +37,10 @@ export type ChannelDto = {
   lastMessageAtUtc?: string | null;
   unreadCount: number;
   members: ChannelMemberDto[];
+  // Set when the channel backs a study group (provisioned from StudyGroupCreated).
+  // Null for user-created channels and DMs — lets the rail pull group channels into
+  // their own section and deep-link to `/study-groups/{id}`. See EDX-010 / EDX-011.
+  sourceStudyGroupId?: string | null;
 };
 
 export type MessageAttachmentDto = {
