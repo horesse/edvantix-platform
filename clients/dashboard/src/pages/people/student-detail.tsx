@@ -8,6 +8,7 @@ import {
   ChevronRight,
   ClipboardCheck,
   GraduationCap,
+  History,
   Link2,
   Link2Off,
   Mail,
@@ -44,6 +45,15 @@ import {
   type UpdateStudentInput,
 } from "@/api/people";
 import { searchUsers, type UserDto } from "@/api/identity";
+import {
+  AUDIT_EVENT_TYPE_LABELS,
+  ENTITY_OPERATION_LABELS,
+  getAuditById,
+  getAuditLabels,
+  listEntityAudits,
+  type AuditLabels,
+  type EntityChangePayload,
+} from "@/api/audits";
 import {
   getStudentEnrollments,
   searchStudyGroups,
@@ -86,6 +96,7 @@ import {
   EntityDetailSection,
   EntityDetailStat,
   EntityInitialsAvatar,
+  EntityPager,
   EntityStatusBadge,
   Field,
   type EntityStatusTone,
@@ -125,7 +136,8 @@ type Tab =
   | "notes"
   | "groups"
   | "attendance"
-  | "billing";
+  | "billing"
+  | "history";
 
 export function StudentDetailPage() {
   const { studentId = "" } = useParams();
@@ -138,6 +150,7 @@ export function StudentDetailPage() {
   const canViewGroups = perms.includes("Permissions.StudyGroups.Enrollments.View");
   const canViewAttendance = perms.includes("Permissions.Scheduling.Attendance.View");
   const canViewBilling = perms.includes("Permissions.Payments.StudentInvoices.View");
+  const canViewHistory = perms.includes("Permissions.AuditTrails.View");
 
   const [tab, setTab] = useState<Tab>("profile");
   const [editOpen, setEditOpen] = useState(false);
@@ -312,6 +325,11 @@ export function StudentDetailPage() {
             Заметки
           </TabPill>
         )}
+        {canViewHistory && (
+          <TabPill active={tab === "history"} onClick={() => setTab("history")} icon={History}>
+            История
+          </TabPill>
+        )}
       </nav>
 
       {tab === "profile" && (
@@ -376,6 +394,10 @@ export function StudentDetailPage() {
 
       {tab === "notes" && canViewNotes && (
         <NotesTab studentId={student.id} onChanged={invalidate} />
+      )}
+
+      {tab === "history" && canViewHistory && (
+        <HistoryTab entityName="Student" entityId={student.id} />
       )}
 
       <EditStudentDialog open={editOpen} onClose={() => setEditOpen(false)} student={student} onSaved={invalidate} />
@@ -1091,6 +1113,195 @@ function NotesTab({ studentId, onChanged }: { studentId: string; onChanged: () =
       )}
     </EntityDetailSection>
   );
+}
+
+// ───────────────────────────────────────────────────────────────────────
+//  History tab — the audit trail of one entity, via
+//  GET /audits/by-entity/{entityName}/{entityId} (Auditing, AuditTrails.View).
+//  The list DTO carries no field-level detail, so each row lazily fetches
+//  its own audit detail on expand to show the changed fields (relabelled
+//  through GET /audits/entity-labels).
+// ───────────────────────────────────────────────────────────────────────
+
+const HISTORY_PAGE_SIZE = 20;
+
+const EVENT_TYPE_RU: Record<string, string> = {
+  None: "—",
+  EntityChange: "Изменение данных",
+  Security: "Безопасность",
+  Activity: "Действие",
+  Exception: "Ошибка",
+};
+
+function HistoryTab({ entityName, entityId }: { entityName: string; entityId: string }) {
+  const [page, setPage] = useState(1);
+
+  const query = useQuery({
+    queryKey: ["entity-audits", entityName, entityId, page],
+    queryFn: ({ signal }) =>
+      listEntityAudits(
+        entityName,
+        entityId,
+        { pageNumber: page, pageSize: HISTORY_PAGE_SIZE },
+        signal,
+      ),
+  });
+
+  const labels = useQuery<AuditLabels>({
+    queryKey: ["audits", "entity-labels"],
+    queryFn: ({ signal }) => getAuditLabels(signal),
+    staleTime: Infinity,
+    gcTime: Infinity,
+  });
+
+  const paged = query.data;
+  const items = paged?.items ?? [];
+  const totalPages = Math.max(paged?.totalPages ?? 1, 1);
+
+  return (
+    <EntityDetailSection
+      title="История изменений"
+      icon={History}
+      description="События аудита по этой карточке. Разверните строку, чтобы увидеть изменённые поля."
+    >
+      {query.isLoading ? (
+        <p className="text-[13px] text-[var(--color-muted-foreground)]">Загрузка…</p>
+      ) : query.isError ? (
+        <p className="text-[13px] text-[var(--color-destructive)]">{describe(query.error)}</p>
+      ) : items.length === 0 ? (
+        <p className="text-[13px] text-[var(--color-muted-foreground)]">
+          Записей аудита по этой карточке пока нет.
+        </p>
+      ) : (
+        <>
+          <ul className="divide-y divide-[oklch(from_var(--color-border)_l_c_h_/_0.5)]">
+            {items.map((row) => (
+              <HistoryRow key={row.id} row={row} labels={labels.data} />
+            ))}
+          </ul>
+          {totalPages > 1 && (
+            <EntityPager
+              page={page}
+              totalPages={totalPages}
+              hasPrev={page > 1}
+              hasNext={page < totalPages}
+              onPrev={() => setPage((p) => Math.max(1, p - 1))}
+              onNext={() => setPage((p) => p + 1)}
+            />
+          )}
+        </>
+      )}
+    </EntityDetailSection>
+  );
+}
+
+function HistoryRow({
+  row,
+  labels,
+}: {
+  row: {
+    id: string;
+    occurredAtUtc: string;
+    eventType: string;
+    userName?: string | null;
+    userId?: string | null;
+    source?: string | null;
+  };
+  labels: AuditLabels | undefined;
+}) {
+  const [open, setOpen] = useState(false);
+  const isEntityChange = row.eventType === "EntityChange";
+
+  const detail = useQuery({
+    queryKey: ["audit", "detail", row.id],
+    queryFn: ({ signal }) => getAuditById(row.id, signal),
+    enabled: open && isEntityChange,
+    staleTime: Infinity,
+  });
+
+  const actor = row.userName || row.userId || "система";
+  const payload =
+    isEntityChange && detail.data
+      ? (detail.data.payload as EntityChangePayload | null | undefined)
+      : undefined;
+  const opLabel = payload?.operation
+    ? ENTITY_OPERATION_LABELS[payload.operation] ?? payload.operation
+    : undefined;
+  const fieldLabels = labels?.fields ?? {};
+  const changes = payload?.changes ?? [];
+
+  return (
+    <li className="py-2.5 first:pt-0 last:pb-0">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-3 text-left"
+      >
+        <div className="min-w-0">
+          <p className="text-[13px] text-[var(--color-foreground)]">
+            {formatDateTimeMono(row.occurredAtUtc)}
+          </p>
+          <p className="truncate text-[11.5px] text-[var(--color-muted-foreground)]">
+            {actor}
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <EntityStatusBadge tone={isEntityChange ? "info" : "default"}>
+            {EVENT_TYPE_RU[row.eventType] ??
+              AUDIT_EVENT_TYPE_LABELS[row.eventType as keyof typeof AUDIT_EVENT_TYPE_LABELS] ??
+              row.eventType}
+          </EntityStatusBadge>
+          <ChevronRight
+            className={cn(
+              "size-4 text-[var(--color-border)] transition-transform",
+              open && "rotate-90",
+            )}
+          />
+        </div>
+      </button>
+
+      {open && isEntityChange && (
+        <div className="mt-2 rounded-lg border border-[oklch(from_var(--color-border)_l_c_h_/_0.6)] bg-[var(--color-muted)] px-3 py-2.5 text-[12px]">
+          {detail.isLoading ? (
+            <p className="text-[var(--color-muted-foreground)]">Загрузка…</p>
+          ) : detail.isError ? (
+            <p className="text-[var(--color-destructive)]">{describe(detail.error)}</p>
+          ) : (
+            <>
+              {opLabel && (
+                <p className="mb-1.5 font-medium text-[var(--color-foreground)]">{opLabel}</p>
+              )}
+              {changes.length === 0 ? (
+                <p className="text-[var(--color-muted-foreground)]">
+                  Изменённые поля не зафиксированы.
+                </p>
+              ) : (
+                <ul className="space-y-1">
+                  {changes.map((c, i) => (
+                    <li key={`${c.name}-${i}`} className="flex flex-wrap items-baseline gap-1.5">
+                      <span className="font-medium text-[var(--color-foreground)]">
+                        {fieldLabels[c.name] ?? c.name}
+                      </span>
+                      <span className="text-[var(--color-muted-foreground)]">
+                        {formatAuditValue(c.oldValue)} → {formatAuditValue(c.newValue)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </li>
+  );
+}
+
+function formatAuditValue(value: unknown): string {
+  if (value === null || value === undefined || value === "") return "—";
+  if (typeof value === "string") return value;
+  return JSON.stringify(value);
 }
 
 // ───────────────────────────────────────────────────────────────────────
