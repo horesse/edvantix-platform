@@ -132,7 +132,8 @@ GET    /api/v1/chat/search
 
 Канал ищется по `SourceStudyGroupId` (частичный индекс) — прямой ссылки
 StudyGroups → Chat в рантайме нет. Тот же признак вынесен в `ChannelDto` и в фильтр
-`GET /channels/my?kind=study-group`, чтобы SPA показывала каналы групп отдельным разделом
+`GET /channels/my?kind=study-group`; dashboard группирует каналы учебных групп в отдельную
+секцию «Study Groups» на `/chat` со ссылкой на `/study-groups/:id`
 ([[EDX-011 Раздел каналов учебных групп в чате]]). Миграция `StudyGroupChannelBackfill`
 (EDX-010) — разовый бэкофилл `SourceStudyGroupId` по `StudyGroup.ChatChannelId` для каналов,
 созданных до появления признака (защищён `to_regclass`, no-op без модуля StudyGroups).

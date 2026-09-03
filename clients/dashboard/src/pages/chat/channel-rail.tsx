@@ -1,6 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Hash, Lock, MessageCircle, Plus, Search, Users2, X } from "lucide-react";
+import {
+  ArrowUpRight,
+  GraduationCap,
+  Hash,
+  Lock,
+  MessageCircle,
+  Plus,
+  Search,
+  Users2,
+  X,
+} from "lucide-react";
 import {
   ChannelType,
   createChannel,
@@ -76,12 +87,18 @@ export function ChannelRail({
 
   const channels = useMemo(() => channelsQuery.data ?? [], [channelsQuery.data]);
 
-  const { namedChannels, dms } = useMemo(() => {
+  const { studyGroupChannels, namedChannels, dms } = useMemo(() => {
     const f = filter.trim().toLowerCase();
     const match = (c: ChannelDto) =>
       f.length === 0 || channelTitle(c, selfUserId).toLowerCase().includes(f);
     return {
-      namedChannels: channels.filter((c) => c.type === ChannelType.Channel && match(c)),
+      // Channels provisioned for a study group (EDX-010: sourceStudyGroupId set).
+      // They're type `Channel`, so without this split they'd hide among ad-hoc
+      // channels below.
+      studyGroupChannels: channels.filter((c) => c.sourceStudyGroupId && match(c)),
+      namedChannels: channels.filter(
+        (c) => c.type === ChannelType.Channel && !c.sourceStudyGroupId && match(c),
+      ),
       dms: channels.filter(
         (c) =>
           (c.type === ChannelType.DirectMessage || c.type === ChannelType.GroupMessage) &&
@@ -91,7 +108,7 @@ export function ChannelRail({
   }, [channels, filter, selfUserId]);
 
   const filtering = filter.trim().length > 0;
-  const totalShown = namedChannels.length + dms.length;
+  const totalShown = studyGroupChannels.length + namedChannels.length + dms.length;
 
   return (
     <aside
@@ -158,6 +175,21 @@ export function ChannelRail({
       </div>
 
       <nav className="min-h-0 flex-1 space-y-3 overflow-y-auto px-2 py-2">
+        {studyGroupChannels.length > 0 && (
+          <Section caption="Study Groups">
+            {studyGroupChannels.map((c) => (
+              <ChannelRow
+                key={c.id}
+                channel={c}
+                selfUserId={selfUserId}
+                selected={c.id === selectedChannelId}
+                onSelect={() => onSelect(c.id)}
+                groupId={c.sourceStudyGroupId}
+              />
+            ))}
+          </Section>
+        )}
+
         <Section caption="Channels" onAction={() => setCreateChannelOpen(true)} actionLabel="New channel">
           {channelsQuery.isLoading ? (
             <EmptyHint>Loading…</EmptyHint>
@@ -229,8 +261,10 @@ function Section({
   children,
 }: {
   caption: string;
-  actionLabel: string;
-  onAction: () => void;
+  /** Optional "+" affordance — omitted for read-only sections (e.g. study-group
+   *  channels, which are provisioned server-side and can't be created here). */
+  actionLabel?: string;
+  onAction?: () => void;
   children: React.ReactNode;
 }) {
   return (
@@ -239,20 +273,22 @@ function Section({
         <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
           {caption}
         </span>
-        <button
-          type="button"
-          onClick={onAction}
-          title={actionLabel}
-          aria-label={actionLabel}
-          className={cn(
-            "grid h-6 w-6 cursor-pointer place-items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]",
-            "text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)] hover:text-[var(--color-foreground)]",
-            "transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out-cubic)]",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]",
-          )}
-        >
-          <Plus className="h-3 w-3" aria-hidden />
-        </button>
+        {onAction && (
+          <button
+            type="button"
+            onClick={onAction}
+            title={actionLabel}
+            aria-label={actionLabel}
+            className={cn(
+              "grid h-6 w-6 cursor-pointer place-items-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]",
+              "text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)] hover:text-[var(--color-foreground)]",
+              "transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out-cubic)]",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]",
+            )}
+          >
+            <Plus className="h-3 w-3" aria-hidden />
+          </button>
+        )}
       </div>
       <div className="space-y-0.5">{children}</div>
     </div>
@@ -264,11 +300,15 @@ function ChannelRow({
   selfUserId,
   selected,
   onSelect,
+  groupId,
 }: {
   channel: ChannelDto;
   selfUserId?: string;
   selected: boolean;
   onSelect: () => void;
+  /** When set, the row backs this study group — renders a trailing deep-link
+   *  to `/study-groups/{groupId}` alongside the channel-select button. */
+  groupId?: string | null;
 }) {
   // For 1-on-1 DMs, resolve the partner's real name. Group DMs and named
   // channels keep channelTitle's fallback formatting.
@@ -283,66 +323,90 @@ function ChannelRow({
       ? dmPartner.name
       : channelTitle(channel, selfUserId);
   const hasUnread = channel.unreadCount > 0;
-  const Icon =
-    channel.type === ChannelType.Channel ? (channel.isPrivate ? Lock : Hash) : Users2;
+  const Icon = groupId
+    ? GraduationCap
+    : channel.type === ChannelType.Channel
+      ? channel.isPrivate
+        ? Lock
+        : Hash
+      : Users2;
 
   return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className={cn(
-        "group relative flex h-8 w-full cursor-pointer items-center gap-2 rounded-md px-2.5 text-left",
-        "transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out-cubic)]",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]",
-        selected
-          ? "bg-[var(--color-primary-soft)] text-[var(--color-primary)]"
-          : hasUnread
-            ? "text-[var(--color-foreground)] hover:bg-[var(--color-accent)]"
-            : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)] hover:text-[var(--color-foreground)]",
-      )}
-    >
-      {/* Active 2px brand bar — matches the sidebar's NavItemLink. */}
-      <span
-        aria-hidden
+    <div className="relative">
+      <button
+        type="button"
+        onClick={onSelect}
         className={cn(
-          "absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-r-full bg-[var(--color-primary)]",
-          "transition-opacity duration-[var(--duration-default)]",
-          selected ? "opacity-100" : "opacity-0",
-        )}
-      />
-
-      {channel.type === ChannelType.DirectMessage && otherDmMember ? (
-        <Avatar
-          name={dmPartner.name}
-          src={dmPartner.imageUrl ?? null}
-          size="xs"
-          status={dmPartnerOnline ? "online" : "offline"}
-          className="shrink-0"
-        />
-      ) : (
-        <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden />
-      )}
-      <span
-        className={cn(
-          "truncate text-sm",
-          hasUnread || selected ? "font-medium" : "font-normal",
+          "group relative flex h-8 w-full cursor-pointer items-center gap-2 rounded-md px-2.5 text-left",
+          "transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out-cubic)]",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]",
+          groupId && "pr-8",
+          selected
+            ? "bg-[var(--color-primary-soft)] text-[var(--color-primary)]"
+            : hasUnread
+              ? "text-[var(--color-foreground)] hover:bg-[var(--color-accent)]"
+              : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)] hover:text-[var(--color-foreground)]",
         )}
       >
-        {title}
-      </span>
-      {hasUnread && !selected && (
+        {/* Active 2px brand bar — matches the sidebar's NavItemLink. */}
         <span
-          aria-label={`${channel.unreadCount} unread`}
+          aria-hidden
           className={cn(
-            "ml-auto shrink-0 rounded-full px-1.5 py-0.5",
-            "text-[10px] font-semibold tabular-nums",
-            "bg-[var(--color-primary)] text-[var(--color-primary-foreground)]",
+            "absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-r-full bg-[var(--color-primary)]",
+            "transition-opacity duration-[var(--duration-default)]",
+            selected ? "opacity-100" : "opacity-0",
+          )}
+        />
+
+        {channel.type === ChannelType.DirectMessage && otherDmMember ? (
+          <Avatar
+            name={dmPartner.name}
+            src={dmPartner.imageUrl ?? null}
+            size="xs"
+            status={dmPartnerOnline ? "online" : "offline"}
+            className="shrink-0"
+          />
+        ) : (
+          <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden />
+        )}
+        <span
+          className={cn(
+            "truncate text-sm",
+            hasUnread || selected ? "font-medium" : "font-normal",
           )}
         >
-          {channel.unreadCount > 99 ? "99+" : channel.unreadCount}
+          {title}
         </span>
+        {hasUnread && !selected && (
+          <span
+            aria-label={`${channel.unreadCount} unread`}
+            className={cn(
+              "ml-auto shrink-0 rounded-full px-1.5 py-0.5",
+              "text-[10px] font-semibold tabular-nums",
+              "bg-[var(--color-primary)] text-[var(--color-primary-foreground)]",
+            )}
+          >
+            {channel.unreadCount > 99 ? "99+" : channel.unreadCount}
+          </span>
+        )}
+      </button>
+
+      {groupId && (
+        <Link
+          to={`/study-groups/${groupId}`}
+          aria-label="Open study group"
+          title="Open study group"
+          className={cn(
+            "absolute right-1 top-1/2 grid size-6 -translate-y-1/2 place-items-center rounded",
+            "text-[var(--color-muted-foreground)] opacity-60 transition-opacity hover:opacity-100",
+            "hover:bg-[var(--color-accent)] hover:text-[var(--color-foreground)]",
+            "focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]",
+          )}
+        >
+          <ArrowUpRight className="size-3.5" aria-hidden />
+        </Link>
       )}
-    </button>
+    </div>
   );
 }
 

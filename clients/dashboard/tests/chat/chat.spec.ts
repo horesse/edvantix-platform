@@ -156,6 +156,53 @@ test.describe("chat — active channel pane", () => {
   });
 });
 
+// ─── Study-group channels ────────────────────────────────────────────
+
+// A channel provisioned for a study group — same shape as a named channel
+// but with sourceStudyGroupId set (EDX-010). The rail must pull it into a
+// dedicated "Study Groups" section and expose a deep-link to the group.
+const GROUP_ID = "00000000-0000-0000-0000-0000000e4444";
+const GROUP_CHANNEL = {
+  ...CHANNEL_ENGINEERING,
+  id: "00000000-0000-0000-0000-0000000c5555",
+  name: "math-grade-8",
+  slug: "math-grade-8",
+  description: "Group channel.",
+  sourceStudyGroupId: GROUP_ID,
+};
+
+test.describe("chat — study group channels", () => {
+  test("groups group-backed channels under their own section with a link to the group", async ({
+    page,
+  }) => {
+    await mockChannelWithMessages(page, [MESSAGE_HELLO]);
+    // Override the list to carry both an ad-hoc channel and a group channel.
+    await mockJsonResponse(page, "**/api/v1/chat/channels?**", [
+      CHANNEL_ENGINEERING,
+      GROUP_CHANNEL,
+    ]);
+    await mockJsonResponse(page, "**/api/v1/chat/channels", [CHANNEL_ENGINEERING, GROUP_CHANNEL]);
+
+    await page.goto(`/chat/${CHANNEL_ID}`);
+
+    // The dedicated section header renders.
+    await expect(page.getByText("Study Groups", { exact: true })).toBeVisible();
+
+    // The group channel sits inside the "Study Groups" section; the ad-hoc
+    // channel does not.
+    const studyGroupsSection = page.locator("div.space-y-1", {
+      has: page.getByText("Study Groups", { exact: true }),
+    });
+    await expect(studyGroupsSection.getByText("math-grade-8")).toBeVisible();
+    await expect(studyGroupsSection.getByText("engineering")).toHaveCount(0);
+
+    // Exactly one row exposes the deep-link, pointing at the source group.
+    const groupLinks = page.getByRole("link", { name: /open study group/i });
+    await expect(groupLinks).toHaveCount(1);
+    await expect(groupLinks.first()).toHaveAttribute("href", `/study-groups/${GROUP_ID}`);
+  });
+});
+
 // ─── Empty state ──────────────────────────────────────────────────────
 
 test.describe("chat — empty state", () => {
