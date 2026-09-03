@@ -46,7 +46,7 @@ public sealed class LessonMaterialsDebtBlockTests
 
         // An invoice that is 30 days overdue.
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        await CreateOverdueIssuedInvoiceAsync(client, studentId, dueDate: today.AddDays(-30));
+        var invoiceId = await CreateOverdueIssuedInvoiceAsync(client, studentId, dueDate: today.AddDays(-30));
 
         // Flag OFF (default) → materials visible.
         (await GetMaterialsStatusAsync(client, lessonId)).ShouldBe(HttpStatusCode.OK);
@@ -56,11 +56,14 @@ public sealed class LessonMaterialsDebtBlockTests
         (await GetMaterialsStatusAsync(client, lessonId)).ShouldBe(HttpStatusCode.Forbidden);
         (await GetMyScheduleStatusAsync(client)).ShouldBe(HttpStatusCode.OK);
 
-        // Clearing the debt restores access — proven here via the school disabling the policy;
-        // the "invoice paid in full → access returns" leg is covered deterministically in
-        // Payments.Tests/Services/MaterialsAccessServiceTests (the HTTP payment path races the
-        // overdue-detection job on the row-versionless invoice — see ConfirmPaymentCommandHandler).
-        await SetDebtRestrictionAsync(client, restrict: false, graceDays: 7);
+        // Paying the overdue invoice in full over HTTP clears the debt → materials reachable again
+        // (EDX-020 — this leg used to fail with a permanent 409 from the payment endpoint).
+        using (var pay = await client.PostAsJsonAsync(
+            $"{TestConstants.PaymentsBasePath}/student-invoices/{invoiceId}/payments",
+            new { amount = 100m, paidOn = today, method = "Cash", reference = (string?)null, proofFileId = (Guid?)null, note = (string?)null }))
+        {
+            pay.StatusCode.ShouldBe(HttpStatusCode.OK, await pay.Content.ReadAsStringAsync());
+        }
         (await GetMaterialsStatusAsync(client, lessonId)).ShouldBe(HttpStatusCode.OK);
     }
 

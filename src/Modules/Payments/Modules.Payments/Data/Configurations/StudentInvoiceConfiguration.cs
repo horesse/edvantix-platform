@@ -12,6 +12,10 @@ public sealed class StudentInvoiceConfiguration : IEntityTypeConfiguration<Stude
         builder.ToTable("StudentInvoices");
         builder.HasKey(x => x.Id);
 
+        // Client-assigned key (Guid.CreateVersion7 in StudentInvoice.Create) — keep EF from treating
+        // a populated key as a store-generated one. See PaymentConfirmationConfiguration / EDX-020.
+        builder.Property(x => x.Id).ValueGeneratedNever();
+
         builder.Property(x => x.Number).IsRequired().HasMaxLength(64);
         builder.Property(x => x.Currency).IsRequired().HasMaxLength(8);
         builder.Property(x => x.Status).IsRequired().HasConversion<string>().HasMaxLength(16);
