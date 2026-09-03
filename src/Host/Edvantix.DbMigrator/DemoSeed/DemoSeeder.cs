@@ -1163,6 +1163,7 @@ internal sealed class DemoSeeder
                 StudyGroupsPermissions.StudyGroups.Update,
                 StudyGroupsPermissions.Enrollments.View,
                 StudyGroupsPermissions.Enrollments.Create,
+                StudyGroupsPermissions.Enrollments.Update,
                 TicketsPermissions.Tickets.View,
                 TicketsPermissions.Tickets.Create,
                 TicketsPermissions.Tickets.Update,

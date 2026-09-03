@@ -74,6 +74,7 @@ const ALL_PERMS = [
   "Permissions.StudyGroups.StudyGroups.Delete",
   "Permissions.StudyGroups.Enrollments.View",
   "Permissions.StudyGroups.Enrollments.Create",
+  "Permissions.StudyGroups.Enrollments.Update",
   "Permissions.StudyGroups.Enrollments.Delete",
   "Permissions.StudyGroups.Enrollments.Transfer",
   "Permissions.Payments.Tariffs.View",
@@ -226,6 +227,75 @@ test.describe("study-groups/:id — enrollments", () => {
     await del;
     await expect(page.getByText("Смирнов Иван").last()).toBeVisible();
     await expect(page.getByText("Ушёл").last()).toBeVisible();
+  });
+
+  test("change-tariff PUTs the picked tariffId + discount via mutate(arg)", async ({
+    page,
+  }) => {
+    await mockJsonResponse(
+      page,
+      `**/api/v1/study-groups/${GID}`,
+      detail({
+        status: "Active",
+        activeEnrollmentCount: 1,
+        enrollments: [enrollment({ discountPercent: 0 })],
+      }),
+    );
+    await mockJsonResponse(
+      page,
+      `**/api/v1/enrollments/${ENR_A}/tariff`,
+      "",
+      { method: "PUT", status: 204 },
+    );
+    await page.goto(`/study-groups/${GID}`);
+    await expect(page.getByText("Смирнов Иван").last()).toBeVisible();
+
+    const put = page.waitForRequest(
+      (r) => r.url().includes(`/enrollments/${ENR_A}/tariff`) && r.method() === "PUT",
+    );
+    await page.getByRole("button", { name: /Сменить тариф Смирнов Иван/ }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel("Тариф").click();
+    await page.getByRole("menuitemradio", { name: /Базовый/ }).click();
+    await dialog.getByLabel("Скидка, %").fill("20");
+    await dialog.getByRole("button", { name: "Сохранить", exact: true }).click();
+
+    const req = await put;
+    expect(JSON.parse(req.postData() ?? "{}")).toMatchObject({
+      tariffId: TARIFF_ID,
+      discountPercent: 20,
+    });
+  });
+
+  test("change-tariff surfaces a 409 from the server", async ({ page }) => {
+    await mockJsonResponse(
+      page,
+      `**/api/v1/study-groups/${GID}`,
+      detail({
+        status: "Active",
+        activeEnrollmentCount: 1,
+        enrollments: [enrollment()],
+      }),
+    );
+    await mockProblemDetails(
+      page,
+      `**/api/v1/enrollments/${ENR_A}/tariff`,
+      409,
+      {
+        title: "Конфликт",
+        detail: "Сменить тариф можно только у действующего зачисления.",
+      },
+    );
+    await page.goto(`/study-groups/${GID}`);
+    await expect(page.getByText("Смирнов Иван").last()).toBeVisible();
+
+    await page.getByRole("button", { name: /Сменить тариф Смирнов Иван/ }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByRole("button", { name: "Сохранить", exact: true }).click();
+
+    await expect(
+      page.getByText("Сменить тариф можно только у действующего зачисления.").last(),
+    ).toBeVisible();
   });
 
   test("transfer posts targetStudyGroupId via mutate(arg)", async ({ page }) => {

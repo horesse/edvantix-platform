@@ -51,6 +51,28 @@ public sealed class GroupEnrollment : BaseEntity<Guid>
         };
     }
 
+    /// <summary>Re-prices a live enrollment — only <see cref="EnrollmentStatus.Active"/>/
+    /// <see cref="EnrollmentStatus.Paused"/> rows can change terms; a departed or completed
+    /// enrollment is history and stays frozen. Past invoices are not the domain's concern here
+    /// (see <see cref="Contracts.v1.Enrollments.ChangeEnrollmentTariffCommand"/>).</summary>
+    internal void ChangeTariff(Guid? tariffId, decimal discountPercent)
+    {
+        if (Status is not (EnrollmentStatus.Active or EnrollmentStatus.Paused))
+        {
+            throw new CustomException(
+                $"Cannot change the tariff of an enrollment in status {Status}.",
+                (IEnumerable<string>?)null,
+                HttpStatusCode.Conflict);
+        }
+        if (discountPercent is < 0 or > 100)
+        {
+            throw new ArgumentOutOfRangeException(nameof(discountPercent), "DiscountPercent must be between 0 and 100.");
+        }
+
+        TariffId = tariffId;
+        DiscountPercent = discountPercent;
+    }
+
     internal void MarkLeft(DateOnly leftOn, string? reason)
     {
         if (Status == EnrollmentStatus.Left)

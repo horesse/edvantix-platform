@@ -121,6 +121,64 @@ public sealed class StudyGroupTests
     }
 
     [Fact]
+    public void ChangeEnrollmentTariff_Should_UpdateTariffAndDiscount_When_Active()
+    {
+        StudyGroup group = CreateValidGroup();
+        var enrollment = group.Enroll(Guid.NewGuid(), new DateOnly(2026, 9, 1), tariffId: Guid.NewGuid(), discountPercent: 5);
+        var newTariffId = Guid.NewGuid();
+
+        group.ChangeEnrollmentTariff(enrollment.Id, newTariffId, discountPercent: 15);
+
+        enrollment.TariffId.ShouldBe(newTariffId);
+        enrollment.DiscountPercent.ShouldBe(15);
+    }
+
+    [Fact]
+    public void ChangeEnrollmentTariff_Should_AllowClearingTariff_When_Paused()
+    {
+        StudyGroup group = CreateValidGroup();
+        var enrollment = group.Enroll(Guid.NewGuid(), new DateOnly(2026, 9, 1), tariffId: Guid.NewGuid(), discountPercent: 0);
+        group.PauseEnrollment(enrollment.Id);
+
+        group.ChangeEnrollmentTariff(enrollment.Id, tariffId: null, discountPercent: 0);
+
+        enrollment.TariffId.ShouldBeNull();
+    }
+
+    [Fact]
+    public void ChangeEnrollmentTariff_Should_Throw_When_EnrollmentLeft()
+    {
+        StudyGroup group = CreateValidGroup();
+        var enrollment = group.Enroll(Guid.NewGuid(), new DateOnly(2026, 9, 1), null, 0);
+        group.Unenroll(enrollment.Id, new DateOnly(2026, 9, 10), "left");
+
+        Should.Throw<CustomException>(() =>
+            group.ChangeEnrollmentTariff(enrollment.Id, Guid.NewGuid(), 0));
+    }
+
+    [Fact]
+    public void ChangeEnrollmentTariff_Should_Throw_When_DiscountOutOfRange()
+    {
+        StudyGroup group = CreateValidGroup();
+        var enrollment = group.Enroll(Guid.NewGuid(), new DateOnly(2026, 9, 1), null, 0);
+
+        Should.Throw<ArgumentOutOfRangeException>(() =>
+            group.ChangeEnrollmentTariff(enrollment.Id, Guid.NewGuid(), discountPercent: 150));
+    }
+
+    [Fact]
+    public void ChangeEnrollmentTariff_Should_Throw_When_GroupFinished()
+    {
+        StudyGroup group = CreateValidGroup();
+        var enrollment = group.Enroll(Guid.NewGuid(), new DateOnly(2026, 9, 1), null, 0);
+        group.Activate();
+        group.Finish(new DateOnly(2026, 12, 1));
+
+        Should.Throw<CustomException>(() =>
+            group.ChangeEnrollmentTariff(enrollment.Id, Guid.NewGuid(), 0));
+    }
+
+    [Fact]
     public void PauseEnrollment_Then_ResumeEnrollment_Should_RoundTrip_To_Active()
     {
         StudyGroup group = CreateValidGroup();

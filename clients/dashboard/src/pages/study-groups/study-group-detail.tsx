@@ -15,6 +15,7 @@ import {
   Plus,
   RefreshCw,
   Rocket,
+  Tag,
   Trash2,
   UserMinus,
   UserPlus,
@@ -28,6 +29,7 @@ import {
   activateStudyGroup,
   addGroupTeacher,
   cancelStudyGroup,
+  changeEnrollmentTariff,
   deleteStudyGroup,
   enrollStudents,
   finishStudyGroup,
@@ -118,6 +120,7 @@ export function StudyGroupBuilderPage() {
   const canDelete = perms.includes("Permissions.StudyGroups.StudyGroups.Delete");
   const canEnrollView = perms.includes("Permissions.StudyGroups.Enrollments.View");
   const canEnrollCreate = perms.includes("Permissions.StudyGroups.Enrollments.Create");
+  const canEnrollUpdate = perms.includes("Permissions.StudyGroups.Enrollments.Update");
   const canEnrollDelete = perms.includes("Permissions.StudyGroups.Enrollments.Delete");
   const canEnrollTransfer = perms.includes("Permissions.StudyGroups.Enrollments.Transfer");
   const canViewTemplates = perms.includes(
@@ -205,6 +208,8 @@ export function StudyGroupBuilderPage() {
   const [addTeacherOpen, setAddTeacherOpen] = useState(false);
   const [enrollOpen, setEnrollOpen] = useState(false);
   const [transferTarget, setTransferTarget] = useState<GroupEnrollmentDto | null>(null);
+  const [changeTariffTarget, setChangeTariffTarget] =
+    useState<GroupEnrollmentDto | null>(null);
   const [unenrollTarget, setUnenrollTarget] = useState<GroupEnrollmentDto | null>(null);
   const [lifecycleError, setLifecycleError] = useState<string | null>(null);
 
@@ -469,10 +474,12 @@ export function StudyGroupBuilderPage() {
                       studentName={studentName}
                       tariffName={tariffName}
                       canCreate={canEnrollCreate}
+                      canUpdate={canEnrollUpdate}
                       canDelete={canEnrollDelete}
                       canTransfer={canEnrollTransfer}
                       onEnroll={() => setEnrollOpen(true)}
                       onTransfer={setTransferTarget}
+                      onChangeTariff={setChangeTariffTarget}
                       onUnenroll={setUnenrollTarget}
                       onChanged={invalidateGroup}
                     />
@@ -548,6 +555,20 @@ export function StudyGroupBuilderPage() {
                     enrollment={transferTarget}
                     currentGroupId={group.id}
                     onClose={() => setTransferTarget(null)}
+                    onDone={invalidateGroup}
+                  />
+                )}
+
+                {changeTariffTarget && (
+                  <ChangeTariffDialog
+                    enrollment={changeTariffTarget}
+                    tariffOptions={tariffOptions}
+                    canPickTariff={canViewTariffs}
+                    studentName={
+                      studentName.get(changeTariffTarget.studentId) ??
+                      short(changeTariffTarget.studentId)
+                    }
+                    onClose={() => setChangeTariffTarget(null)}
                     onDone={invalidateGroup}
                   />
                 )}
@@ -793,10 +814,12 @@ function EnrollmentsSection({
   studentName,
   tariffName,
   canCreate,
+  canUpdate,
   canDelete,
   canTransfer,
   onEnroll,
   onTransfer,
+  onChangeTariff,
   onUnenroll,
   onChanged,
 }: {
@@ -805,10 +828,12 @@ function EnrollmentsSection({
   studentName: Map<string, string>;
   tariffName: Map<string, string>;
   canCreate: boolean;
+  canUpdate: boolean;
   canDelete: boolean;
   canTransfer: boolean;
   onEnroll: () => void;
   onTransfer: (e: GroupEnrollmentDto) => void;
+  onChangeTariff: (e: GroupEnrollmentDto) => void;
   onUnenroll: (e: GroupEnrollmentDto) => void;
   onChanged: () => void;
 }) {
@@ -938,6 +963,14 @@ function EnrollmentsSection({
                         disabled={resumeMutation.isPending}
                       >
                         <Play className="size-3.5" />
+                      </IconAction>
+                    )}
+                    {canUpdate && (
+                      <IconAction
+                        label={`Сменить тариф ${name}`}
+                        onClick={() => onChangeTariff(e)}
+                      >
+                        <Tag className="size-3.5" />
                       </IconAction>
                     )}
                     {canTransfer && (
@@ -1400,6 +1433,127 @@ function TransferDialog({
             >
               <ArrowLeftRight className="h-4 w-4" />
               {mutation.isPending ? "Перевод…" : "Перевести"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ───────────────────────────────────────────────────────────────────────
+//  Change-tariff dialog — re-prices a live enrollment in place (EDX-007)
+// ───────────────────────────────────────────────────────────────────────
+
+function ChangeTariffDialog({
+  enrollment,
+  tariffOptions,
+  canPickTariff,
+  studentName,
+  onClose,
+  onDone,
+}: {
+  enrollment: GroupEnrollmentDto;
+  tariffOptions: ComboboxOption[];
+  canPickTariff: boolean;
+  studentName: string;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [tariffId, setTariffId] = useState<string | null>(enrollment.tariffId ?? null);
+  const [discount, setDiscount] = useState(String(enrollment.discountPercent));
+  const [error, setError] = useState<string | null>(null);
+
+  const mutation = useMutation({
+    mutationFn: (vars: { tariffId: string | null; discountPercent: number }) =>
+      changeEnrollmentTariff({ enrollmentId: enrollment.id, ...vars }),
+    onSuccess: () => {
+      toast.success("Тариф зачисления обновлён");
+      onDone();
+      onClose();
+    },
+    onError: (err) => {
+      const msg =
+        err instanceof ApiRequestError && err.status === 409
+          ? err.problem?.detail ??
+            "Сменить тариф можно только у действующего зачисления."
+          : describe(err);
+      setError(msg);
+      toast.error("Не удалось сменить тариф", { description: msg });
+    },
+  });
+
+  const pct = Number.parseFloat(discount);
+  const validPct = !Number.isNaN(pct) && pct >= 0 && pct <= 100;
+
+  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError(null);
+    if (!validPct) return;
+    mutation.mutate({ tariffId, discountPercent: pct });
+  };
+
+  return (
+    <Dialog open onOpenChange={(o) => (!o ? onClose() : undefined)}>
+      <DialogContent className="!max-w-md">
+        <form onSubmit={onSubmit}>
+          <DialogHeader>
+            <DialogTitle>Сменить тариф</DialogTitle>
+            <DialogDescription>
+              {studentName}: новые условия применятся со следующей массовой
+              генерации счетов. Уже выставленные счета не меняются.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogBody className="space-y-4">
+            {canPickTariff && (
+              <Field
+                id="ct-tariff"
+                label="Тариф"
+                hint="Если не выбрать — при массовой генерации счетов берётся тариф курса."
+              >
+                <Combobox
+                  id="ct-tariff"
+                  label="Тариф"
+                  value={tariffId}
+                  onChange={setTariffId}
+                  options={tariffOptions}
+                  placeholder={
+                    tariffOptions.length === 0
+                      ? "Нет активных тарифов"
+                      : "Тариф курса по умолчанию"
+                  }
+                  searchable
+                  clearable
+                />
+              </Field>
+            )}
+            <Field id="ct-discount" label="Скидка, %">
+              <Input
+                id="ct-discount"
+                type="number"
+                min="0"
+                max="100"
+                step="0.5"
+                value={discount}
+                onChange={(e) => setDiscount(e.target.value)}
+                className="tabular-nums"
+              />
+            </Field>
+            {error && <ErrorBand message={error} />}
+          </DialogBody>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline" disabled={mutation.isPending}>
+                Отмена
+              </Button>
+            </DialogClose>
+            <Button
+              type="submit"
+              disabled={mutation.isPending || !validPct}
+              className="gap-1.5"
+            >
+              <Tag className="h-4 w-4" />
+              {mutation.isPending ? "Сохранение…" : "Сохранить"}
             </Button>
           </DialogFooter>
         </form>

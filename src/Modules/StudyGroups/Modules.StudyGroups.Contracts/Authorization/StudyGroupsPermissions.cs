@@ -20,6 +20,7 @@ public static class StudyGroupsPermissions
         public const string Resource = "StudyGroups.Enrollments";
         public const string View     = $"Permissions.{Resource}.View";
         public const string Create   = $"Permissions.{Resource}.Create";
+        public const string Update   = $"Permissions.{Resource}.Update";
         public const string Delete   = $"Permissions.{Resource}.Delete";
         public const string Transfer = $"Permissions.{Resource}.Transfer";
     }
@@ -35,6 +36,7 @@ public static class StudyGroupsPermissions
 
         new("View Enrollments",     ActionConstants.View,   Enrollments.Resource, IsBasic: true),
         new("Create Enrollments",   ActionConstants.Create, Enrollments.Resource),
+        new("Update Enrollments",   ActionConstants.Update, Enrollments.Resource),
         new("Delete Enrollments",   ActionConstants.Delete, Enrollments.Resource),
         new("Transfer Enrollments", "Transfer",               Enrollments.Resource),
     ];

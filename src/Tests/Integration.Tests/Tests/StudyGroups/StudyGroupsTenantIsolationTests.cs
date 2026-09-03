@@ -63,7 +63,69 @@ public sealed class StudyGroupsTenantIsolationTests
             "tenant B's study group list must not include tenant A's study group");
     }
 
+    [Fact]
+    public async Task ChangeEnrollmentTariff_Should_Return404_When_EnrollmentOwnedByDifferentTenant()
+    {
+        using var rootClient = await _auth.CreateRootAdminClientAsync();
+        var uniqueId = Guid.NewGuid().ToString("N")[..8];
+        using var otherClient = await ProvisionTenantClientAsync(rootClient, $"sg-tariff-{uniqueId}");
+
+        var teacherId = await CreateTeacherAsync(rootClient);
+        var courseId = await CreatePublishedCourseAsync(rootClient);
+        var groupId = await CreateStudyGroupAsync(rootClient, courseId, teacherId);
+        var studentId = await CreateStudentAsync(rootClient);
+        var enrollmentId = await EnrollStudentAsync(rootClient, groupId, studentId);
+
+        var body = new { tariffId = (Guid?)null, discountPercent = 10m };
+
+        using var crossPut = await otherClient.PutAsJsonAsync(
+            $"{TestConstants.StudyGroupsBasePath}/enrollments/{enrollmentId}/tariff", body);
+        crossPut.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+
+        using var ownPut = await rootClient.PutAsJsonAsync(
+            $"{TestConstants.StudyGroupsBasePath}/enrollments/{enrollmentId}/tariff", body);
+        ownPut.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+    }
+
     // ─── helpers ─────────────────────────────────────────────────────
+
+    private static async Task<Guid> CreateStudentAsync(HttpClient client)
+    {
+        var uniqueId = Guid.NewGuid().ToString("N")[..8];
+        using var response = await client.PostAsJsonAsync(
+            $"{TestConstants.PeopleBasePath}/students",
+            new
+            {
+                lastName = $"Student-{uniqueId}",
+                firstName = "Test",
+                middleName = (string?)null,
+                birthDate = new DateOnly(2012, 6, 15),
+                phone = "+10000000003",
+                email = $"student-{uniqueId}@example.com",
+                managerUserId = Guid.NewGuid().ToString(),
+                source = (string?)null,
+            });
+        response.StatusCode.ShouldBe(HttpStatusCode.OK,
+            $"setup failed to create student: {await response.Content.ReadAsStringAsync()}");
+        return await response.DeserializeAsync<Guid>();
+    }
+
+    private static async Task<Guid> EnrollStudentAsync(HttpClient client, Guid studyGroupId, Guid studentId)
+    {
+        using var response = await client.PostAsJsonAsync(
+            $"{TestConstants.StudyGroupsBasePath}/study-groups/{studyGroupId}/enrollments",
+            new
+            {
+                studentIds = new[] { studentId },
+                enrolledOn = (DateOnly?)null,
+                tariffId = (Guid?)null,
+                discountPercent = 0m,
+            });
+        response.StatusCode.ShouldBe(HttpStatusCode.OK,
+            $"setup failed to enroll student: {await response.Content.ReadAsStringAsync()}");
+        var ids = await response.DeserializeAsync<List<Guid>>();
+        return ids.ShouldHaveSingleItem();
+    }
 
     private static async Task<Guid> CreatePublishedCourseAsync(HttpClient client)
     {
