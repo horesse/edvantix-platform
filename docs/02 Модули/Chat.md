@@ -54,14 +54,17 @@ tags: [модуль, каркас, chat]
 
 ### Запросы
 
-`ListMyChannelsQuery` · `DiscoverChannelsQuery` · `GetChannelByIdQuery` ·
+`ListMyChannelsQuery` (фильтр `Kind`: `study-group` — только каналы учебных групп,
+`standalone` — только остальные) · `DiscoverChannelsQuery` · `GetChannelByIdQuery` ·
 `ListChannelMessagesQuery` · `ListMessageRepliesQuery` · `GetPinnedMessagesQuery` ·
 `SearchMessagesQuery`
 
 ### DTO
 
-`ChannelDto` · `ChannelType` · `ChannelMemberDto` · `ChannelMemberRole` ·
-`MessageDto` · `MessageAttachmentDto` · `MessageReactionDto`
+`ChannelDto` (`SourceStudyGroupId` — nullable id учебной группы, если канал её обслуживает;
+позволяет SPA отличать каналы групп и делать deep-link) · `ChannelType` ·
+`ChannelMemberDto` · `ChannelMemberRole` · `MessageDto` · `MessageAttachmentDto` ·
+`MessageReactionDto`
 
 ### Публикуемые события
 
@@ -91,7 +94,7 @@ SignalR-хаб: новые сообщения, редактирование, р�
 ## HTTP API
 
 ```
-GET    /api/v1/chat/channels/my
+GET    /api/v1/chat/channels/my            ?kind=study-group|standalone — фильтр по типу канала
 GET    /api/v1/chat/channels/discover
 POST   /api/v1/chat/channels
 GET    /api/v1/chat/channels/{id}
@@ -128,7 +131,11 @@ GET    /api/v1/chat/search
 | `StudyGroupFinished` | `channel.Lock()` — история остаётся, `SendMessage` в заблокированный канал отдаёт `409` |
 
 Канал ищется по `SourceStudyGroupId` (частичный индекс) — прямой ссылки
-StudyGroups → Chat в рантайме нет.
+StudyGroups → Chat в рантайме нет. Тот же признак вынесен в `ChannelDto` и в фильтр
+`GET /channels/my?kind=study-group`, чтобы SPA показывала каналы групп отдельным разделом
+([[EDX-011 Раздел каналов учебных групп в чате]]). Миграция `StudyGroupChannelBackfill`
+(EDX-010) — разовый бэкофилл `SourceStudyGroupId` по `StudyGroup.ChatChannelId` для каналов,
+созданных до появления признака (защищён `to_regclass`, no-op без модуля StudyGroups).
 
 ### Ограничение личных сообщений
 
