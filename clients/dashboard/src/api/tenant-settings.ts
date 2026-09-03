@@ -20,7 +20,15 @@ export type TenantSettingsDto = {
   restrictMaterialsOnDebt: boolean;
   /** Grace period in days past an invoice's due date before materials are blocked. */
   debtGraceDays: number;
+  /** EDX-013/EDX-014 — template for `StudentInvoice.Number`. Placeholders
+   *  `{YYYY}`/`{YY}` (year), `{MM}` (month), `{N…}` (zero-padded running counter).
+   *  A year placeholder resets the counter each calendar year. Default `{YYYY}-{NNNN}`. */
+  invoiceNumberTemplate: string;
 };
+
+/** Backend default (`TenantSettings.DefaultInvoiceNumberTemplate`) — used when an
+ *  older server response omits the field. */
+export const DEFAULT_INVOICE_NUMBER_TEMPLATE = "{YYYY}-{NNNN}";
 
 export function getTenantSettings(): Promise<TenantSettingsDto> {
   return apiFetch<TenantSettingsDto>("/api/v1/tenants/settings");
@@ -34,6 +42,7 @@ export function updateTenantSettings(input: TenantSettingsDto): Promise<void> {
       currency: input.currency.toUpperCase(),
       restrictMaterialsOnDebt: input.restrictMaterialsOnDebt,
       debtGraceDays: input.debtGraceDays,
+      invoiceNumberTemplate: input.invoiceNumberTemplate.trim(),
     }),
   });
 }
