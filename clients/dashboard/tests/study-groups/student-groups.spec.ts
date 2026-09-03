@@ -67,6 +67,7 @@ function enr(id: string, groupId: string, status: string, over: Record<string, u
 const PERMS = [
   "Permissions.People.Students.View",
   "Permissions.StudyGroups.Enrollments.View",
+  "Permissions.Scheduling.Sessions.View",
 ];
 
 test.describe("people/students/:id — Группы tab", () => {
@@ -80,6 +81,12 @@ test.describe("people/students/:id — Группы tab", () => {
       sg(G1, "ENG-A1", "Английский A1"),
       sg(G2, "ENG-A0", "Английский A0", "Finished"),
     ]));
+    await mockJsonResponse(page, `**/api/v1/study-groups/${G1}/course-progress`, {
+      studyGroupId: G1,
+      courseId: "c1",
+      passedLessons: 4,
+      totalLessons: 8,
+    });
   });
 
   test("lists all groups including finished/left, linking to the group card", async ({
@@ -99,6 +106,9 @@ test.describe("people/students/:id — Группы tab", () => {
     await expect(
       page.getByRole("link", { name: /Английский A1/ }),
     ).toHaveAttribute("href", `/study-groups/${G1}`);
+
+    // EDX-019: course-program progress line on the active enrollment row.
+    await expect(page.getByText("программа: 4 из 8 уроков")).toBeVisible();
   });
 
   test("empty state when the student has no enrollments", async ({ page }) => {

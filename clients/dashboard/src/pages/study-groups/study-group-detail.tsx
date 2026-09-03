@@ -53,6 +53,7 @@ import { searchCourses } from "@/api/curriculum";
 import { searchStudents, searchTeachers } from "@/api/people";
 import {
   getGroupAttendanceReport,
+  getGroupCourseProgress,
   type StudentAttendanceSummaryDto,
 } from "@/api/scheduling";
 import { getTariffs } from "@/api/payments";
@@ -127,6 +128,7 @@ export function StudyGroupBuilderPage() {
     "Permissions.Scheduling.ScheduleTemplates.View",
   );
   const canViewAttendance = perms.includes("Permissions.Scheduling.Attendance.View");
+  const canViewSessions = perms.includes("Permissions.Scheduling.Sessions.View");
   const canViewChat = perms.includes("Permissions.Chat.Channels.View");
   const canViewTariffs = perms.includes("Permissions.Payments.Tariffs.View");
 
@@ -457,6 +459,10 @@ export function StudyGroupBuilderPage() {
                 )}
 
                 <div className="mt-4 space-y-4">
+                  {canViewSessions && (
+                    <CourseProgressSection studyGroupId={group.id} />
+                  )}
+
                   <TeachersSection
                     group={group}
                     teacherName={teacherName}
@@ -1835,6 +1841,68 @@ function StudyGroupEditDialog({
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// ───────────────────────────────────────────────────────────────────────
+//  Course-program progress — "Пройдено N из M уроков", via
+//  GET /study-groups/{id}/course-progress (Scheduling, Sessions.View).
+//  Counted on the fly from held sessions carrying a program lesson — EDX-019.
+// ───────────────────────────────────────────────────────────────────────
+
+function CourseProgressSection({ studyGroupId }: { studyGroupId: string }) {
+  const query = useQuery({
+    queryKey: ["group-course-progress", studyGroupId],
+    queryFn: () => getGroupCourseProgress(studyGroupId),
+  });
+
+  const data = query.data;
+  const pct =
+    data && data.totalLessons > 0
+      ? Math.round((data.passedLessons / data.totalLessons) * 100)
+      : 0;
+
+  return (
+    <EntityDetailSection
+      title="Прогресс по программе"
+      icon={BookOpen}
+      description="Пройденные уроки курса — по проведённым занятиям."
+    >
+      {query.isLoading ? (
+        <p className="text-[13px] text-[var(--color-muted-foreground)]">Загрузка…</p>
+      ) : query.isError ? (
+        <p className="text-[13px] text-[var(--color-destructive)]">
+          {describe(query.error)}
+        </p>
+      ) : !data || data.totalLessons === 0 ? (
+        <p className="text-[13px] text-[var(--color-muted-foreground)]">
+          В курсе группы пока нет уроков.
+        </p>
+      ) : (
+        <div className="space-y-2">
+          <div className="flex items-baseline justify-between text-[13px]">
+            <span className="font-medium text-[var(--color-foreground)]">
+              Пройдено {data.passedLessons} из {data.totalLessons} уроков
+            </span>
+            <span className="tabular-nums text-[var(--color-muted-foreground)]">
+              {pct}%
+            </span>
+          </div>
+          <div
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={data.totalLessons}
+            aria-valuenow={data.passedLessons}
+            className="h-2 overflow-hidden rounded-full bg-[var(--color-muted)]"
+          >
+            <div
+              className="h-full rounded-full bg-[var(--color-primary)] transition-[width]"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+        </div>
+      )}
+    </EntityDetailSection>
   );
 }
 

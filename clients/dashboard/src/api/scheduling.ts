@@ -214,6 +214,17 @@ export type TeacherWorkloadDto = {
   totalHours: number;
 };
 
+/** "Прошли N из M уроков" — a study group's progress through its course
+ *  program. `totalLessons` is Curriculum's (lessons of the group's course),
+ *  `passedLessons` is the count of distinct held-session lessons. Computed on
+ *  the fly server-side (Scheduling), no stored projection. */
+export type CourseProgressDto = {
+  studyGroupId: string;
+  courseId: string;
+  passedLessons: number;
+  totalLessons: number;
+};
+
 // ─── Calendar & sessions ──────────────────────────────────────────────
 
 const SESSIONS = "/api/v1/sessions";
@@ -406,6 +417,19 @@ export function getTeacherWorkload(
   const qs = q.toString();
   return apiFetch<TeacherWorkloadDto>(
     `/api/v1/teachers/${encodeURIComponent(teacherId)}/workload${qs ? `?${qs}` : ""}`,
+  );
+}
+
+// ─── Course-program progress ──────────────────────────────────────────
+
+/** `GET /study-groups/{id}/course-progress` — cross-module route mapped by
+ *  Scheduling under StudyGroups' resource name. Gated by
+ *  `Scheduling.Sessions.View`. 404 if the group does not exist. */
+export function getGroupCourseProgress(
+  studyGroupId: string,
+): Promise<CourseProgressDto> {
+  return apiFetch<CourseProgressDto>(
+    `/api/v1/study-groups/${encodeURIComponent(studyGroupId)}/course-progress`,
   );
 }
 
