@@ -71,6 +71,15 @@ Enrollments — не EF `OwnsMany`). `Status` **никогда не задаёт
 - **`PaymentProofAccessPolicy`** — `IFileAccessPolicy` для `OwnerType = "PaymentProof"`, `OwnerId` =
   `InvoiceId` (по образцу Curriculum's `LessonMaterialAccessPolicy`, которая ключуется на урок, а не на
   отдельный файл). Чтение открыто — гейт на уровне эндпоинта (`StudentPayments.View`), не в политике.
+- **Все ключи графа счёта — `ValueGeneratedNever()` (EDX-020).** `Tariff`/`StudentInvoice`/
+  `InvoiceLine`/`PaymentConfirmation` сами присваивают `Id = Guid.CreateVersion7()`. Если оставить
+  ключ store-generated (дефолт EF для Guid PK), то при `DetectChanges` новый дочерний объект,
+  добавленный через уже отслеживаемый агрегат (`invoice.ConfirmPayment` / `ReversePayment` /
+  `ReplaceLines`), классифицируется как *существующий* (`Modified`) — EF шлёт `UPDATE … WHERE Id=@id`,
+  он задевает 0 строк, летит `DbUpdateConcurrencyException`, и `InvoiceWrite.WithConcurrencyRetryAsync`
+  исчерпывает 3 попытки → детерминированный `409` на каждой оплате с фронта. Никакой внешний писатель
+  (джоба/аутбокс/интерсептор) в этом не участвует — миф про «тугой цикл» из тела задачи EDX-020 неверен.
+  Мигр. `20260903183523_PaymentsClientAssignedKeys` — без DDL, только снапшот.
 - **Остаток пакета (`PerPackage`) — проекция в `GetStudentBalanceQueryHandler`, не ledger.**
   `StudentBalanceDto.Packages` (`PackageBalanceDto[]`) считается живьём через тот же
   `IAttendanceQueryService.CountHeldSessionsAsync`, которым уже пользуется `PerLesson`-начисление

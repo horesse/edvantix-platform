@@ -12,6 +12,13 @@ public sealed class PaymentConfirmationConfiguration : IEntityTypeConfiguration<
         builder.ToTable("PaymentConfirmations");
         builder.HasKey(x => x.Id);
 
+        // Domain assigns the key (Guid.CreateVersion7 in PaymentConfirmation.Create). Without this,
+        // EF treats the property as store-generated and — when a new payment is discovered through
+        // the already-tracked StudentInvoice aggregate's Payments collection during DetectChanges —
+        // classifies the populated key as an *existing* row (Modified), emitting an UPDATE that
+        // affects 0 rows and throws DbUpdateConcurrencyException (EDX-020).
+        builder.Property(x => x.Id).ValueGeneratedNever();
+
         builder.Property(x => x.Amount).HasPrecision(18, 2);
         builder.Property(x => x.Method).IsRequired().HasConversion<string>().HasMaxLength(16);
         builder.Property(x => x.Reference).HasMaxLength(128);

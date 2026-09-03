@@ -2,14 +2,14 @@
 key: EDX-020
 aliases: [EDX-020]
 tags: [задача, backend, tests]
-status: open
+status: done
 area: backend
 priority: p3
 blocked-by: []
 blocks: []
 related: ["[[EDX-015 Автоблокировка доступа при задолженности]]"]
 created: 2026-09-03
-closed:
+closed: 2026-09-03
 ---
 
 # EDX-020 · Гонка записи по счёту мешает e2e-тесту «оплата → доступ вернулся»
@@ -46,16 +46,38 @@ try again.» — `InvoiceWrite.WithConcurrencyRetryAsync`
 
 ## Что сделать
 
-- [ ] Воспроизвести локально: `GET /student-invoices/{id}` в цикле сразу после `issue` —
-      меняется ли `updatedAtUtc` / версия строки без внешних действий.
-- [ ] Найти, что пишет `StudentInvoice` в окне между чтением и `SaveChanges` хендлера
-      оплаты (задание, обработчик события, интерсептор).
-- [ ] Устранить лишнюю запись **или** добавить `StudentInvoice` настоящий
-      concurrency-токен (`xmin` в Npgsql / `rowversion`), чтобы reload-and-retry сходился
-      детерминированно; проверить, что коммит #29 (нет 500 при гонке) не регрессирует.
-- [ ] В `Integration.Tests/Tests/Curriculum/LessonMaterialsDebtBlockTests` заменить
-      обход (разблок флагом) на реальный сценарий: блок 403 → полная оплата счёта →
-      материалы снова 200.
+- [x] Воспроизвести локально — `Integration.Tests/Tests/Payments/ConfirmPaymentRaceTests`:
+      `POST /student-invoices/{id}/payments` сразу после `issue` отдаёт `409` **детерминированно**,
+      с первого раза, без всякого внешнего писателя.
+- [x] Найти причину. Это **не гонка** и не «тугой цикл» — гипотеза из контекста ниже неверна.
+      `StudentInvoice`/`InvoiceLine`/`PaymentConfirmation`/`Tariff` сами присваивают
+      `Id = Guid.CreateVersion7()`, но в EF-конфигурации ключ оставался store-generated
+      (дефолт для Guid PK). При `DetectChanges` новый `PaymentConfirmation`, добавленный через
+      **уже отслеживаемый** агрегат `invoice` (`invoice.ConfirmPayment(...)` → `_payments.Add`),
+      классифицировался как *существующая* строка (`Modified`, не `Added`) → EF генерил
+      `UPDATE "PaymentConfirmations" … WHERE "Id" = @id`, он задевал 0 строк →
+      `DbUpdateConcurrencyException` → `InvoiceWrite.WithConcurrencyRetryAsync` жёг все 3 попытки
+      (каждая перезагрузка повторяла ту же ошибочную классификацию) → `409`. То же касалось
+      `ReversePayment` и `ReplaceLines` (новые `InvoiceLine`).
+- [x] Устранить. `.Property(x => x.Id).ValueGeneratedNever()` на всех четырёх сущностях графа
+      счёта (`StudentInvoiceConfiguration`, `InvoiceLineConfiguration`,
+      `PaymentConfirmationConfiguration`, `TariffConfiguration`). Миграция
+      `20260903171258…` → `20260903183523_PaymentsClientAssignedKeys` — **без DDL** (колонки
+      Guid PK и так без database default), меняется только снапшот модели.
+      Row-version на `StudentInvoice` не добавлялся: реальной гонки нет, а `WithConcurrencyRetryAsync`
+      остаётся как страховка от настоящих гонок (второй платёж, `DraftInvoiceRefreshService`) —
+      коммит #29 не регрессирует.
+- [x] `Integration.Tests/Tests/Curriculum/LessonMaterialsDebtBlockTests` —
+      финальный шаг заменён: блок `403` → **полная оплата счёта по HTTP** → материалы снова `200`
+      (вместо снятия флага тенанта).
+
+## Итог
+
+- Правка чисто в EF-маппинге Payments (4 конфигурации + пустая миграция-снапшот). Домен,
+  хендлеры, контракты, HTTP API — без изменений.
+- Тесты: `Payments.Tests` 74/74; `Integration.Tests` — `ConfirmPaymentRaceTests` (оплата +
+  сторно по HTTP, с первого раза), `LessonMaterialsDebtBlockTests` (реальная оплата),
+  `Payments`/`Billing` счётные сценарии, `Architecture.Tests` 51/51 — зелёные.
 
 ## Зависимости
 

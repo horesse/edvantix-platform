@@ -176,6 +176,12 @@ erDiagram
 - Валюта одна на тенант (`TenantSettings.Currency`).
 - Деньги — `decimal(18,2)` / `numeric(18,2)`, никогда `double`. Округление
   `MidpointRounding.AwayFromZero`.
+- Ключи `Tariff`/`StudentInvoice`/`InvoiceLine`/`PaymentConfirmation` задаёт домен
+  (`Guid.CreateVersion7`), поэтому в EF они `ValueGeneratedNever()`. Без этого EF считал
+  строку с уже проставленным ключом, добавленную через отслеживаемый агрегат
+  (`ConfirmPayment`/`ReversePayment`/`ReplaceLines`), *существующей* → `UPDATE` на 0 строк →
+  вечный `409` из `InvoiceWrite.WithConcurrencyRetryAsync` (EDX-020). Строку счёта при этом
+  никто не переписывал — гонки не было.
 
 ### Модель начисления
 
