@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import FullCalendar from "@fullcalendar/react";
 import type {
@@ -59,8 +59,12 @@ export function ScheduleCalendarPage() {
   const [view, setView] = useState<CalView>("timeGridWeek");
   const [title, setTitle] = useState("");
   const [range, setRange] = useState<{ from: string; to: string } | null>(null);
+  const [searchParams] = useSearchParams();
   const [studyGroupId, setStudyGroupId] = useState<string | null>(null);
-  const [teacherId, setTeacherId] = useState<string | null>(null);
+  // Deep-linkable from the teacher card ("Расписание преподавателя").
+  const [teacherId, setTeacherId] = useState<string | null>(
+    () => searchParams.get("teacherId"),
+  );
   const [roomId, setRoomId] = useState<string | null>(null);
   const [pending, setPending] = useState<PendingReschedule | null>(null);
 

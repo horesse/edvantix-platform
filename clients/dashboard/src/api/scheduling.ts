@@ -202,6 +202,18 @@ export type AttendanceReportDto = {
   students: StudentAttendanceSummaryDto[];
 };
 
+/** A teacher's group/session workload for a period — shown on the teacher
+ *  profile card. Computed in Scheduling (not People): needs StudyGroups +
+ *  Session rows. `from`/`to` are `yyyy-MM-dd`. */
+export type TeacherWorkloadDto = {
+  teacherId: string;
+  from: string;
+  to: string;
+  activeGroupsCount: number;
+  sessionsCount: number;
+  totalHours: number;
+};
+
 // ─── Calendar & sessions ──────────────────────────────────────────────
 
 const SESSIONS = "/api/v1/sessions";
@@ -376,6 +388,24 @@ export function getGroupAttendanceReport(
   const q = new URLSearchParams({ from, to });
   return apiFetch<AttendanceReportDto>(
     `/api/v1/study-groups/${encodeURIComponent(studyGroupId)}/attendance-report?${q.toString()}`,
+  );
+}
+
+// ─── Teacher workload ─────────────────────────────────────────────────
+
+/** `GET /teachers/{id}/workload` — cross-module route mapped by Scheduling
+ *  under People's resource name. Gated by `Scheduling.Sessions.View`. Omit
+ *  `to` and the server defaults to a 7-day window ahead of `from`. */
+export function getTeacherWorkload(
+  teacherId: string,
+  params: { from?: string | null; to?: string | null } = {},
+): Promise<TeacherWorkloadDto> {
+  const q = new URLSearchParams();
+  if (params.from) q.set("from", params.from);
+  if (params.to) q.set("to", params.to);
+  const qs = q.toString();
+  return apiFetch<TeacherWorkloadDto>(
+    `/api/v1/teachers/${encodeURIComponent(teacherId)}/workload${qs ? `?${qs}` : ""}`,
   );
 }
 

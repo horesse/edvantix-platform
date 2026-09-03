@@ -1,9 +1,13 @@
-import { useEffect, useState, type FormEvent } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   BadgeCheck,
   Ban,
+  CalendarClock,
+  CalendarDays,
+  ChevronRight,
+  Clock,
   Link2,
   Link2Off,
   Mail,
@@ -11,6 +15,7 @@ import {
   Phone,
   Trash2,
   Users,
+  UsersRound,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -25,6 +30,12 @@ import {
   type TeacherStatus,
   type UpdateTeacherInput,
 } from "@/api/people";
+import { getTeacherWorkload } from "@/api/scheduling";
+import { searchStudyGroups } from "@/api/study-groups";
+import {
+  STATUS_LABEL as GROUP_STATUS_LABEL,
+  STATUS_TONE as GROUP_STATUS_TONE,
+} from "@/pages/study-groups/study-groups-ui";
 import { useAuth } from "@/auth/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,7 +60,7 @@ import {
   Field,
   type EntityStatusTone,
 } from "@/components/list";
-import { describe } from "@/lib/list-helpers";
+import { describe, formatDate, pad2 } from "@/lib/list-helpers";
 import { ConfirmDeleteDialog, LinkUserDialog } from "./student-detail";
 
 const STATUS_TONE: Record<TeacherStatus, EntityStatusTone> = {
@@ -68,6 +79,7 @@ export function TeacherDetailPage() {
   const perms = useAuth().user?.permissions ?? [];
   const canUpdate = perms.includes("Permissions.People.Teachers.Update");
   const canDelete = perms.includes("Permissions.People.Teachers.Delete");
+  const canViewSchedule = perms.includes("Permissions.Scheduling.Sessions.View");
 
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -249,12 +261,9 @@ export function TeacherDetailPage() {
           )}
         </EntityDetailSection>
 
-        <EntityDetailSection title="Нагрузка" icon={Users}>
-          <p className="text-[13px] text-[var(--color-muted-foreground)]">
-            Блок нагрузки появится после подключения модулей StudyGroups и Scheduling
-            (эндпоинт <code>GET /teachers/&#123;id&#125;/workload</code>).
-          </p>
-        </EntityDetailSection>
+        <TeacherWorkloadSection teacherId={teacher.id} canView={canViewSchedule} />
+
+        <TeacherGroupsSection teacherId={teacher.id} />
       </div>
 
       <EditTeacherDialog open={editOpen} onClose={() => setEditOpen(false)} teacher={teacher} onSaved={invalidate} />
@@ -276,6 +285,160 @@ export function TeacherDetailPage() {
         }}
       />
     </div>
+  );
+}
+
+// ───────────────────────────────────────────────────────────────────────
+//  Нагрузка — GET /teachers/{id}/workload (Scheduling, Sessions.View).
+//  Active groups / sessions / hours over a 7 / 14 / 30-day window ahead.
+// ───────────────────────────────────────────────────────────────────────
+
+const WORKLOAD_WINDOWS = [7, 14, 30] as const;
+type WorkloadWindow = (typeof WORKLOAD_WINDOWS)[number];
+
+function isoDate(d: Date): string {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+function formatHours(hours: number): string {
+  return Number.isInteger(hours) ? String(hours) : hours.toFixed(1).replace(".", ",");
+}
+
+function TeacherWorkloadSection({ teacherId, canView }: { teacherId: string; canView: boolean }) {
+  const [windowDays, setWindowDays] = useState<WorkloadWindow>(7);
+
+  const { from, to } = useMemo(() => {
+    const start = new Date();
+    const end = new Date();
+    end.setDate(end.getDate() + windowDays);
+    return { from: isoDate(start), to: isoDate(end) };
+  }, [windowDays]);
+
+  const query = useQuery({
+    queryKey: ["teacher-workload", teacherId, { from, to }],
+    queryFn: () => getTeacherWorkload(teacherId, { from, to }),
+    enabled: canView,
+  });
+
+  if (!canView) {
+    return (
+      <EntityDetailSection title="Нагрузка" icon={CalendarClock}>
+        <p className="text-[13px] text-[var(--color-muted-foreground)]">
+          Недостаточно прав для просмотра нагрузки преподавателя.
+        </p>
+      </EntityDetailSection>
+    );
+  }
+
+  return (
+    <EntityDetailSection
+      title="Нагрузка"
+      icon={CalendarClock}
+      description={`Активные группы, занятия и часы с ${formatDate(from)} по ${formatDate(to)}.`}
+      action={
+        <div className="flex gap-1">
+          {WORKLOAD_WINDOWS.map((d) => (
+            <Button
+              key={d}
+              variant={d === windowDays ? "default" : "outline"}
+              size="sm"
+              onClick={() => setWindowDays(d)}
+            >
+              {d} дн.
+            </Button>
+          ))}
+        </div>
+      }
+    >
+      {query.isLoading ? (
+        <p className="text-[13px] text-[var(--color-muted-foreground)]">Загрузка…</p>
+      ) : query.isError ? (
+        <p className="text-[13px] text-[var(--color-destructive)]">{describe(query.error)}</p>
+      ) : query.data ? (
+        <div className="flex flex-wrap gap-2">
+          <EntityDetailStat
+            icon={UsersRound}
+            value={query.data.activeGroupsCount}
+            label="активных групп"
+            tone="primary"
+          />
+          <EntityDetailStat
+            icon={CalendarDays}
+            value={query.data.sessionsCount}
+            label="занятий за период"
+          />
+          <EntityDetailStat icon={Clock} value={formatHours(query.data.totalHours)} label="часов" />
+        </div>
+      ) : null}
+    </EntityDetailSection>
+  );
+}
+
+// ───────────────────────────────────────────────────────────────────────
+//  Группы преподавателя — GET /study-groups?teacherId= (groups where he is
+//  the lead), plus a shortcut into the schedule filtered to this teacher.
+// ───────────────────────────────────────────────────────────────────────
+
+function TeacherGroupsSection({ teacherId }: { teacherId: string }) {
+  const query = useQuery({
+    queryKey: ["study-groups", { teacherId, for: "teacher-groups" }],
+    queryFn: () => searchStudyGroups({ teacherId, pageSize: 100 }),
+  });
+  const groups = query.data?.items ?? [];
+
+  return (
+    <EntityDetailSection
+      title="Группы преподавателя"
+      icon={UsersRound}
+      description="Учебные группы, где преподаватель — ведущий."
+      action={
+        <Button asChild variant="outline" size="sm" className="gap-1.5">
+          <Link to={`/schedule?teacherId=${encodeURIComponent(teacherId)}`}>
+            <CalendarDays className="size-3.5" />
+            Расписание преподавателя
+          </Link>
+        </Button>
+      }
+    >
+      {query.isLoading ? (
+        <p className="text-[13px] text-[var(--color-muted-foreground)]">Загрузка…</p>
+      ) : query.isError ? (
+        <p className="text-[13px] text-[var(--color-destructive)]">{describe(query.error)}</p>
+      ) : groups.length === 0 ? (
+        <p className="text-[13px] text-[var(--color-muted-foreground)]">
+          Преподаватель не ведёт ни одной группы.
+        </p>
+      ) : (
+        <ul className="divide-y divide-[oklch(from_var(--color-border)_l_c_h_/_0.5)]">
+          {groups.map((g) => (
+            <li key={g.id} className="py-3 first:pt-0 last:pb-0">
+              <Link
+                to={`/study-groups/${g.id}`}
+                className="flex items-center justify-between gap-3"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-[13px] font-medium text-[var(--color-foreground)]">
+                    {g.name}
+                    <span className="ml-2 font-mono text-[11px] text-[var(--color-muted-foreground)]">
+                      {g.code}
+                    </span>
+                  </p>
+                  <p className="mt-0.5 flex flex-wrap items-center gap-2 text-[11.5px] text-[var(--color-muted-foreground)]">
+                    <EntityStatusBadge tone={GROUP_STATUS_TONE[g.status]}>
+                      {GROUP_STATUS_LABEL[g.status]}
+                    </EntityStatusBadge>
+                    <span>
+                      {g.activeEnrollmentCount}/{g.capacity} учеников · с {formatDate(g.startDate)}
+                    </span>
+                  </p>
+                </div>
+                <ChevronRight className="size-4 shrink-0 text-[var(--color-border)]" />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </EntityDetailSection>
   );
 }
 
