@@ -15,6 +15,10 @@ public class TenantSettings : BaseEntity<Guid>, IHasTenant, IAuditableEntity
     public const string DefaultCurrency = "USD";
     public const int DefaultDebtGraceDays = 7;
 
+    /// <summary>Default invoice-number template — year-scoped counter, e.g. <c>2026-0001</c>
+    /// (EDX-013; see docs/02 Модули/Payments.md → «Нумерация счетов»).</summary>
+    public const string DefaultInvoiceNumberTemplate = "{YYYY}-{NNNN}";
+
     public string TenantId { get; private set; } = default!;
 
     /// <summary>IANA time zone identifier (e.g. "UTC", "Europe/Moscow").</summary>
@@ -36,6 +40,15 @@ public class TenantSettings : BaseEntity<Guid>, IHasTenant, IAuditableEntity
     /// starts blocking. <c>0</c> = block the moment an invoice is overdue.</summary>
     public int DebtGraceDays { get; set; } = DefaultDebtGraceDays;
 
+    /// <summary>
+    /// Template for <c>StudentInvoice.Number</c> (EDX-013). Placeholders: <c>{YYYY}</c> / <c>{YY}</c>
+    /// (year), <c>{MM}</c> (month), <c>{N…}</c> (zero-padded running counter). A year placeholder
+    /// makes the counter reset per calendar year; otherwise it runs continuously. Owned as an opaque
+    /// string here — Payments (<c>InvoiceNumberFormat</c>) renders it. Default
+    /// <see cref="DefaultInvoiceNumberTemplate"/>.
+    /// </summary>
+    public string InvoiceNumberTemplate { get; set; } = DefaultInvoiceNumberTemplate;
+
     // IAuditableEntity
     public DateTimeOffset CreatedOnUtc { get; private set; } = DateTimeOffset.UtcNow;
     public string? CreatedBy { get; private set; }
@@ -55,7 +68,8 @@ public class TenantSettings : BaseEntity<Guid>, IHasTenant, IAuditableEntity
         string? currency = null,
         string? createdBy = null,
         bool restrictMaterialsOnDebt = false,
-        int debtGraceDays = DefaultDebtGraceDays)
+        int debtGraceDays = DefaultDebtGraceDays,
+        string? invoiceNumberTemplate = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(tenantId);
 
@@ -67,6 +81,9 @@ public class TenantSettings : BaseEntity<Guid>, IHasTenant, IAuditableEntity
             Currency = string.IsNullOrWhiteSpace(currency) ? DefaultCurrency : currency.ToUpperInvariant(),
             RestrictMaterialsOnDebt = restrictMaterialsOnDebt,
             DebtGraceDays = debtGraceDays < 0 ? DefaultDebtGraceDays : debtGraceDays,
+            InvoiceNumberTemplate = string.IsNullOrWhiteSpace(invoiceNumberTemplate)
+                ? DefaultInvoiceNumberTemplate
+                : invoiceNumberTemplate.Trim(),
             CreatedBy = createdBy,
             CreatedOnUtc = DateTimeOffset.UtcNow,
         };
@@ -77,7 +94,8 @@ public class TenantSettings : BaseEntity<Guid>, IHasTenant, IAuditableEntity
         string currency,
         string? modifiedBy,
         bool restrictMaterialsOnDebt = false,
-        int debtGraceDays = DefaultDebtGraceDays)
+        int debtGraceDays = DefaultDebtGraceDays,
+        string? invoiceNumberTemplate = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(timeZoneId);
         ArgumentException.ThrowIfNullOrWhiteSpace(currency);
@@ -86,6 +104,15 @@ public class TenantSettings : BaseEntity<Guid>, IHasTenant, IAuditableEntity
         Currency = currency.ToUpperInvariant();
         RestrictMaterialsOnDebt = restrictMaterialsOnDebt;
         DebtGraceDays = debtGraceDays < 0 ? 0 : debtGraceDays;
+
+        // null/blank = "leave the existing template untouched" — lets callers that don't manage
+        // numbering (e.g. the time-zone/currency form before EDX-014 ships) PUT settings without
+        // clobbering a customised template.
+        if (!string.IsNullOrWhiteSpace(invoiceNumberTemplate))
+        {
+            InvoiceNumberTemplate = invoiceNumberTemplate.Trim();
+        }
+
         LastModifiedOnUtc = DateTimeOffset.UtcNow;
         LastModifiedBy = modifiedBy;
     }

@@ -7,6 +7,7 @@ namespace Payments.Tests.Domain;
 public sealed class StudentInvoiceTests
 {
     private static StudentInvoice CreateDraft(DateOnly? periodFrom = null, DateOnly? periodTo = null) => StudentInvoice.Create(
+        number: "2026-0001",
         studentId: Guid.NewGuid(),
         payerGuardianId: null,
         studyGroupId: Guid.NewGuid(),

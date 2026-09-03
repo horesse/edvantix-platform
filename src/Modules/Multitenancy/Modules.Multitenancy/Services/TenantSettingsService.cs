@@ -118,14 +118,14 @@ public sealed class TenantSettingsService : ITenantSettingsService
         {
             entity = TenantSettings.Create(
                 tenantId, settings.TimeZoneId, settings.Currency, GetCurrentUserId(),
-                settings.RestrictMaterialsOnDebt, settings.DebtGraceDays);
+                settings.RestrictMaterialsOnDebt, settings.DebtGraceDays, settings.InvoiceNumberTemplate);
             _dbContext.TenantSettings.Add(entity);
         }
         else
         {
             entity.Update(
                 settings.TimeZoneId, settings.Currency, GetCurrentUserId(),
-                settings.RestrictMaterialsOnDebt, settings.DebtGraceDays);
+                settings.RestrictMaterialsOnDebt, settings.DebtGraceDays, settings.InvoiceNumberTemplate);
         }
 
         await _dbContext.SaveChangesAsync(ct).ConfigureAwait(false);
@@ -150,6 +150,7 @@ public sealed class TenantSettingsService : ITenantSettingsService
         Currency = entity.Currency,
         RestrictMaterialsOnDebt = entity.RestrictMaterialsOnDebt,
         DebtGraceDays = entity.DebtGraceDays,
+        InvoiceNumberTemplate = entity.InvoiceNumberTemplate,
     };
 
     private string? GetCurrentUserId()

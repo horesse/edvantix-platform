@@ -58,6 +58,7 @@ public sealed class PaymentsModule : IModule
         builder.Services.AddHeroDbContext<PaymentsDbContext>();
         builder.Services.AddScoped<IDbInitializer, PaymentsDbInitializer>();
         builder.Services.AddScoped<ITariffAccrualService, TariffAccrualService>();
+        builder.Services.AddScoped<IInvoiceNumberGenerator, InvoiceNumberGenerator>();
         builder.Services.AddScoped<IInvoicePdfRenderer, InvoicePdfRenderer>();
         builder.Services.AddScoped<IDraftInvoiceRefreshService, DraftInvoiceRefreshService>();
         builder.Services.AddScoped<IFileAccessPolicy, PaymentProofAccessPolicy>();

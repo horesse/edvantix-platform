@@ -39,6 +39,13 @@ public class TenantSettingsConfiguration : IEntityTypeConfiguration<TenantSettin
         builder.Property(s => s.DebtGraceDays)
             .HasDefaultValue(Domain.TenantSettings.DefaultDebtGraceDays);
 
+        // EDX-013 — configurable invoice-number template. HasDefaultValue backfills rows that predate
+        // the AddInvoiceNumberTemplate migration with the standard "{YYYY}-{NNNN}".
+        builder.Property(s => s.InvoiceNumberTemplate)
+            .HasMaxLength(64)
+            .IsRequired()
+            .HasDefaultValue(Domain.TenantSettings.DefaultInvoiceNumberTemplate);
+
         // Audit
         builder.Property(s => s.CreatedOnUtc).IsRequired();
         builder.Property(s => s.CreatedBy).HasMaxLength(256);

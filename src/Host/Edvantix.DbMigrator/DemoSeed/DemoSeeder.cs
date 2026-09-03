@@ -826,6 +826,7 @@ internal sealed class DemoSeeder
                 }
 
                 var invoice = StudentInvoice.Create(
+                    InvoiceNumberFormat.Render(InvoiceNumberFormat.DefaultTemplate, invoiceIndex + 1, today),
                     studentId, guardianId, group.Id, periodFrom, periodTo, dueDate,
                     currency: tariff.Currency, comment: null);
                 invoice.ReplaceLines([(tariff.Name, tariff.Id, 1m, tariff.Amount)]);

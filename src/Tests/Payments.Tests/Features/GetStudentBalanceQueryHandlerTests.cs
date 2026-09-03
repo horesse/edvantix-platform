@@ -122,7 +122,7 @@ public sealed class GetStudentBalanceQueryHandlerTests
 
         var tariff = Tariff.Create("Per lesson", null, TariffKind.PerLesson, 15m, "USD", 0, 0, false);
         db.Tariffs.Add(tariff);
-        var invoice = StudentInvoice.Create(studentId, null, studyGroupId, new DateOnly(2026, 9, 1), new DateOnly(2026, 9, 30), new DateOnly(2026, 10, 5), "USD", null);
+        var invoice = StudentInvoice.Create("INV-2026-0001", studentId, null, studyGroupId, new DateOnly(2026, 9, 1), new DateOnly(2026, 9, 30), new DateOnly(2026, 10, 5), "USD", null);
         invoice.ReplaceLines([("Per lesson — 5 занятий", tariff.Id, 5m, 15m)]);
         invoice.Issue(new DateOnly(2026, 9, 30));
         db.StudentInvoices.Add(invoice);
@@ -145,7 +145,7 @@ public sealed class GetStudentBalanceQueryHandlerTests
 
         var tariff = Tariff.Create("10-lesson package", null, TariffKind.PerPackage, 200m, "USD", 10, 60, false);
         db.Tariffs.Add(tariff);
-        var invoice = StudentInvoice.Create(studentId, null, studyGroupId, new DateOnly(2026, 9, 1), new DateOnly(2026, 9, 1), new DateOnly(2026, 9, 10), "USD", null);
+        var invoice = StudentInvoice.Create("INV-2026-0002", studentId, null, studyGroupId, new DateOnly(2026, 9, 1), new DateOnly(2026, 9, 1), new DateOnly(2026, 9, 10), "USD", null);
         invoice.ReplaceLines(
         [
             ("Package", tariff.Id, 1m, 200m),
@@ -169,7 +169,7 @@ public sealed class GetStudentBalanceQueryHandlerTests
         var tariff = Tariff.Create("Package", null, TariffKind.PerPackage, 200m, "USD", lessonsCount, validDays, false);
         db.Tariffs.Add(tariff);
 
-        var invoice = StudentInvoice.Create(studentId, null, studyGroupId, issuedOn, issuedOn, issuedOn.AddDays(7), "USD", null);
+        var invoice = StudentInvoice.Create("INV-2026-0003", studentId, null, studyGroupId, issuedOn, issuedOn, issuedOn.AddDays(7), "USD", null);
         invoice.ReplaceLines([($"Package ({lessonsCount} занятий)", tariff.Id, 1m, 200m)]);
         invoice.Issue(issuedOn);
         db.StudentInvoices.Add(invoice);

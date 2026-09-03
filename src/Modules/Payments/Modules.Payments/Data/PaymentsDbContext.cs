@@ -28,6 +28,7 @@ public sealed class PaymentsDbContext : BaseDbContext
     public DbSet<StudentInvoice> StudentInvoices => Set<StudentInvoice>();
     public DbSet<InvoiceLine> InvoiceLines => Set<InvoiceLine>();
     public DbSet<PaymentConfirmation> PaymentConfirmations => Set<PaymentConfirmation>();
+    public DbSet<InvoiceNumberSequence> InvoiceNumberSequences => Set<InvoiceNumberSequence>();
 
     // Required by AddEventingForDbContext<PaymentsDbContext>() — present from the first migration
     // (same as StudyGroups/Scheduling; see People's Outbox/Inbox bug note for why this matters).
