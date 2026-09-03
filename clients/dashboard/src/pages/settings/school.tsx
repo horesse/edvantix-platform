@@ -4,6 +4,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 import { CalendarX2, Clock, DoorOpen, Hash, Landmark, Lock } from "lucide-react";
 import { toast } from "sonner";
 import {
+  DEFAULT_INVOICE_NUMBER_TEMPLATE,
   getTenantSettings,
   updateTenantSettings,
   type TenantSettingsDto,
@@ -102,6 +103,48 @@ function zoneOffsetLabel(zone: string): string | undefined {
   }
 }
 
+// ── Invoice-number template ───────────────────────────────────────────────
+// Mirrors Payments' `InvoiceNumberFormat` (Render / IsValid) so the editor can
+// validate and preview without a round-trip. The backend re-validates on PUT
+// (`UpdateTenantSettingsCommandValidator`) — this is a UX convenience only.
+
+const INVOICE_TOKEN_RE = /\{(YYYY|YY|MM|N{1,10})\}/g;
+const INVOICE_TEMPLATE_MAX = 64;
+
+/** Known placeholders only, no stray braces, ≥1 `{N…}` counter, within length. */
+function isValidInvoiceTemplate(template: string): boolean {
+  const t = template.trim();
+  if (!t || t.length > INVOICE_TEMPLATE_MAX) return false;
+  if (t.replace(INVOICE_TOKEN_RE, "").match(/[{}]/)) return false;
+  return [...t.matchAll(INVOICE_TOKEN_RE)].some((m) => m[1].startsWith("N"));
+}
+
+/** True when the template carries a year token — counter resets per calendar year. */
+function isYearScopedInvoiceTemplate(template: string): boolean {
+  return template.includes("{YYYY}") || template.includes("{YY}");
+}
+
+/** Render `template` for a sample counter value and date (UTC, as the backend does). */
+function renderInvoiceTemplate(template: string, sequence: number, now: Date): string {
+  let hasCounter = false;
+  const rendered = template.replace(INVOICE_TOKEN_RE, (_m, token: string) => {
+    switch (token) {
+      case "YYYY":
+        return String(now.getUTCFullYear()).padStart(4, "0");
+      case "YY":
+        return String(now.getUTCFullYear() % 100).padStart(2, "0");
+      case "MM":
+        return String(now.getUTCMonth() + 1).padStart(2, "0");
+      default: // run of N's
+        hasCounter = true;
+        return String(sequence).padStart(token.length, "0");
+    }
+  });
+  return hasCounter
+    ? rendered
+    : `${rendered}-${String(sequence).padStart(4, "0")}`;
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────
 
 export function SchoolSettings() {
@@ -120,6 +163,9 @@ export function SchoolSettings() {
   const [currency, setCurrency] = useState<string | null>(null);
   const [restrictMaterialsOnDebt, setRestrictMaterialsOnDebt] = useState(false);
   const [debtGraceDays, setDebtGraceDays] = useState(7);
+  const [invoiceTemplate, setInvoiceTemplate] = useState(
+    DEFAULT_INVOICE_NUMBER_TEMPLATE,
+  );
 
   // Seed the form from the server response once (and again whenever a fresh
   // response lands after a save). Editing is local until the user hits Save.
@@ -129,6 +175,9 @@ export function SchoolSettings() {
       setCurrency(server.currency);
       setRestrictMaterialsOnDebt(server.restrictMaterialsOnDebt ?? false);
       setDebtGraceDays(server.debtGraceDays ?? 7);
+      setInvoiceTemplate(
+        server.invoiceNumberTemplate || DEFAULT_INVOICE_NUMBER_TEMPLATE,
+      );
     }
   }, [server]);
 
@@ -152,12 +201,23 @@ export function SchoolSettings() {
   const graceValid =
     Number.isInteger(debtGraceDays) && debtGraceDays >= 0 && debtGraceDays <= 90;
 
+  const templateValid = isValidInvoiceTemplate(invoiceTemplate);
+  const templatePreview = useMemo(
+    () =>
+      templateValid
+        ? renderInvoiceTemplate(invoiceTemplate.trim(), 1, new Date())
+        : null,
+    [invoiceTemplate, templateValid],
+  );
+
   const dirty =
     !!server &&
     (timeZoneId !== server.timeZoneId ||
       (currency ?? "") !== server.currency ||
       restrictMaterialsOnDebt !== (server.restrictMaterialsOnDebt ?? false) ||
-      debtGraceDays !== (server.debtGraceDays ?? 7));
+      debtGraceDays !== (server.debtGraceDays ?? 7) ||
+      invoiceTemplate.trim() !==
+        (server.invoiceNumberTemplate || DEFAULT_INVOICE_NUMBER_TEMPLATE));
 
   const save = useMutation({
     mutationFn: (input: TenantSettingsDto) => updateTenantSettings(input),
@@ -171,12 +231,13 @@ export function SchoolSettings() {
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!timeZoneId || !currency || !graceValid) return;
+    if (!timeZoneId || !currency || !graceValid || !templateValid) return;
     save.mutate({
       timeZoneId,
       currency,
       restrictMaterialsOnDebt,
       debtGraceDays,
+      invoiceNumberTemplate: invoiceTemplate.trim(),
     });
   };
 
@@ -192,7 +253,12 @@ export function SchoolSettings() {
         type="submit"
         size="sm"
         disabled={
-          !dirty || save.isPending || !timeZoneId || !currency || !graceValid
+          !dirty ||
+          save.isPending ||
+          !timeZoneId ||
+          !currency ||
+          !graceValid ||
+          !templateValid
         }
       >
         {save.isPending ? "Сохранение…" : "Сохранить"}
@@ -314,11 +380,50 @@ export function SchoolSettings() {
       <SettingsSection
         title="Нумерация счетов"
         icon={Hash}
-        description="Формат номеров счетов учеников. Пока задаётся сервером автоматически и не настраивается из интерфейса."
+        description="Формат номера счёта ученика. Номер присваивается при создании счёта. Сохранение — общей кнопкой в блоке «Регион и валюта»."
       >
-        <div className="rounded-lg border border-dashed border-[var(--color-border)] bg-[var(--color-muted)]/40 px-4 py-3 text-[12.5px] text-[var(--color-muted-foreground)]">
-          Номер формируется автоматически при выставлении счёта. Настройка префикса и
-          счётчика появится в отдельном обновлении модуля «Оплаты».
+        <div className="max-w-[380px] space-y-3">
+          <Field
+            id="school-invoice-template"
+            label="Шаблон номера"
+            required
+            hint="Плейсхолдеры: {YYYY} / {YY} — год, {MM} — месяц, {N…} — счётчик (число символов N задаёт ширину, дополняется нулями). Остальной текст выводится как есть. Нужен хотя бы один {N…}."
+          >
+            <Input
+              id="school-invoice-template"
+              value={invoiceTemplate}
+              onChange={(e) => setInvoiceTemplate(e.target.value)}
+              disabled={!canManage}
+              maxLength={64}
+              spellCheck={false}
+              autoComplete="off"
+              aria-invalid={!templateValid}
+              className="font-mono"
+            />
+          </Field>
+          {templateValid ? (
+            <p className="text-[11.5px] leading-relaxed text-[var(--color-muted-foreground)]">
+              Следующий номер:{" "}
+              <span className="font-mono font-medium text-[var(--color-foreground)]">
+                {templatePreview}
+              </span>
+              .{" "}
+              {isYearScopedInvoiceTemplate(invoiceTemplate)
+                ? "Счётчик обнуляется в начале каждого календарного года."
+                : "Счётчик сквозной за всё время работы школы."}{" "}
+              Счётчик продолжается с текущей позиции школы — у первого счёта он
+              может быть не 1.
+            </p>
+          ) : (
+            <p
+              role="alert"
+              className="text-[11.5px] leading-relaxed text-[var(--color-destructive)]"
+            >
+              Шаблон может содержать только {"{YYYY}"} {"{YY}"} {"{MM}"} {"{N…}"} и
+              обязан включать хотя бы один счётчик {"{N…}"}; лишние фигурные скобки
+              и длина больше 64 символов недопустимы.
+            </p>
+          )}
         </div>
       </SettingsSection>
 
