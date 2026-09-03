@@ -1,18 +1,24 @@
 using FSH.Modules.Payments.Contracts.v1.StudentInvoices;
 using FSH.Modules.Payments.Data;
 using FSH.Modules.Payments.Domain;
+using FSH.Modules.Payments.Services;
 using Mediator;
 
 namespace FSH.Modules.Payments.Features.v1.StudentInvoices.CreateStudentInvoice;
 
-public sealed class CreateStudentInvoiceCommandHandler(PaymentsDbContext dbContext)
+public sealed class CreateStudentInvoiceCommandHandler(
+    PaymentsDbContext dbContext,
+    IInvoiceNumberGenerator numberGenerator)
     : ICommandHandler<CreateStudentInvoiceCommand, Guid>
 {
     public async ValueTask<Guid> Handle(CreateStudentInvoiceCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
 
+        var number = await numberGenerator.NextAsync(cancellationToken).ConfigureAwait(false);
+
         var invoice = StudentInvoice.Create(
+            number,
             command.StudentId,
             command.PayerGuardianId,
             command.StudyGroupId,

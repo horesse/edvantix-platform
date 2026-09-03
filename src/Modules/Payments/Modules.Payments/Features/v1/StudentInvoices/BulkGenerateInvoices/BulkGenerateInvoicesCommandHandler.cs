@@ -12,7 +12,8 @@ namespace FSH.Modules.Payments.Features.v1.StudentInvoices.BulkGenerateInvoices;
 public sealed class BulkGenerateInvoicesCommandHandler(
     PaymentsDbContext dbContext,
     IStudyGroupQueryService studyGroupQueryService,
-    ITariffAccrualService accrualService)
+    ITariffAccrualService accrualService,
+    IInvoiceNumberGenerator numberGenerator)
     : ICommandHandler<BulkGenerateInvoicesCommand, IReadOnlyList<Guid>>
 {
     public async ValueTask<IReadOnlyList<Guid>> Handle(BulkGenerateInvoicesCommand command, CancellationToken cancellationToken)
@@ -54,6 +55,11 @@ public sealed class BulkGenerateInvoicesCommandHandler(
                 .ConfigureAwait(false);
 
         var invoiceIds = new List<Guid>();
+
+        // Resolve everything that needs a brand-new invoice first, so the whole batch draws a single
+        // contiguous block of numbers from the per-tenant counter (one atomic reservation, no
+        // per-student round-trip, no race with a parallel batch — see IInvoiceNumberGenerator).
+        var pending = new List<(Guid StudentId, Tariff Tariff, AccrualLine Line)>();
         foreach (var enrollment in enrollments)
         {
             var existing = await dbContext.StudentInvoices
@@ -86,16 +92,26 @@ public sealed class BulkGenerateInvoicesCommandHandler(
                 continue;
             }
 
-            var invoice = StudentInvoice.Create(
-                enrollment.StudentId, null, command.StudyGroupId, command.PeriodFrom, command.PeriodTo, command.DueDate, tariff.Currency, null);
-            invoice.ReplaceLines([(line.Description, tariff.Id, line.Quantity, line.UnitPrice)]);
-            if (command.IssueImmediately)
-            {
-                invoice.Issue(command.PeriodTo);
-            }
+            pending.Add((enrollment.StudentId, tariff, line));
+        }
 
-            dbContext.StudentInvoices.Add(invoice);
-            invoiceIds.Add(invoice.Id);
+        if (pending.Count > 0)
+        {
+            var numbers = await numberGenerator.NextBatchAsync(pending.Count, cancellationToken).ConfigureAwait(false);
+            for (var i = 0; i < pending.Count; i++)
+            {
+                var (studentId, tariff, line) = pending[i];
+                var invoice = StudentInvoice.Create(
+                    numbers[i], studentId, null, command.StudyGroupId, command.PeriodFrom, command.PeriodTo, command.DueDate, tariff.Currency, null);
+                invoice.ReplaceLines([(line.Description, tariff.Id, line.Quantity, line.UnitPrice)]);
+                if (command.IssueImmediately)
+                {
+                    invoice.Issue(command.PeriodTo);
+                }
+
+                dbContext.StudentInvoices.Add(invoice);
+                invoiceIds.Add(invoice.Id);
+            }
         }
 
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

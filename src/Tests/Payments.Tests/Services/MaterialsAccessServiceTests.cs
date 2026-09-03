@@ -116,7 +116,7 @@ public sealed class MaterialsAccessServiceTests
         await using var db = TestPaymentsDbContextFactory.Create();
         var studentId = Guid.NewGuid();
 
-        var invoice = StudentInvoice.Create(studentId, null, Guid.NewGuid(),
+        var invoice = StudentInvoice.Create("INV-2026-0001", studentId, null, Guid.NewGuid(),
             new DateOnly(2026, 8, 1), new DateOnly(2026, 8, 31), Today.AddDays(-15), "USD", null);
         invoice.ReplaceLines([("Сентябрь", null, 1m, 100m)]);
         invoice.Issue(new DateOnly(2026, 8, 1));
@@ -166,7 +166,7 @@ public sealed class MaterialsAccessServiceTests
 
     private static async Task SeedOverdueInvoiceAsync(PaymentsDbContext db, Guid studentId, DateOnly dueDate)
     {
-        var invoice = StudentInvoice.Create(studentId, null, Guid.NewGuid(),
+        var invoice = StudentInvoice.Create("INV-2026-0002", studentId, null, Guid.NewGuid(),
             dueDate.AddMonths(-1), dueDate, dueDate, "USD", null);
         invoice.ReplaceLines([("Обучение", null, 1m, 100m)]);
         invoice.Issue(dueDate.AddMonths(-1));

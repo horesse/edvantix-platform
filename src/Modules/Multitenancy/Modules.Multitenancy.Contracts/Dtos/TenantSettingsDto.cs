@@ -24,5 +24,9 @@ public sealed record TenantSettingsDto
     /// <summary>Grace period in days past an invoice's due date before materials are blocked.</summary>
     public int DebtGraceDays { get; init; } = 7;
 
+    /// <summary>EDX-013 — template for <c>StudentInvoice.Number</c>. Placeholders <c>{YYYY}</c>/<c>{YY}</c>,
+    /// <c>{MM}</c>, <c>{N…}</c> (counter). Default <c>{YYYY}-{NNNN}</c>.</summary>
+    public string InvoiceNumberTemplate { get; init; } = "{YYYY}-{NNNN}";
+
     public static TenantSettingsDto Default => new();
 }

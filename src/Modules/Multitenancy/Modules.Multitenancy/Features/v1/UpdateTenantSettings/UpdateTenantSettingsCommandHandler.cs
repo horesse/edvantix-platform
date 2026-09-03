@@ -19,12 +19,19 @@ public sealed class UpdateTenantSettingsCommandHandler(
         var tenantId = tenantAccessor.MultiTenantContext?.TenantInfo?.Id
             ?? throw new InvalidOperationException("No tenant context available");
 
+        // A null InvoiceNumberTemplate means "keep what's there" — resolve it against the current
+        // (cache-backed) settings so we never write a blank/placeholder over a customised template.
+        var current = await settingsService.GetAsync(tenantId, cancellationToken);
+
         var settings = new TenantSettingsDto
         {
             TimeZoneId = command.TimeZoneId,
             Currency = command.Currency,
             RestrictMaterialsOnDebt = command.RestrictMaterialsOnDebt,
             DebtGraceDays = command.DebtGraceDays,
+            InvoiceNumberTemplate = string.IsNullOrWhiteSpace(command.InvoiceNumberTemplate)
+                ? current.InvoiceNumberTemplate
+                : command.InvoiceNumberTemplate.Trim(),
         };
 
         await settingsService.UpdateAsync(tenantId, settings, cancellationToken);
