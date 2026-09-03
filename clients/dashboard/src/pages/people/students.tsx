@@ -12,6 +12,7 @@ import {
 } from "@/api/people";
 import { searchUsers, type UserDto } from "@/api/identity";
 import { useAuth } from "@/auth/use-auth";
+import { DuplicatePersonNotice } from "@/components/duplicate-person-notice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -349,6 +350,7 @@ function CreateStudentDialog({ open, onClose }: { open: boolean; onClose: () => 
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [source, setSource] = useState("");
+  const [dupCount, setDupCount] = useState(0);
 
   useEffect(() => {
     if (!open) {
@@ -359,6 +361,7 @@ function CreateStudentDialog({ open, onClose }: { open: boolean; onClose: () => 
       setPhone("");
       setEmail("");
       setSource("");
+      setDupCount(0);
     }
   }, [open]);
 
@@ -426,6 +429,14 @@ function CreateStudentDialog({ open, onClose }: { open: boolean; onClose: () => 
             <Field id="s-source" label="Источник" hint="Откуда пришёл ученик (необязательно).">
               <Input id="s-source" value={source} onChange={(e) => setSource(e.target.value)} placeholder="Сайт, рекомендация…" />
             </Field>
+
+            <DuplicatePersonNotice
+              lastName={lastName}
+              firstName={firstName}
+              phone={phone}
+              email={email}
+              onCountChange={setDupCount}
+            />
           </DialogBody>
 
           <DialogFooter>
@@ -436,7 +447,11 @@ function CreateStudentDialog({ open, onClose }: { open: boolean; onClose: () => 
             </DialogClose>
             <Button type="submit" disabled={mutation.isPending} className="gap-1.5">
               <UserPlus className="h-4 w-4" />
-              {mutation.isPending ? "Создание…" : "Создать"}
+              {mutation.isPending
+                ? "Создание…"
+                : dupCount > 0
+                  ? "Всё равно создать"
+                  : "Создать"}
             </Button>
           </DialogFooter>
         </form>

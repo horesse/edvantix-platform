@@ -11,6 +11,7 @@ import {
   type TeacherStatus,
 } from "@/api/people";
 import { useAuth } from "@/auth/use-auth";
+import { DuplicatePersonNotice } from "@/components/duplicate-person-notice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -290,6 +291,7 @@ function CreateTeacherDialog({ open, onClose }: { open: boolean; onClose: () => 
   const [email, setEmail] = useState("");
   const [specializations, setSpecializations] = useState("");
   const [hourlyRate, setHourlyRate] = useState("");
+  const [dupCount, setDupCount] = useState(0);
 
   useEffect(() => {
     if (!open) {
@@ -300,6 +302,7 @@ function CreateTeacherDialog({ open, onClose }: { open: boolean; onClose: () => 
       setEmail("");
       setSpecializations("");
       setHourlyRate("");
+      setDupCount(0);
     }
   }, [open]);
 
@@ -369,6 +372,14 @@ function CreateTeacherDialog({ open, onClose }: { open: boolean; onClose: () => 
             <Field id="t-rate" label="Часовая ставка" hint="Необязательно.">
               <Input id="t-rate" type="number" min="0" step="0.01" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} />
             </Field>
+
+            <DuplicatePersonNotice
+              lastName={lastName}
+              firstName={firstName}
+              phone={phone}
+              email={email}
+              onCountChange={setDupCount}
+            />
           </DialogBody>
 
           <DialogFooter>
@@ -379,7 +390,11 @@ function CreateTeacherDialog({ open, onClose }: { open: boolean; onClose: () => 
             </DialogClose>
             <Button type="submit" disabled={mutation.isPending} className="gap-1.5">
               <UserPlus className="h-4 w-4" />
-              {mutation.isPending ? "Создание…" : "Создать"}
+              {mutation.isPending
+                ? "Создание…"
+                : dupCount > 0
+                  ? "Всё равно создать"
+                  : "Создать"}
             </Button>
           </DialogFooter>
         </form>

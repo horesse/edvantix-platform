@@ -10,6 +10,7 @@ import {
   type GuardianDto,
 } from "@/api/people";
 import { useAuth } from "@/auth/use-auth";
+import { DuplicatePersonNotice } from "@/components/duplicate-person-notice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -229,6 +230,7 @@ function CreateGuardianDialog({ open, onClose }: { open: boolean; onClose: () =>
   const [firstName, setFirstName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  const [dupCount, setDupCount] = useState(0);
 
   useEffect(() => {
     if (!open) {
@@ -236,6 +238,7 @@ function CreateGuardianDialog({ open, onClose }: { open: boolean; onClose: () =>
       setFirstName("");
       setPhone("");
       setEmail("");
+      setDupCount(0);
     }
   }, [open]);
 
@@ -286,6 +289,14 @@ function CreateGuardianDialog({ open, onClose }: { open: boolean; onClose: () =>
             <Field id="g-email" label="E-mail" required>
               <Input id="g-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
             </Field>
+
+            <DuplicatePersonNotice
+              lastName={lastName}
+              firstName={firstName}
+              phone={phone}
+              email={email}
+              onCountChange={setDupCount}
+            />
           </DialogBody>
 
           <DialogFooter>
@@ -296,7 +307,11 @@ function CreateGuardianDialog({ open, onClose }: { open: boolean; onClose: () =>
             </DialogClose>
             <Button type="submit" disabled={mutation.isPending} className="gap-1.5">
               <UserPlus className="h-4 w-4" />
-              {mutation.isPending ? "Создание…" : "Создать"}
+              {mutation.isPending
+                ? "Создание…"
+                : dupCount > 0
+                  ? "Всё равно создать"
+                  : "Создать"}
             </Button>
           </DialogFooter>
         </form>
