@@ -333,3 +333,23 @@ export async function resumeEnrollment(enrollmentId: string): Promise<void> {
     { method: "POST" },
   );
 }
+
+/** Re-prices a live enrollment in place (no re-enrolment). Past invoices are
+ *  left as-is; the new terms apply from the next bulk generation. Gated by
+ *  `Enrollments.Update`. `tariffId: null` falls back to the course tariff. */
+export async function changeEnrollmentTariff(input: {
+  enrollmentId: string;
+  tariffId: string | null;
+  discountPercent: number;
+}): Promise<void> {
+  await apiFetch<void>(
+    `${ENROLLMENTS}/${encodeURIComponent(input.enrollmentId)}/tariff`,
+    {
+      method: "PUT",
+      body: JSON.stringify({
+        tariffId: input.tariffId ?? null,
+        discountPercent: input.discountPercent,
+      }),
+    },
+  );
+}

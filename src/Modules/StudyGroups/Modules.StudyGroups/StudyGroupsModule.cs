@@ -7,6 +7,7 @@ using FSH.Framework.Web.Modules;
 using FSH.Modules.StudyGroups.Contracts;
 using FSH.Modules.StudyGroups.Contracts.Authorization;
 using FSH.Modules.StudyGroups.Data;
+using FSH.Modules.StudyGroups.Features.v1.Enrollments.ChangeEnrollmentTariff;
 using FSH.Modules.StudyGroups.Features.v1.Enrollments.EnrollStudents;
 using FSH.Modules.StudyGroups.Features.v1.Enrollments.GetGroupEnrollments;
 using FSH.Modules.StudyGroups.Features.v1.Enrollments.GetStudentEnrollments;
@@ -108,6 +109,7 @@ public sealed class StudyGroupsModule : IModule
         group.MapEnrollStudentsEndpoint();
         group.MapUnenrollStudentEndpoint();
         group.MapTransferEnrollmentEndpoint();
+        group.MapChangeEnrollmentTariffEndpoint();
         group.MapPauseEnrollmentEndpoint();
         group.MapResumeEnrollmentEndpoint();
         group.MapGetStudentEnrollmentsEndpoint();

@@ -12,13 +12,14 @@ tags: [модуль, новый, study-groups]
 > ✅ Реализован · порядок `610` · схема `study_groups`
 >
 > Домен (`StudyGroup`/`GroupEnrollment`/`GroupTeacher` как вложенный агрегат), миграция,
-> CRUD/поиск/жизненный цикл групп, зачисление/отчисление/перевод/пауза-возобновление,
+> CRUD/поиск/жизненный цикл групп, зачисление/отчисление/перевод/смена тарифа/пауза-возобновление,
 > ростер преподавателей, `IStudyGroupQueryService`, пять интеграционных событий и три подписки
 > на People/Curriculum — всё сделано. `dotnet build` — 0 предупреждений/0 ошибок,
 > `StudyGroups.Tests` (юнит) — 32/32, `StudyGroupsTenantIsolationTests` (интеграционные) — 2/2,
 > полный прогон `Integration.Tests` — 746/747 (1 skip, не связан со StudyGroups), без регрессий.
 > Ретроспектива этапа и рисков — [[Этапы внедрения]] → «Этап 3 · StudyGroups».
-> Frontend реализован (PR #18). Открытый хвост — [[EDX-007 Смена тарифа действующего зачисления]].
+> Frontend реализован (PR #18). [[EDX-007 Смена тарифа действующего зачисления]] закрыта:
+> `PUT /api/v1/enrollments/{id}/tariff` + действие «Сменить тариф» в ростере.
 
 ## Назначение
 
@@ -96,6 +97,20 @@ erDiagram
 даты ученик не попадает) и на [[Payments]] (начисление с даты зачисления,
 при помесячном тарифе — пропорционально).
 
+### Смена тарифа действующего зачисления
+
+`ChangeEnrollmentTariffCommand` (`PUT /api/v1/enrollments/{id}/tariff`) меняет `TariffId`
+и/или `DiscountPercent` у живого зачисления (`Active`/`Paused`) без переоформления —
+в отличие от перевода, строка не закрывается. Разрешено только пока группа принимает
+изменения состава (`Forming`/`Active`); у `Finished`/`Cancelled` — `409`.
+
+> [!note] Поведение для уже выставленных счетов
+> Прошлые счета **не пересчитываются**. Новые условия применяются со следующего
+> массового начисления: `BulkGenerateInvoicesCommand` каждый раз резолвит тариф
+> зачисления «вживую» через `IStudyGroupQueryService.GetActiveEnrollmentsWithTariffAsync`,
+> поэтому отдельное интеграционное событие не публикуется — следующая генерация для
+> группы просто берёт актуальный `TariffId`.
+
 ## Контракты
 
 `Modules.StudyGroups.Contracts`
@@ -109,6 +124,7 @@ erDiagram
 | `EnrollStudentsCommand` | Enrollments — принимает список |
 | `UnenrollStudentCommand` | Enrollments — с причиной |
 | `TransferEnrollmentCommand` | Enrollments — атомарный перевод между группами |
+| `ChangeEnrollmentTariffCommand` | Enrollments — смена тарифа/скидки без переоформления |
 | `PauseEnrollmentCommand` · `ResumeEnrollmentCommand` | Enrollments |
 | `AddGroupTeacherCommand` · `RemoveGroupTeacherCommand` | Teachers |
 
@@ -189,11 +205,13 @@ public interface IStudyGroupQueryService
 | Ресурс | Действия |
 |---|---|
 | `StudyGroups` | `View` `ViewOwn` `Create` `Update` `Delete` `Archive` |
-| `Enrollments` | `View` `Create` `Delete` `Transfer` |
+| `Enrollments` | `View` `Create` `Update` `Delete` `Transfer` |
 
 `ViewOwn` — преподаватель видит свои группы, ученик те, где состоит; принадлежность
 проверяется в обработчике через `IPeopleScopeResolver`.
-`Enrollments.Transfer` отдельно: перевод затрагивает деньги.
+`Enrollments.Transfer` и `Enrollments.Update` — отдельно: и перевод, и смена тарифа
+действующего зачисления затрагивают деньги, поэтому не покрываются обычным
+`Enrollments.Create` (пауза/возобновление — покрываются).
 
 ## HTTP API
 
@@ -212,6 +230,7 @@ GET    /api/v1/study-groups/{id}/enrollments
 POST   /api/v1/study-groups/{id}/enrollments
 DELETE /api/v1/study-groups/{id}/enrollments/{eid}
 POST   /api/v1/enrollments/{eid}/transfer
+PUT    /api/v1/enrollments/{eid}/tariff
 
 POST   /api/v1/study-groups/{id}/teachers
 DELETE /api/v1/study-groups/{id}/teachers/{tid}

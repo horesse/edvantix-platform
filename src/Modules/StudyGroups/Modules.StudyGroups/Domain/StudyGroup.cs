@@ -279,6 +279,16 @@ public sealed class StudyGroup : AggregateRoot<Guid>, ISoftDeletable
         UpdatedAtUtc = DateTimeOffset.UtcNow;
     }
 
+    /// <summary>Changes the tariff/discount of a live enrollment without re-enrolling the student.
+    /// Allowed only while the group still accepts roster changes (Forming/Active) — a frozen group's
+    /// commercial terms are settled.</summary>
+    public void ChangeEnrollmentTariff(Guid enrollmentId, Guid? tariffId, decimal discountPercent)
+    {
+        EnsureAcceptsRosterChanges();
+        FindEnrollment(enrollmentId).ChangeTariff(tariffId, discountPercent);
+        UpdatedAtUtc = DateTimeOffset.UtcNow;
+    }
+
     public void PauseEnrollment(Guid enrollmentId)
     {
         EnsureAcceptsRosterChanges();
