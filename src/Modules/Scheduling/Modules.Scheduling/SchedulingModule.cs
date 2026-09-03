@@ -33,6 +33,7 @@ using FSH.Modules.Scheduling.Features.v1.Sessions.HoldSession;
 using FSH.Modules.Scheduling.Features.v1.Sessions.RescheduleSession;
 using FSH.Modules.Scheduling.Features.v1.Sessions.SearchSessions;
 using FSH.Modules.Scheduling.Features.v1.Sessions.UpdateSession;
+using FSH.Modules.Scheduling.Features.v1.StudyGroups.GetGroupCourseProgress;
 using FSH.Modules.Scheduling.Features.v1.Teachers.GetTeacherWorkload;
 using FSH.Modules.Scheduling.Jobs;
 using FSH.Modules.Scheduling.Services;
@@ -143,6 +144,7 @@ public sealed class SchedulingModule : IModule
         group.MapGetGroupAttendanceReportEndpoint();
 
         group.MapGetTeacherWorkloadEndpoint();
+        group.MapGetGroupCourseProgressEndpoint();
 
         // Recurring Hangfire jobs — registration here matches the pattern Files/Billing use.
         var jobManager = endpoints.ServiceProvider.GetService<IRecurringJobManager>();

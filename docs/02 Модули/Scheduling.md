@@ -187,6 +187,7 @@ flowchart TB
 | `GetGroupAttendanceReportQuery` | сводка по группе за период |
 | `GetScheduleTemplatesQuery` · `GetRoomsQuery` · `GetNonWorkingDaysQuery` | справочники |
 | `GetTeacherWorkloadQuery` | `TeacherWorkloadDto` — см. примечание ниже |
+| `GetGroupCourseProgressQuery` | `CourseProgressDto` — «прошли N из M уроков» курса группы, на лету, см. примечание ниже |
 
 > [!note] `GetTeacherWorkloadQuery` живёт здесь, а не в [[People]]
 > Изначально спецификация числила его запросом People (`GET /teachers/{id}/workload`,
@@ -199,11 +200,22 @@ flowchart TB
 > `From`/`To` не заданы — по умолчанию «сегодня + 7 дней», короче 8-недельного горизонта
 > генерации (`SchedulingDefaults.DefaultWorkloadWindowDays`).
 
+> [!note] `GetGroupCourseProgressQuery` живёт здесь, а не в [[Curriculum]] (EDX-019)
+> Из [[Открытые вопросы]] → Curriculum: «прошли 12 из 40 уроков». `total` — уроки курса
+> группы ([[Curriculum]], `ICourseQueryService.GetLessonsInOrderAsync`), `passed` —
+> уникальные `Session.LessonId` у занятий в терминальном статусе `Held` этой группы,
+> пересечённые с текущим набором уроков курса (устаревшая ссылка на перенесённый/удалённый
+> урок не задирает `passed` выше `total`). Тот же приём, что у `GetTeacherWorkloadQuery`:
+> Scheduling мапит `GET /study-groups/{id}/course-progress` под чужим именем ресурса, гейтит
+> своим правом `Sessions.View`. Проекции нет — порог перехода описан в
+> `docs/02 Модули/Curriculum.md` → «Чего в модели нет намеренно». 404, если группы нет.
+
 ### DTO
 
 `SessionDto` · `SessionDetailDto` · `CalendarEntryDto` · `AttendanceDto` ·
 `AttendanceReportDto` · `ScheduleTemplateDto` · `GenerationPreviewDto` ·
-`SessionConflictDto` · `RoomDto` · `NonWorkingDayDto` · `TeacherWorkloadDto`
+`SessionConflictDto` · `RoomDto` · `NonWorkingDayDto` · `TeacherWorkloadDto` ·
+`CourseProgressDto`
 
 ### Публикуемые события
 
@@ -317,6 +329,7 @@ GET    /api/v1/sessions/{id}/attendance
 PUT    /api/v1/sessions/{id}/attendance
 GET    /api/v1/students/{id}/attendance
 GET    /api/v1/study-groups/{id}/attendance-report
+GET    /api/v1/study-groups/{id}/course-progress   «N из M уроков», на лету — см. примечание в «Контракты» (EDX-019)
 
 GET    /api/v1/rooms                            + CRUD
 GET    /api/v1/non-working-days                 + CRUD

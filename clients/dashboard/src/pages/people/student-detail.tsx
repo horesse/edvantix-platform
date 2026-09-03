@@ -59,7 +59,7 @@ import {
   searchStudyGroups,
   type EnrollmentStatus,
 } from "@/api/study-groups";
-import { getStudentAttendance } from "@/api/scheduling";
+import { getGroupCourseProgress, getStudentAttendance } from "@/api/scheduling";
 import {
   getStudentBalance,
   outstanding,
@@ -149,6 +149,7 @@ export function StudentDetailPage() {
   const canViewNotes = perms.includes("Permissions.People.Students.ViewNotes");
   const canViewGroups = perms.includes("Permissions.StudyGroups.Enrollments.View");
   const canViewAttendance = perms.includes("Permissions.Scheduling.Attendance.View");
+  const canViewSessions = perms.includes("Permissions.Scheduling.Sessions.View");
   const canViewBilling = perms.includes("Permissions.Payments.StudentInvoices.View");
   const canViewHistory = perms.includes("Permissions.AuditTrails.View");
 
@@ -382,7 +383,9 @@ export function StudentDetailPage() {
         <GuardiansTab studentId={student.id} canUpdate={canUpdate} onChanged={invalidate} />
       )}
 
-      {tab === "groups" && canViewGroups && <GroupsTab studentId={student.id} />}
+      {tab === "groups" && canViewGroups && (
+        <GroupsTab studentId={student.id} showProgress={canViewSessions} />
+      )}
 
       {tab === "attendance" && canViewAttendance && (
         <AttendanceTab studentId={student.id} />
@@ -693,7 +696,13 @@ function AddGuardianDialog({
 //  including finished/left), via GET /students/{id}/enrollments.
 // ───────────────────────────────────────────────────────────────────────
 
-function GroupsTab({ studentId }: { studentId: string }) {
+function GroupsTab({
+  studentId,
+  showProgress,
+}: {
+  studentId: string;
+  showProgress: boolean;
+}) {
   const query = useQuery({
     queryKey: ["student-enrollments", studentId],
     queryFn: () => getStudentEnrollments(studentId),
@@ -759,6 +768,10 @@ function GroupsTab({ studentId }: { studentId: string }) {
                         {e.leftOn ? ` · до ${formatDate(e.leftOn)}` : ""}
                         {e.leaveReason ? ` · ${e.leaveReason}` : ""}
                       </p>
+                      {showProgress &&
+                        (e.status === "Active" || e.status === "Paused") && (
+                          <GroupCourseProgressLine studyGroupId={e.studyGroupId} />
+                        )}
                     </div>
                   </div>
                   <ChevronRight className="size-4 shrink-0 text-[var(--color-border)]" />
@@ -769,6 +782,40 @@ function GroupsTab({ studentId }: { studentId: string }) {
         </ul>
       )}
     </EntityDetailSection>
+  );
+}
+
+// One compact "N/M уроков" line under a group row — course-program progress
+// for the group, via GET /study-groups/{id}/course-progress (EDX-019). Own
+// query per row; the enrollment list is short, and only active/paused rows
+// render it.
+function GroupCourseProgressLine({ studyGroupId }: { studyGroupId: string }) {
+  const query = useQuery({
+    queryKey: ["group-course-progress", studyGroupId],
+    queryFn: () => getGroupCourseProgress(studyGroupId),
+    staleTime: 60_000,
+  });
+
+  const data = query.data;
+  if (!data || data.totalLessons === 0) return null;
+
+  const pct = Math.round((data.passedLessons / data.totalLessons) * 100);
+  return (
+    <p className="mt-1 flex items-center gap-2 text-[11px] text-[var(--color-muted-foreground)]">
+      <span
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={data.totalLessons}
+        aria-valuenow={data.passedLessons}
+        className="inline-block h-1.5 w-20 overflow-hidden rounded-full bg-[var(--color-muted)]"
+      >
+        <span
+          className="block h-full rounded-full bg-[var(--color-primary)]"
+          style={{ width: `${pct}%` }}
+        />
+      </span>
+      программа: {data.passedLessons} из {data.totalLessons} уроков
+    </p>
   );
 }
 
