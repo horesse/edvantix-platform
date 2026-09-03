@@ -124,6 +124,11 @@ GET    /api/v1/audits/exceptions
 `EntityChangeEventPayload.EntityName`/`.Key` (`AsText`+`ILIKE`, как security/exception),
 схема `AuditRecords` не меняется.
 
+Потребители фронта: вкладка «История» на карточке ученика (`clients/dashboard`,
+`/students/:id`, `entityName = "Student"`, гейт `Permissions.AuditTrails.View`, EDX-005) —
+строки списка раскрываются, дозагружая `GET /api/v1/audits/{id}` ради изменённых полей,
+имена которых переводятся через `entity-labels`.
+
 ### Читаемые названия
 
 Аудит пишет `entityType.ClrType.Name` и сырые имена свойств — в UI это выглядело как
