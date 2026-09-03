@@ -492,6 +492,41 @@ export function getGuardianStudents(guardianId: string): Promise<GuardianStudent
   );
 }
 
+// ─── Duplicate-person check (EDX-018) ────────────────────────────────
+
+/** One possible duplicate for the create-person dialogs: an existing person in
+ *  the tenant whose last + first name match and whose phone or e-mail matches.
+ *  Advisory only — creation is never blocked. `GET /people/duplicate-candidates`. */
+export type DuplicatePersonCandidate = {
+  id: string;
+  personType: "Student" | "Teacher" | "Guardian";
+  displayName: string;
+  phone: string;
+  email: string;
+  phoneMatches: boolean;
+  emailMatches: boolean;
+};
+
+export type FindDuplicateCandidatesParams = {
+  lastName: string;
+  firstName: string;
+  phone?: string | null;
+  email?: string | null;
+};
+
+export function findDuplicatePersonCandidates(
+  params: FindDuplicateCandidatesParams,
+): Promise<DuplicatePersonCandidate[]> {
+  const q = new URLSearchParams();
+  q.set("lastName", params.lastName);
+  q.set("firstName", params.firstName);
+  if (params.phone) q.set("phone", params.phone);
+  if (params.email) q.set("email", params.email);
+  return apiFetch<DuplicatePersonCandidate[]>(
+    `/api/v1/people/duplicate-candidates?${q.toString()}`,
+  );
+}
+
 // ─── People scope (current user) ──────────────────────────────────────
 
 export type PeopleScope = {

@@ -14,6 +14,7 @@ using FSH.Modules.People.Features.v1.Guardians.LinkGuardianUser;
 using FSH.Modules.People.Features.v1.Guardians.SearchGuardians;
 using FSH.Modules.People.Features.v1.Guardians.UnlinkGuardianUser;
 using FSH.Modules.People.Features.v1.Guardians.UpdateGuardian;
+using FSH.Modules.People.Features.v1.DuplicatePersonCandidates;
 using FSH.Modules.People.Features.v1.GetMyPeopleScope;
 using FSH.Modules.People.Features.v1.Students.AddStudentGuardian;
 using FSH.Modules.People.Features.v1.Students.AddStudentNote;
@@ -150,5 +151,6 @@ public sealed class PeopleModule : IModule
         group.MapUnlinkGuardianUserEndpoint();
 
         group.MapGetMyPeopleScopeEndpoint();
+        group.MapFindDuplicatePersonCandidatesEndpoint();
     }
 }

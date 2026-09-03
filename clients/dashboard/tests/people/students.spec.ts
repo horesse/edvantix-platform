@@ -49,6 +49,8 @@ test.describe("people/students — list", () => {
     await installShellMocks(page);
     // Manager filter combobox loads the tenant user list on mount.
     await mockJsonResponse(page, "**/api/v1/identity/users/search**", paged([]));
+    // EDX-018 duplicate check — default to "no duplicates"; specific tests override.
+    await mockJsonResponse(page, "**/api/v1/people/duplicate-candidates**", []);
   });
 
   test("renders heading and a student row", async ({ page }) => {
@@ -85,6 +87,64 @@ test.describe("people/students — list", () => {
     await mockJsonResponse(page, "**/api/v1/students?**", paged(STUDENTS));
     await page.goto("/students");
     await expect(page.getByRole("button", { name: /Новый ученик/ })).toHaveCount(0);
+  });
+
+  test("duplicate warning shows and «Всё равно создать» still submits (EDX-018)", async ({
+    page,
+  }) => {
+    await mockJsonResponse(page, "**/api/v1/identity/permissions", CREATE_PERMS);
+    await mockJsonResponse(page, "**/api/v1/students?**", paged(STUDENTS));
+    await mockJsonResponse(page, "**/api/v1/people/duplicate-candidates**", [
+      {
+        id: STUDENTS[0].id,
+        personType: "Student",
+        displayName: STUDENTS[0].displayName,
+        phone: STUDENTS[0].phone,
+        email: STUDENTS[0].email,
+        phoneMatches: true,
+        emailMatches: false,
+      },
+    ]);
+    const sent = captureRequest(page, "**/api/v1/students");
+    await page.goto("/students");
+
+    await page.getByRole("button", { name: /Новый ученик/ }).first().click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+
+    await dialog.getByLabel("Фамилия").fill("Иванов");
+    await dialog.getByLabel("Имя").fill("Пётр");
+    await dialog.getByLabel("Дата рождения").fill("2012-01-15");
+    await dialog.getByLabel("Телефон").fill("+7 900 111-22-33");
+    await dialog.getByLabel("E-mail").fill("petya@acme.com");
+
+    await expect(dialog.getByText(/Возможно, это дубль/)).toBeVisible();
+    await expect(
+      dialog.getByRole("link", { name: "Иванов Пётр Сергеевич" }),
+    ).toBeVisible();
+
+    const proceed = dialog.getByRole("button", { name: "Всё равно создать" });
+    await expect(proceed).toBeVisible();
+    await proceed.click();
+
+    const body = (await sent.value()).body as Record<string, unknown>;
+    expect(body).toMatchObject({ lastName: "Иванов", firstName: "Пётр" });
+  });
+
+  test("no duplicate warning when the check returns nothing", async ({ page }) => {
+    await mockJsonResponse(page, "**/api/v1/identity/permissions", CREATE_PERMS);
+    await mockJsonResponse(page, "**/api/v1/students?**", paged(STUDENTS));
+    await mockJsonResponse(page, "**/api/v1/people/duplicate-candidates**", []);
+    await page.goto("/students");
+
+    await page.getByRole("button", { name: /Новый ученик/ }).first().click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel("Фамилия").fill("Сидоров");
+    await dialog.getByLabel("Имя").fill("Иван");
+    await dialog.getByLabel("Телефон").fill("+7 900 000-00-00");
+
+    await expect(dialog.getByText(/Возможно, это дубль/)).toHaveCount(0);
+    await expect(dialog.getByRole("button", { name: "Создать" })).toBeVisible();
   });
 
   test("create dialog posts the entered fields via mutate(arg)", async ({ page }) => {

@@ -54,6 +54,8 @@ test.describe("people/guardians", () => {
     await seedAuthedSession(page, TEST_USER);
     await installShellMocks(page);
     await mockJsonResponse(page, "**/api/v1/identity/permissions", ALL_PERMS);
+    // EDX-018 duplicate check — default to "no duplicates"; specific tests override.
+    await mockJsonResponse(page, "**/api/v1/people/duplicate-candidates**", []);
   });
 
   test("list renders a guardian row", async ({ page }) => {
@@ -83,6 +85,33 @@ test.describe("people/guardians", () => {
       firstName: "Сергей",
       email: "sp@acme.com",
     });
+  });
+
+  test("duplicate warning shows in the create dialog (EDX-018)", async ({ page }) => {
+    await mockJsonResponse(page, "**/api/v1/guardians?**", paged(GUARDIANS));
+    await mockJsonResponse(page, "**/api/v1/people/duplicate-candidates**", [
+      {
+        id: GUARDIANS[0].id,
+        personType: "Guardian",
+        displayName: GUARDIANS[0].displayName,
+        phone: GUARDIANS[0].phone,
+        email: GUARDIANS[0].email,
+        phoneMatches: false,
+        emailMatches: true,
+      },
+    ]);
+    await page.goto("/guardians");
+
+    await page.getByRole("button", { name: /Новый представитель/ }).first().click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel("Фамилия").fill("Иванова");
+    await dialog.getByLabel("Имя").fill("Мария");
+    await dialog.getByLabel("E-mail").fill("maria@acme.com");
+
+    await expect(dialog.getByText(/Возможно, это дубль/)).toBeVisible();
+    await expect(
+      dialog.getByRole("button", { name: "Всё равно создать" }),
+    ).toBeVisible();
   });
 
   test("detail loads and shows the account section", async ({ page }) => {

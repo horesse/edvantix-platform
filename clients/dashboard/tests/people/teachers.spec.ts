@@ -67,6 +67,8 @@ test.describe("people/teachers", () => {
     // Teacher-detail side panels — harmless defaults; specs override after.
     await mockJsonResponse(page, "**/api/v1/study-groups?**", paged([]));
     await mockJsonResponse(page, "**/api/v1/teachers/*/workload**", WORKLOAD);
+    // EDX-018 duplicate check — default to "no duplicates"; specific tests override.
+    await mockJsonResponse(page, "**/api/v1/people/duplicate-candidates**", []);
   });
 
   test("list renders a teacher row with specializations", async ({ page }) => {
@@ -98,6 +100,34 @@ test.describe("people/teachers", () => {
       firstName: "Дмитрий",
       specializations: ["Химия", "Биология"],
     });
+  });
+
+  test("duplicate warning shows in the create dialog (EDX-018)", async ({ page }) => {
+    await mockJsonResponse(page, "**/api/v1/teachers?**", paged(TEACHERS));
+    await mockJsonResponse(page, "**/api/v1/people/duplicate-candidates**", [
+      {
+        id: TEACHERS[0].id,
+        personType: "Teacher",
+        displayName: TEACHERS[0].displayName,
+        phone: TEACHERS[0].phone,
+        email: TEACHERS[0].email,
+        phoneMatches: true,
+        emailMatches: true,
+      },
+    ]);
+    await page.goto("/teachers");
+
+    await page.getByRole("button", { name: /Новый преподаватель/ }).first().click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel("Фамилия").fill("Смирнов");
+    await dialog.getByLabel("Имя").fill("Олег");
+    await dialog.getByLabel("Телефон").fill("+7 900 111-00-11");
+    await dialog.getByLabel("E-mail").fill("oleg@acme.com");
+
+    await expect(dialog.getByText(/Возможно, это дубль/)).toBeVisible();
+    await expect(
+      dialog.getByRole("button", { name: "Всё равно создать" }),
+    ).toBeVisible();
   });
 
   test("detail: deactivate posts to the deactivate endpoint", async ({ page }) => {
