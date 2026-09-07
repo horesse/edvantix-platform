@@ -7,7 +7,8 @@ Curriculum (см. `ADR-006 Урок программы и занятие рас�
 StudyGroups (610): занятие принадлежит учебной группе. Справочник: `docs/02 Модули/Scheduling.md`.
 
 **Entities / DbContext:** `SchedulingDbContext`, схема `scheduling`, **плоская персистентность** —
-пять независимых `DbSet` (`ScheduleTemplate`, `Session`, `Attendance`, `Room`, `NonWorkingDay`), не
+независимые `DbSet` (`ScheduleTemplate`, `Session`, `Attendance`, `Room`, `NonWorkingDay`, плюс
+`IcalSubscriptionToken` — вспомогательная, один личный токен iCal-фида на пользователя, EDX-012), не
 вложенный агрегат (в отличие от StudyGroups) — посещаемость и занятия ищутся/пагинируются/
 отчитываются независимо от шаблона. `RoomId`/`TeacherId`/`StudyGroupId`/`LessonId` — обычные `Guid`/
 `Guid?` без DB-level FK (кросс-модульные ссылки по правилу 1 architecture.md; `RoomId` — тоже, хоть

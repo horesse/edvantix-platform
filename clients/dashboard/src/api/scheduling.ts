@@ -1,4 +1,5 @@
 import { apiFetch } from "@/lib/api-client";
+import { env } from "@/env";
 import type { PagedResponse } from "@/api/people";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -298,6 +299,44 @@ export function getMySchedule(
   const q = new URLSearchParams({ from, to });
   if (studentId) q.set("studentId", studentId);
   return apiFetch<SessionDto[]>(`${SESSIONS}/my?${q.toString()}`);
+}
+
+// ─── iCal subscription (EDX-012) ──────────────────────────────────────
+
+/** A personal, revocable calendar-feed subscription. `path` is a
+ *  tenant-qualified relative URL (`/api/v1/my/schedule.ics?tenant=…&token=…`);
+ *  prefix it with the API origin for a link a calendar app can subscribe to. */
+export type IcalSubscriptionDto = { token: string; path: string };
+
+/** Absolute, subscribe-ready URL for the personal iCal feed. */
+export function icalSubscriptionUrl(path: string): string {
+  return `${env.apiBase}${path}`;
+}
+
+/** The caller's current subscription, or `null` if they've never created one
+ *  (the endpoint answers 204 → `apiFetch` resolves `undefined`). */
+export async function getIcalSubscription(): Promise<IcalSubscriptionDto | null> {
+  return (
+    (await apiFetch<IcalSubscriptionDto | undefined>(
+      "/api/v1/my/schedule/ical-subscription",
+    )) ?? null
+  );
+}
+
+/** Create the subscription, or regenerate its token — any link copied earlier
+ *  stops working. */
+export function rotateIcalSubscription(): Promise<IcalSubscriptionDto> {
+  return apiFetch<IcalSubscriptionDto>(
+    "/api/v1/my/schedule/ical-subscription/rotate",
+    { method: "POST" },
+  );
+}
+
+/** Delete the subscription — every copied link stops working. */
+export async function revokeIcalSubscription(): Promise<void> {
+  await apiFetch<void>("/api/v1/my/schedule/ical-subscription", {
+    method: "DELETE",
+  });
 }
 
 /** Planned → Held. Seeds one attendance row per active student server-side —

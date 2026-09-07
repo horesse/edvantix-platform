@@ -294,7 +294,8 @@ public class EndpointConventionTests
                                name.StartsWith("Duplicate", StringComparison.Ordinal) ||
                                name.StartsWith("Preview", StringComparison.Ordinal) ||
                                name.StartsWith("Hold", StringComparison.Ordinal) ||
-                               name.StartsWith("Reschedule", StringComparison.Ordinal);
+                               name.StartsWith("Reschedule", StringComparison.Ordinal) ||
+                               name.StartsWith("Rotate", StringComparison.Ordinal);
 
                 if (!hasVerb)
                 {
