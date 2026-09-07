@@ -3,6 +3,7 @@ using System;
 using FSH.Modules.Scheduling.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Edvantix.Migrations.PostgreSQL.Scheduling
 {
     [DbContext(typeof(SchedulingDbContext))]
-    partial class SchedulingDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260907192534_AddIcalSubscriptionTokens")]
+    partial class AddIcalSubscriptionTokens
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

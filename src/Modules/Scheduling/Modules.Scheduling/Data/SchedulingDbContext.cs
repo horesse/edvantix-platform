@@ -29,6 +29,7 @@ public sealed class SchedulingDbContext : BaseDbContext
     public DbSet<Attendance> Attendances => Set<Attendance>();
     public DbSet<Room> Rooms => Set<Room>();
     public DbSet<NonWorkingDay> NonWorkingDays => Set<NonWorkingDay>();
+    public DbSet<IcalSubscriptionToken> IcalSubscriptionTokens => Set<IcalSubscriptionToken>();
 
     // Required by AddEventingForDbContext<SchedulingDbContext>() from the very first migration —
     // added straight away (not patched in later) per the lesson learned from People, see

@@ -42,6 +42,53 @@ test.describe("/my/schedule — моё расписание", () => {
 
     await expect(page.getByText(/нет доступа/i)).toBeVisible();
   });
+
+  test("EDX-012 — «Добавить в календарь» выдаёт персональную ссылку iCal", async ({
+    page,
+  }) => {
+    await mockJsonResponse(page, "**/api/v1/identity/permissions", [PERMS.sessionsViewOwn]);
+    await mockScope(page, { teacherId: "t-1" });
+    await mockJsonResponse(page, "**/api/v1/sessions/my?**", []);
+    // No subscription yet → 204.
+    await mockJsonResponse(page, "**/api/v1/my/schedule/ical-subscription", "", {
+      method: "GET",
+      status: 204,
+    });
+    await mockJsonResponse(page, "**/api/v1/my/schedule/ical-subscription/rotate", {
+      token: "tok-abc",
+      path: "/api/v1/my/schedule.ics?tenant=acme&token=tok-abc",
+    });
+
+    await page.goto("/my/schedule");
+
+    const addButton = page.getByRole("button", { name: "Добавить в календарь" });
+    await expect(addButton).toBeVisible();
+    await addButton.click();
+
+    const linkField = page.getByLabel("Ссылка на календарь");
+    await expect(linkField).toHaveValue(/\/api\/v1\/my\/schedule\.ics\?tenant=acme&token=tok-abc$/);
+    await expect(page.getByRole("button", { name: "Отозвать" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Обновить ссылку" })).toBeVisible();
+  });
+
+  test("EDX-012 — существующая подписка: ссылка и «Отозвать» без кнопки создания", async ({
+    page,
+  }) => {
+    await mockJsonResponse(page, "**/api/v1/identity/permissions", [PERMS.sessionsViewOwn]);
+    await mockScope(page, { teacherId: "t-1" });
+    await mockJsonResponse(page, "**/api/v1/sessions/my?**", []);
+    await mockJsonResponse(page, "**/api/v1/my/schedule/ical-subscription", {
+      token: "tok-live",
+      path: "/api/v1/my/schedule.ics?tenant=acme&token=tok-live",
+    });
+
+    await page.goto("/my/schedule");
+
+    await expect(page.getByRole("button", { name: "Отозвать" })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Добавить в календарь" }),
+    ).toHaveCount(0);
+  });
 });
 
 test.describe("/my/invoices — мои счета", () => {

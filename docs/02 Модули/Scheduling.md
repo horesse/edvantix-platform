@@ -100,6 +100,9 @@ erDiagram
 
 ### Инварианты
 
+- `IcalSubscriptionToken` (EDX-012) — вспомогательная сущность модуля, не часть доменного графа
+  занятий: одна строка на пользователя (тенант-скоуп), носитель доступа к личному iCal-фиду.
+  Подробности — в примечании «Экспорт расписания в iCal» ниже.
 - `EndUtc > StartUtc`; занятие принадлежит ровно одной группе.
 - `LessonId` **опционален**: консультация, отработка, пробное занятие программе не
   соответствуют ([[ADR-006 Урок программы и занятие расписания]]).
@@ -172,6 +175,7 @@ flowchart TB
 | `MarkAttendanceCommand` | Attendance — массовая отметка по занятию |
 | `CreateRoomCommand` · `UpdateRoomCommand` · `DeleteRoomCommand` | Rooms |
 | `AddNonWorkingDayCommand` · `RemoveNonWorkingDayCommand` | Calendar |
+| `RotateIcalSubscriptionCommand` · `RevokeIcalSubscriptionCommand` | IcalSubscription (EDX-012) — личный токен фида, гейт `Sessions.ViewOwn` |
 
 ### Запросы
 
@@ -188,6 +192,8 @@ flowchart TB
 | `GetScheduleTemplatesQuery` · `GetRoomsQuery` · `GetNonWorkingDaysQuery` | справочники |
 | `GetTeacherWorkloadQuery` | `TeacherWorkloadDto` — см. примечание ниже |
 | `GetGroupCourseProgressQuery` | `CourseProgressDto` — «прошли N из M уроков» курса группы, на лету, см. примечание ниже |
+| `GetIcalSubscriptionQuery` | `IcalSubscriptionDto?` — текущий токен фида и относительный URL, `null` если не создан |
+| `GetScheduleIcsQuery` | `string?` — тело VCALENDAR анонимного фида, `null` (→ 404) при неизвестном токене; см. примечание ниже |
 
 > [!note] `GetTeacherWorkloadQuery` живёт здесь, а не в [[People]]
 > Изначально спецификация числила его запросом People (`GET /teachers/{id}/workload`,
@@ -210,12 +216,29 @@ flowchart TB
 > своим правом `Sessions.View`. Проекции нет — порог перехода описан в
 > `docs/02 Модули/Curriculum.md` → «Чего в модели нет намеренно». 404, если группы нет.
 
+> [!note] Экспорт расписания в iCal (EDX-012)
+> `GET /api/v1/my/schedule.ics?tenant={identifier}&token={ical-token}` — **анонимный** фид
+> VCALENDAR: календарные клиенты не умеют слать bearer-токен. Аутентификация — по личному
+> `IcalSubscriptionToken` (сущность модуля, тенант-скоуп, одна строка на пользователя,
+> уникальный индекс по `UserId` и по `Token`); тенант резолвится из `?tenant=` штатной
+> `WithDelegateStrategy` Finbuckle (та же, что уже читает `?tenant=`), **до** построения
+> `SchedulingDbContext`, поэтому поиск токена уже тенант-фильтрован. Выборка занятий — общий
+> `IMyScheduleReader` (тот же, что за `GetMyScheduleQuery`), в фид попадают только
+> `Planned`/`Held`; перенесённое занятие сохраняет `UID` предшественника (`RescheduledFromId`),
+> чтобы клиент двигал событие, а не дублировал. Все метки времени — UTC с суффиксом `Z`
+> (VTIMEZONE не пишем). Управление токеном — JWT-гейт `Sessions.ViewOwn`:
+> `GET /my/schedule/ical-subscription` (204, если нет), `POST …/rotate` (создать/сменить секрет —
+> старые ссылки ломаются), `DELETE …/ical-subscription` (отозвать). Анонимный фид под
+> `RequireRateLimiting("auth")`. Отдельного права под фид нет — токен и есть носитель доступа.
+> Согласовано с [[EDX-008 API-ключи в Identity]]: это **не** тот механизм — фид даёт ровно один
+> read-only ресурс и не несёт прав; полноценные API-ключи остаются задачей EDX-008.
+
 ### DTO
 
 `SessionDto` · `SessionDetailDto` · `CalendarEntryDto` · `AttendanceDto` ·
 `AttendanceReportDto` · `ScheduleTemplateDto` · `GenerationPreviewDto` ·
 `SessionConflictDto` · `RoomDto` · `NonWorkingDayDto` · `TeacherWorkloadDto` ·
-`CourseProgressDto`
+`CourseProgressDto` · `IcalSubscriptionDto`
 
 ### Публикуемые события
 
@@ -311,6 +334,10 @@ public interface ISessionPlanQueryService
 GET    /api/v1/sessions
 GET    /api/v1/sessions/my
 GET    /api/v1/sessions/calendar
+GET    /api/v1/my/schedule.ics                 анонимный iCal-фид (?tenant=&token=), см. примечание (EDX-012)
+GET    /api/v1/my/schedule/ical-subscription   мой токен фида (204, если нет)
+POST   /api/v1/my/schedule/ical-subscription/rotate    создать / сменить секрет
+DELETE /api/v1/my/schedule/ical-subscription   отозвать
 POST   /api/v1/sessions
 GET    /api/v1/sessions/{id}
 PUT    /api/v1/sessions/{id}

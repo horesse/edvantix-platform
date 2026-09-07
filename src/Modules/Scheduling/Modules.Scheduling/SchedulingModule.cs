@@ -14,6 +14,10 @@ using FSH.Modules.Scheduling.Features.v1.AttendanceRecords.MarkAttendance;
 using FSH.Modules.Scheduling.Features.v1.Calendar.AddNonWorkingDay;
 using FSH.Modules.Scheduling.Features.v1.Calendar.GetNonWorkingDays;
 using FSH.Modules.Scheduling.Features.v1.Calendar.RemoveNonWorkingDay;
+using FSH.Modules.Scheduling.Features.v1.IcalSubscription.GetIcalSubscription;
+using FSH.Modules.Scheduling.Features.v1.IcalSubscription.GetScheduleIcs;
+using FSH.Modules.Scheduling.Features.v1.IcalSubscription.RevokeIcalSubscription;
+using FSH.Modules.Scheduling.Features.v1.IcalSubscription.RotateIcalSubscription;
 using FSH.Modules.Scheduling.Features.v1.Rooms.CreateRoom;
 using FSH.Modules.Scheduling.Features.v1.Rooms.DeleteRoom;
 using FSH.Modules.Scheduling.Features.v1.Rooms.GetRooms;
@@ -67,6 +71,8 @@ public sealed class SchedulingModule : IModule
         builder.Services.AddScoped<IAttendanceQueryService, AttendanceQueryService>();
         builder.Services.AddScoped<ISessionPlanQueryService, SessionPlanQueryService>();
         builder.Services.AddScoped<ISessionRealtimeNotifier, SessionRealtimeNotifier>();
+        builder.Services.AddScoped<IMyScheduleReader, MyScheduleReader>();
+        builder.Services.AddScoped<IIcalSubscriptionService, IcalSubscriptionService>();
 
         // Quota gauge: sessions scheduled in the current UTC month for the MonthlySessions plan
         // limit (UsageSnapshots + soft creation block). Mirrors Identity's UserCount gauge.
@@ -145,6 +151,19 @@ public sealed class SchedulingModule : IModule
 
         group.MapGetTeacherWorkloadEndpoint();
         group.MapGetGroupCourseProgressEndpoint();
+
+        // Personal iCal feed subscription — management is JWT-gated (Sessions.ViewOwn)…
+        group.MapGetIcalSubscriptionEndpoint();
+        group.MapRotateIcalSubscriptionEndpoint();
+        group.MapRevokeIcalSubscriptionEndpoint();
+
+        // …but the feed itself is anonymous (calendar clients can't send a bearer token) — it
+        // authenticates by the personal `?token=` and takes the tenant from `?tenant=` (resolved by
+        // Finbuckle's delegate strategy). Mapped off a group without RequireAuthorization.
+        var anon = endpoints.MapGroup("api/v{version:apiVersion}")
+            .WithTags("Scheduling")
+            .WithApiVersionSet(versionSet);
+        anon.MapGetScheduleIcsEndpoint();
 
         // Recurring Hangfire jobs — registration here matches the pattern Files/Billing use.
         var jobManager = endpoints.ServiceProvider.GetService<IRecurringJobManager>();
